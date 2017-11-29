@@ -1,0 +1,13 @@
+<launch>
+  <include file="$(find cwru_davinci_psm_one_moveit_config)/launch/planning_context.launch">
+    <arg name="load_robot_description" value="true"/>
+  </include>
+
+  <node name="davinci_kinematic_model_tutorial"
+        pkg="cwru_davinci_moveit_tutorials"
+        type="davinci_kinematic_model_tutorial"
+        respawn="false" output="screen">
+    <rosparam command="load"
+              file="$(find cwru_davinci_psm_one_moveit_config)/config/kinematics.yaml"/>
+  </node>
+</launch>

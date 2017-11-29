@@ -1,0 +1,6 @@
+<launch>
+
+  <node name="davinci_move_group_interface_tutorial" pkg="cwru_davinci_moveit_tutorials" type="davinci_move_group_interface_tutorial" respawn="false" output="screen">
+  </node>
+
+</launch>

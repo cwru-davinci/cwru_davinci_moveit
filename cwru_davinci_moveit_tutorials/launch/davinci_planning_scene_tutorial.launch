@@ -1,0 +1,18 @@
+<launch>
+
+    <arg name="kinetic" default="true"/>
+    <!-- send davinci urdf to param server -->
+    <group if="$(arg kinetic)">
+      <param name="robot_description" command="$(find xacro)/xacro.py '$(find cwru_davinci_geometry_models)/model/PSM1.urdf.xacro'" />
+    </group>
+
+    <!-- <group unless="$(arg kinetic)">
+      <param name="robot_description" command="$(find xacro)/xacro.py '$(find cwru_davinci_geometry_models)/model/pr2_no_kinect.urdf.xacro'" />
+    </group> -->
+   
+  <include file="$(find cwru_davinci_psm_one_moveit_config)/launch/planning_context.launch"/>
+
+  <node name="davinci_planning_scene_tutorial" pkg="cwru_davinci_moveit_tutorial" type="davinci_planning_scene_tutorial" respawn="false" output="screen">
+    <rosparam command="load" file="$(find cwru_davinci_psm_one_moveit_config)/config/kinematics.yaml"/>
+  </node>
+</launch>
