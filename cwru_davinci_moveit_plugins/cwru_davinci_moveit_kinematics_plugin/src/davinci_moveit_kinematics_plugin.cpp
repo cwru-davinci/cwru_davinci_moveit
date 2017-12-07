@@ -35,111 +35,347 @@
 /* Author: Su Lu */
 
 #include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_plugin.h>
-namespace davinci_moveit_kinematics_plugin
+#include <pluginlib/class_list_macros.h>
+
+
+//register DavinciMoveitKinematicsPlugin as a KinematicsBase implementation
+PLUGINLIB_EXPORT_CLASS(cwru_davinci_moveit_kinematics_plugin::DavinciMoveitKinematicsPlugin, kinematics::KinematicsBase
+);
+
+namespace davinci_moveit_kinematics
 {
-    /**
-     *  @brief Specifies if the solver is active or not
-     *  @return True if the solver is active, false otherwise.
-     */
-    bool DavinciMoveitKinematicsPlugin::isActive()
+
+  DavinciMoveitKinematicsPlugin::DavinciMoveitKinematicsPlugin() : active_(false)
+  {}
+
+  /**
+   *  @brief Specifies if the solver is active or not
+   *  @return True if the solver is active, false otherwise.
+   */
+  bool DavinciMoveitKinematicsPlugin::isActive()
+  {
+    if(active_)
     {
-        if(active_)
-        {
-            return true;
-        }
-        return false;
+      return true;
+    }
+    return false;
+  }
+
+  bool DavinciMoveitKinematicsPlugin::getPositionIK(const geometry_msgs::Pose &ik_pose,
+                                                    const std::vector<double> &ik_seed_state,
+                                                    std::vector<double> &solution,
+                                                    moveit_msgs::MoveItErrorCodes &error_code,
+                                                    const kinematics::KinematicsQueryOptions &options) const
+  {
+    if(!active_)
+    {
+      ROS_ERROR("kinematics not active");
+      error_code.val = error_code.NO_IK_SOLUTION;
+      return false;
     }
 
-//    bool DavinciMoveitKinematicsPlugin::getPositionIK(const geometry_msgs::Pose &ik_pose,
-//                                                              const std::vector<double> &ik_seed_state,
-//                                                              std::vector<double> &solution,
-//                                                              moveit_msgs::MoveItErrorCodes &error_code,
-//                                                              const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const
-//    {
-//
-//    }
-//
-//    bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
-//                                                                 const std::vector<double> &ik_seed_state,
-//                                                                 double timeout,
-//                                                                 std::vector<double> &solution,
-//                                                                 moveit_msgs::MoveItErrorCodes &error_code,
-//                                                                 const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const
-//    {
-//
-//    }
-//
-//    bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
-//                                                                 const std::vector<double> &ik_seed_state,
-//                                                                 double timeout,
-//                                                                 const std::vector<double> &consistency_limits,
-//                                                                 std::vector<double> &solution,
-//                                                                 moveit_msgs::MoveItErrorCodes &error_code,
-//                                                                 const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const
-//    {
-//
-//    }
-//
-//    bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
-//                                                                 const std::vector<double> &ik_seed_state,
-//                                                                 double timeout,
-//                                                                 std::vector<double> &solution,
-//                                                                 const IKCallbackFn &solution_callback,
-//                                                                 moveit_msgs::MoveItErrorCodes &error_code,
-//                                                                 const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const
-//    {
-//
-//
-//    }
-//
-//    bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
-//                                                                 const std::vector<double> &ik_seed_state,
-//                                                                 double timeout,
-//                                                                 const std::vector<double> &consistency_limits,
-//                                                                 std::vector<double> &solution,
-//                                                                 const IKCallbackFn &solution_callback,
-//                                                                 moveit_msgs::MoveItErrorCodes &error_code,
-//                                                                 const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const
-//    {
-//
-//    }
-//
-//    bool DavinciMoveitKinematicsPlugin::getPositionFK(const std::vector <std::string> &link_names,
-//                                                              const std::vector<double> &joint_angles,
-//                                                              std::vector <geometry_msgs::Pose> &poses) const
-//    {
-//
-//    }
+    KDL::Frame pose_desired;
+    tf::poseMsgToKDL(ik_pose, pose_desired);
 
-    /**
-     * @brief  Initialization function for the kinematics
-     * @return True if initialization was successful, false otherwise
-     */
-    bool DavinciMoveitKinematicsPlugin::initialize(const std::string &robot_description,
-                                                   const std::string &group_name,
-                                                   const std::string &base_frame,
-                                                   const std::string &tip_frame,
-                                                   double search_discretization)
+    // Do the IK
+    KDL::JntArray jnt_pos_in;
+    KDL::JntArray jnt_pos_out;
+    jnt_pos_in.resize(dimension_);
+    for(int i = 0; i < dimension_; i++)
     {
-
-        return active_;
+      jnt_pos_in(i) = ik_seed_state[i];
     }
 
-//    /**
-//      * @brief Return all the joint names in the order they are used internally
-//      */
-//    const DavinciMoveitKinematicsPlugin::std::vector<std::string>& getJointNames() const
-//    {
-//
-//    }
-//
-//    /**
-//      * @brief Return all the link names in the order they are represented internally
-//      */
-//    const DavinciMoveitKinematicsPlugin::std::vector<std::string>& getLinkNames() const
-//    {
-//
-//    }
-}
+    int ik_valid = davinci_moveit_ik_solver_ptr_->CartToJnt(jnt_pos_in,
+                                                            pose_desired,
+                                                            jnt_pos_out);
+
+    if(ik_valid == davinci_moveit_kinematics::NO_IK_SOLUTION)
+    {
+      error_code.val = error_code.NO_IK_SOLUTION;
+      return false;
+    }
+
+    if(ik_valid >= 0)
+    {
+      solution.resize(dimension_);
+      for(int i = 0; i < dimension_; i++)
+      {
+        solution[i] = jnt_pos_out(i);
+      }
+      error_code.val = error_code.SUCCESS;
+      return true;
+    }
+    else
+    {
+      ROS_DEBUG("An IK solution could not be found");
+      error_code.val = error_code.NO_IK_SOLUTION;
+      return false;
+    }
+  }
+
+  bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                                       const std::vector<double> &ik_seed_state,
+                                                       double timeout,
+                                                       std::vector<double> &solution,
+                                                       moveit_msgs::MoveItErrorCodes &error_code,
+                                                       const kinematics::KinematicsQueryOptions &options) const
+  {
+    static kinematics::KinematicsBase::IKCallbackFn solution_callback = NULL;
+    static std::vector<double> consistency_limits;
+    return searchPositionIK(ik_pose, ik_seed_state, timeout, consistency_limits, solution, solution_callback,
+                            error_code);
+  }
+
+  bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                                       const std::vector<double> &ik_seed_state,
+                                                       double timeout,
+                                                       const std::vector<double> &consistency_limits,
+                                                       std::vector<double> &solution,
+                                                       moveit_msgs::MoveItErrorCodes &error_code,
+                                                       const kinematics::KinematicsQueryOptions &options) const
+  {
+    static IKCallbackFn solution_callback = NULL;
+    return searchPositionIK(ik_pose, ik_seed_state, timeout, consistency_limits, solution, solution_callback,
+                            error_code);
+  }
+
+  bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                                       const std::vector<double> &ik_seed_state,
+                                                       double timeout,
+                                                       std::vector<double> &solution,
+                                                       const IKCallbackFn &solution_callback,
+                                                       moveit_msgs::MoveItErrorCodes &error_code,
+                                                       const kinematics::KinematicsQueryOptions &options) const
+  {
+    static std::vector<double> consistency_limits;
+    return searchPositionIK(ik_pose, ik_seed_state, timeout, consistency_limits, solution, solution_callback,
+                            error_code);
+  }
+
+  bool DavinciMoveitKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                                       const std::vector<double> &ik_seed_state,
+                                                       double timeout,
+                                                       const std::vector<double> &consistency_limits,
+                                                       std::vector<double> &solution,
+                                                       const IKCallbackFn &solution_callback,
+                                                       moveit_msgs::MoveItErrorCodes &error_code,
+                                                       const kinematics::KinematicsQueryOptions &options) const
+  {
+    if(!active_)
+    {
+      ROS_ERROR("kinematics not active");
+      error_code.val = error_code.FAILURE;
+      return false;
+    }
+    if(!consistency_limits.empty() && consistency_limits.size() != dimension_)
+    {
+      ROS_ERROR("Consistency limits should be of size: %d", dimension_);
+      error_code.val = error_code.FAILURE;
+    }
+
+    KDL::Frame pose_desired;
+    tf::poseMsgToKDL(ik_pose, pose_desired);
+
+    // Do the IK
+    KDL::JntArray jnt_pos_in;
+    KDL::JntArray jnt_pos_out;
+    jnt_pos_in.resize(dimension_);
+    for(int i = 0; i < dimension_; i++)
+    {
+      jnt_pos_in(i) = ik_seed_state[i];
+    }
+
+    int ik_valid;
+    if(consistency_limits.empty())
+    {
+      ik_valid = davinci_moveit_ik_solver_ptr_->CartToJntSearch(jnt_pos_in,
+                                                                pose_desired,
+                                                                jnt_pos_out,
+                                                                timeout,
+                                                                error_code,
+                                                                solution_callback ?
+                                                                boost::bind(solution_callback, _1, _2, _3) :
+                                                                IKCallbackFn());
+    }
+    else
+    {
+<<<<<<< HEAD
+
+=======
+      ik_valid = davinci_moveit_ik_solver_ptr_->CartToJntSearch(jnt_pos_in,
+                                                                pose_desired,
+                                                                jnt_pos_out,
+                                                                timeout,
+<<<<<<< HEAD
+                                                                consistency_limits[free_angle_],
+=======
+                                                                consistency_limits[0],
+>>>>>>> aec2428... Added test folder under package cwru_davinci_moveit_kinematics_plugin
+                                                                error_code,
+                                                                solution_callback ?
+                                                                boost::bind(solution_callback, _1, _2, _3) :
+                                                                IKCallbackFn());
+    }
+
+    if(ik_valid == davinci_moveit_kinematics::NO_IK_SOLUTION)
+    {
+      return false;
+    }
+
+    if(ik_valid >= 0)
+    {
+      solution.resize(dimension_);
+      for(int i = 0; i < dimension_; i++)
+      {
+        solution[i] = jnt_pos_out(i);
+      }
+      return true;
+    }
+    else
+    {
+      ROS_DEBUG("An IK solution could not be found");
+      return false;
+>>>>>>> 1d679f4... Updated
+    }
+  }
+
+  bool DavinciMoveitKinematicsPlugin::getPositionFK(const std::vector <std::string> &link_names,
+                                                    const std::vector<double> &joint_angles,
+                                                    std::vector <geometry_msgs::Pose> &poses) const
+  {
+    if(!active_)
+    {
+      ROS_ERROR("kinematics not active");
+      error_code.val = error_code.NO_IK_SOLUTION;
+      return false;
+    }
+
+    KDL::Frame p_out;
+    KDL::JntArray jnt_pos_in;
+    geometry_msgs::PoseStamped pose;
+    tf::Stamped<tf::Pose> tf_pose;
+
+    jnt_pos_in.resize(dimension_);
+    for(int i=0; i < dimension_; i++)
+    {
+      jnt_pos_in(i) = joint_angles[i];
+      // ROS_DEBUG("Joint angle: %d %f",i,joint_angles[i]);
+    }
+
+    poses.resize(link_names.size());
+    bool valid = true;
+    for(unsigned int i=0; i < poses.size(); i++)
+    {
+      // ROS_DEBUG("End effector index: %d",davinci_moveit_kinematics::getKDLSegmentIndex(kdl_chain_,link_names[i]));
+      if(jnt_to_pose_solver_ptr_->
+        JntToCart(jnt_pos_in, p_out, davinci_moveit_kinematics::getKDLSegmentIndex(kdl_chain_, link_names[i])) >= 0)
+      {
+        tf::poseKDLToMsg(p_out, poses[i]);
+      }
+      else
+      {
+        ROS_ERROR("Could not compute FK for %s", link_names[i].c_str());
+        valid = false;
+      }
+    }
+    return valid;
+  }
+
+  /**
+   * @brief  Initialization function for the kinematics
+   * @return True if initialization was successful, false otherwise
+   */
+  bool DavinciMoveitKinematicsPlugin::initialize(const std::string &robot_description,
+                                                 const std::string &group_name,
+                                                 const std::string &base_frame,
+                                                 const std::string &tip_frame,
+                                                 double search_discretization)
+  {
+    kinematics::KinematicsBase::setValues(robot_description, group_name, base_frame, tip_frame, search_discretization);
+    urdf::Model robot_model;
+    std::string xml_string;
+    ros::NodeHandle private_handle("~/" + group_name);
+    dimension_ = davinci_kinematics::NUM_JOINTS_ARM7DOF;  // TODO left to decide
+
+    if(!davinci_moveit_kinematics::loadRobotModel(private_handle, robot_model, xml_string) && private_handle.ok())
+    {
+      ROS_ERROR("Could not load robot model. Are you sure the robot model is on the parameter server?");
+      ros::Duration(0.5).sleep();
+    }
+
+    ROS_DEBUG("Loading KDL Tree");
+    if(!davinci_moveit_kinematics::getKDLChain(xml_string, base_frame, tip_frame, kdl_chain_))
+    {
+      active_ = false;
+      ROS_ERROR("Could not load KDL tree");
+    }
+
+    ROS_DEBUG("Advertising services");
+    jnt_to_pose_solver_ptr_.reset(
+      new KDL::ChainFkSolverPos_recursive(kdl_chain_));  // reset() is a member method of boost::shared_ptr class
+    private_handle.param<int>("free_angle", free_angle_, 2);  // TODO, need to change
+
+    // TODO, need to implement this reset function in davinci_kinematics library
+    davinci_moveit_ik_solver_ptr_.reset(
+      new davinci_kinematics::davinci_kinematics::Inverse(robot_model, base_frame, tip_frame, search_discretization,
+                                                          free_angle_));
+
+    if(!davinci_moveit_ik_solver_ptr_->active_)
+    {
+      ROS_ERROR("Could not load IK solver");
+      active_ = false;
+    }
+    else
+    {
+      davinci_moveit_ik_solver_ptr_->getSolverInfo(ik_solver_info_);
+      davinci_moveit_kinematics::getKDLChainInfo(kdl_chain_, fk_solver_info_);
+      fk_solver_info_.joint_names = ik_solver_info_.joint_names;
+
+      for(unsigned int i = 0; i < ik_solver_info_.joint_names.size(); i++)
+      {
+        ROS_DEBUG("daVinciKinematics:: joint name: %s", ik_solver_info_.joint_names[i].c_str());
+      }
+      for(unsigned int i = 0; i < ik_solver_info_.link_names.size(); i++)
+      {
+        ROS_DEBUG("daVinciKinematics can solve IK for %s", ik_solver_info_.link_names[i].c_str());
+      }
+      for(unsigned int i = 0; i < fk_solver_info_.link_names.size(); i++)
+      {
+        ROS_DEBUG("daVinciKinematics can solve FK for %s", fk_solver_info_.link_names[i].c_str());
+      }
+      ROS_DEBUG("DavinciMoveitKinematicsPlugin::active for %s", group_name.c_str());
+      active_ = true;
+    }
+
+    davinci_moveit_ik_solver_ptr_->setFreeAngle(2);  // TODO
+    return active_;
+  }
+
+  /**
+    * @brief Return all the joint names in the order they are used internally
+    */
+  const std::vector<std::string>& DavinciMoveitKinematicsPlugin::getJointNames() const
+  {
+    if(!active_)
+    {
+      ROS_ERROR("kinematics not active");
+    }
+    return ik_solver_info_.joint_names;
+  }
+
+  /**
+    * @brief Return all the link names in the order they are represented internally
+    */
+  const std::vector<std::string>& DavinciMoveitKinematicsPlugin::getLinkNames() const
+  {
+    if(!active_)
+    {
+      ROS_ERROR("kinematics not active");
+    }
+    return fk_solver_info_.link_names;
+  }
+
+}  // namespace
 
 

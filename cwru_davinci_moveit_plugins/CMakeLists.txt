@@ -10,7 +10,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   moveit_core
   roscpp
-  cwru_davinci_kinematics
+  davinci_kinematics
 )
 
 ## System dependencies are found with CMake's conventions
@@ -104,10 +104,17 @@ find_package(Boost REQUIRED thread)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
+<<<<<<< HEAD
 #  INCLUDE_DIRS
 #  LIBRARIES
 #  CATKIN_DEPENDS moveit_core roscpp cwru_davinci_kinematics
 #  DEPENDS moveit_core
+=======
+  INCLUDE_DIRS
+  LIBRARIES
+  CATKIN_DEPENDS moveit_core roscpp
+  DEPENDS moveit_core
+>>>>>>> 0f442f5... Updated
 )
 
 ###########
@@ -185,11 +192,11 @@ add_subdirectory(cwru_davinci_moveit_kinematics_plugin)
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(
+  FILES
+   davinci_moveit_kinematics_plugin_description.xml
+  DESTINATION 
+    ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 #############
 ## Testing ##

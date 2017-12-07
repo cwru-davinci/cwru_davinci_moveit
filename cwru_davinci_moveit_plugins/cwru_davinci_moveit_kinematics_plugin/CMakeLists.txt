@@ -193,10 +193,10 @@ install(TARGETS ${MOVEIT_LIB_NAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DEST
 ##############
 #
 ### Add gtest based cpp test target and link libraries
-## catkin_add_gtest(${PROJECT_NAME}-test test/test_cwru_davinci_moveit_kinematics_plugin.cpp)
-## if(TARGET ${PROJECT_NAME}-test)
-##   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-## endif()
+catkin_add_gtest(${PROJECT_NAME}-test test/test_davinci_moveit_kinematics_plugin.cpp)
+ if(TARGET ${PROJECT_NAME}-test)
+   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+ endif()
 #
 ### Add folders to be run by python nosetests
 ## catkin_add_nosetests(test)

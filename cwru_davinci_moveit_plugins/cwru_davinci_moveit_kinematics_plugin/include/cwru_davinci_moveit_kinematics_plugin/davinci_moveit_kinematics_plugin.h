@@ -38,105 +38,122 @@
 #define DAVINCI_MOVEIT_KINEMATICS_PLUGIN_H
 
 #include <ros/ros.h>
+#include <tf/tf.h>
+
 #include <geometry_msgs/Pose.h>
 #include <vector>
 #include <moveit_msgs/GetPositionFK.h>
 #include <moveit_msgs/GetPositionIK.h>
 #include <moveit_msgs/KinematicSolverInfo.h>
-
 #include <moveit_msgs/MoveItErrorCodes.h>
+
+#include <tf_conversions/tf_kdl.h>
 
 #include <moveit/kinematics_base/kinematics_base.h>
 #include <boost/shared_ptr.hpp>
-#include <cwru_davinci_kinematics/davinci_fwd_kinematics.h>
+
+#include <urdf/model.h>
+
+#include <cwru_davinci_kinematics/davinci_inv_kinematics.h>
 
 /** @brief Namespace for the DavinciMoveitKinematicsPlugin */
-namespace davinci_moveit_kinematics_plugin
+namespace davinci_moveit_kinematics
 {
-    class DavinciMoveitKinematicsPlugin : public kinematics::KinematicsBase
-    {
-        /**
-         *  @brief Plugin-able interface to the davinci moveit kinematics plugin
-         */
-        DavinciMoveitKinematicsPlugin();
+  class DavinciMoveitKinematicsPlugin : public kinematics::KinematicsBase
+  {
+  public:
+    /**
+     *  @brief Plugin-able interface to the davinci moveit kinematics plugin
+     */
+    DavinciMoveitKinematicsPlugin();
 
-        /**
-         *  @brief Specifies if the solver is active or not
-         *  @return True if the solver is active, false otherwise.
-         */
-        bool isActive();
+    /**
+     *  @brief Specifies if the solver is active or not
+     *  @return True if the solver is active, false otherwise.
+     */
+    bool isActive();
 
-        virtual bool getPositionIK(const geometry_msgs::Pose &ik_pose,
-                                   const std::vector<double> &ik_seed_state,
-                                   std::vector<double> &solution,
-                                   moveit_msgs::MoveItErrorCodes &error_code,
-                                   const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
+    virtual bool getPositionIK(const geometry_msgs::Pose &ik_pose,
+                               const std::vector<double> &ik_seed_state,
+                               std::vector<double> &solution,
+                               moveit_msgs::MoveItErrorCodes &error_code,
+                               const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
 
-        virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
-                                      const std::vector<double> &ik_seed_state,
-                                      double timeout,
-                                      std::vector<double> &solution,
-                                      moveit_msgs::MoveItErrorCodes &error_code,
-                                      const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
+    virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                  const std::vector<double> &ik_seed_state,
+                                  double timeout,
+                                  std::vector<double> &solution,
+                                  moveit_msgs::MoveItErrorCodes &error_code,
+                                  const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
 
-        virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
-                                      const std::vector<double> &ik_seed_state,
-                                      double timeout,
-                                      const std::vector<double> &consistency_limits,
-                                      std::vector<double> &solution,
-                                      moveit_msgs::MoveItErrorCodes &error_code,
-                                      const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
+    virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                  const std::vector<double> &ik_seed_state,
+                                  double timeout,
+                                  const std::vector<double> &consistency_limits,
+                                  std::vector<double> &solution,
+                                  moveit_msgs::MoveItErrorCodes &error_code,
+                                  const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
 
-        virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
-                                      const std::vector<double> &ik_seed_state,
-                                      double timeout,
-                                      std::vector<double> &solution,
-                                      const IKCallbackFn &solution_callback,
-                                      moveit_msgs::MoveItErrorCodes &error_code,
-                                      const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
+    virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                  const std::vector<double> &ik_seed_state,
+                                  double timeout,
+                                  std::vector<double> &solution,
+                                  const IKCallbackFn &solution_callback,
+                                  moveit_msgs::MoveItErrorCodes &error_code,
+                                  const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
 
-        virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
-                                      const std::vector<double> &ik_seed_state,
-                                      double timeout,
-                                      const std::vector<double> &consistency_limits,
-                                      std::vector<double> &solution,
-                                      const IKCallbackFn &solution_callback,
-                                      moveit_msgs::MoveItErrorCodes &error_code,
-                                      const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
+    virtual bool searchPositionIK(const geometry_msgs::Pose &ik_pose,
+                                  const std::vector<double> &ik_seed_state,
+                                  double timeout,
+                                  const std::vector<double> &consistency_limits,
+                                  std::vector<double> &solution,
+                                  const IKCallbackFn &solution_callback,
+                                  moveit_msgs::MoveItErrorCodes &error_code,
+                                  const kinematics::KinematicsQueryOptions &options = kinematics::KinematicsQueryOptions()) const;
 
-        virtual bool getPositionFK(const std::vector<std::string> &link_names,
-                                   const std::vector<double> &joint_angles,
-                                   std::vector<geometry_msgs::Pose> &poses) const;
+    /**
+     * @brief Given a set of joint angles and a set of links, compute their pose.
+     * @param link_names
+     * @param joint_angles
+     * @param poses
+     * @return
+     */
+    virtual bool getPositionFK(const std::vector <std::string> &link_names,
+                               const std::vector<double> &joint_angles,
+                               std::vector <geometry_msgs::Pose> &poses) const;
 
-        /**
-         * @brief  Initialization function for the kinematics
-         * @return True if initialization was successful, false otherwise
-         */
-        virtual bool initialize(const std::string& robot_description,
-                                const std::string& group_name,
-                                const std::string& base_frame,
-                                const std::string& tip_frame,
-                                double search_discretization);
+    /**
+     * @brief  Initialization function for the kinematics
+     * @return True if initialization was successful, false otherwise
+     */
+    virtual bool initialize(const std::string &robot_description,
+                            const std::string &group_name,
+                            const std::string &base_frame,
+                            const std::string &tip_frame,
+                            double search_discretization);
 
-        /**
-         * @brief Return all the joint names in the order they are used internally
-         */
-        const std::vector<std::string>& getJointNames() const;
+    /**
+     * @brief Return all the joint names in the order they are used internally
+     */
+    const std::vector<std::string>& getJointNames() const;
 
-        /**
-         * @brief Return all the link names in the order they are represented internally
-         */
-        const std::vector<std::string>& getLinkNames() const;
+    /**
+     * @brief Return all the link names in the order they are represented internally
+     */
+    const std::vector<std::string>& getLinkNames() const;
 
-    protected:
+  protected:
 
-        bool active_;
-        int free_angle_;
-//        urdf::Model robot_model_;
-        ros::NodeHandle node_handle_, root_handle_;
-        boost::shared_ptr<cwru_davinci_kinematics::davinci_kinematics::Inverse> private_davinci_ik_solver_;
-
-    };
+    bool active_;
+    int free_angle_;
+    urdf::Model robot_model_;
+    ros::NodeHandle node_handle_, root_handle_;
+    boost::shared_ptr<davinci_moveit_kinematics::DavinciMoveitIKSolver> davinci_moveit_ik_solver_ptr_;
+    int dimension_;
+    boost::shared_ptr<KDL::ChainFkSolverPos_recursive> jnt_to_pose_solver_ptr_;
+    KDL::Chain kdl_chain_;
+    moveit_msgs::KinematicSolverInfo ik_solver_info_, fk_solver_info_;
+  };
 
 }
 
