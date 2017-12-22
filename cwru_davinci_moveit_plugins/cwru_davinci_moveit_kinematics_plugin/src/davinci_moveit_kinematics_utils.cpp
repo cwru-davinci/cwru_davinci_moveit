@@ -47,7 +47,7 @@ namespace davinci_moveit_kinematics
     node_handle.param("urdf_xml", urdf_xml, std::string("robot_description"));
     node_handle.searchParam(urdf_xml, full_urdf_xml);
     TiXmlDocument xml;
-    ROS_DEBUG("Reading xml file from parameter server\n");
+    ROS_INFO("Reading xml file from parameter server\n");
     std::string result;
     if(node_handle.getParam(full_urdf_xml, result))
     {
@@ -103,6 +103,16 @@ namespace davinci_moveit_kinematics
 
   Eigen::Affine3d KDLToEigenMatrix(const KDL::Frame &p)
   {
+
+//    ROS_INFO_STREAM("Inside utils p matrix Translation: \n" << p.M(0, 0) << " " << p.M(0, 1) << " " << p.M(0, 2) << "\n"
+//                                                            << p.M(1, 0) << " " << p.M(1, 1) << " " << p.M(1, 2) << "\n"
+//                                                            << p.M(2, 0) << " " << p.M(2, 1) << " " << p.M(2, 2)
+//                                                            << "\n");
+
+//    ROS_INFO_STREAM("Inside utils p matrix Rotation: \n" << p.p(0) << "\n"
+//                                                         << p.p(1) << "\n"
+//                                                         << p.p(2) << "\n");
+
     Eigen::Affine3d b = Eigen::Affine3d::Identity();
     for(int i = 0; i < 3; i++)
     {
@@ -112,6 +122,9 @@ namespace davinci_moveit_kinematics
       }
       b..matrix()(i, 3) = p.p(i);
     }
+
+//    ROS_INFO_STREAM("Inside utils b matrix Translation: \n" << b.translation());
+//    ROS_INFO_STREAM("Inside utils b matrix Rotation: \n" << b.rotation());
     return b;
   }
 
@@ -142,7 +155,7 @@ namespace davinci_moveit_kinematics
 //            *x2 = *x1;
 //            return true;
 //        }
-//        //ROS_DEBUG("Discriminant: %f\n",discriminant);
+//        //ROS_INFO("Discriminant: %f\n",discriminant);
 //        if (discriminant >= 0)
 //        {
 //            *x1 = (-b + sqrt(discriminant))/(2*a);
@@ -362,7 +375,7 @@ namespace davinci_moveit_kinematics
 //                                tf::TransformListener& tf)
 //    {
 //        geometry_msgs::PoseStamped pose_msg_in = pose_msg;
-//        ROS_DEBUG("Request:\nframe_id: %s\nPosition: %f %f %f\n:Orientation: %f %f %f %f\n",
+//        ROS_INFO("Request:\nframe_id: %s\nPosition: %f %f %f\n:Orientation: %f %f %f %f\n",
 //                  pose_msg_in.header.frame_id.c_str(),
 //                  pose_msg_in.pose.position.x,
 //                  pose_msg_in.pose.position.y,
@@ -412,6 +425,7 @@ namespace davinci_moveit_kinematics
 //        return -1;
 //    }
 //
+<<<<<<< HEAD
 //    void getKDLChainInfo(const KDL::Chain &chain,
 //                         moveit_msgs::KinematicSolverInfo &chain_info)
 //    {
@@ -423,6 +437,20 @@ namespace davinci_moveit_kinematics
 //        }
 //    }
 //
+=======
+  void getKDLChainInfo(const KDL::Chain &chain,
+                       moveit_msgs::KinematicSolverInfo &chain_info)
+  {
+    int i = 0; // segment number
+    ROS_INFO("Number of segments in KDL::Chain object: %d", (int) chain.getNrOfSegments());
+    while (i < (int) chain.getNrOfSegments())
+    {
+      chain_info.link_names.push_back(chain.getSegment(i).getName());
+      i++;
+    }
+  }
+
+>>>>>>> cbe3dad... Testing kinematics plugin
   int getKDLSegmentIndex(const KDL::Chain &chain,
                          const std::string &name)
   {

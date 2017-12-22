@@ -61,6 +61,7 @@ namespace davinci_moveit_kinematics
       if(parent_joint)
       {
         joint = robot_model.getJoint(parent_joint->name);
+        ROS_INFO("Name of added joints: %s", joint->name.c_str());
       }
       if(!joint)
       {
@@ -76,6 +77,7 @@ namespace davinci_moveit_kinematics
       }
 
       if(joint->type != urdf::Joint::UNKNOWN && joint->type != urdf::Joint::FIXED)
+//      if(joint->type != urdf::Joint::UNKNOWN)
       {
         // get transform from Parent Link frame to Joint frame
         link_offset.push_back(parent_joint->parent_to_joint_origin_transform);
@@ -83,7 +85,7 @@ namespace davinci_moveit_kinematics
         // TODO the following list may not be used
 //        angle_multipliers_.push_back(joint->axis.x * fabs(joint->axis.x) + joint->axis.y * fabs(joint->axis.y) +
 //                                     joint->axis.z * fabs(joint->axis.z));
-//        ROS_DEBUG("Joint axis: %d, %f, %f, %f",6-num_joints,joint->axis.x,joint->axis.y,joint->axis.z);
+//        ROS_INFO("Joint axis: %d, %f, %f, %f",7-num_joints,joint->axis.x,joint->axis.y,joint->axis.z);
 
         // The if-else block checks joint type and store the joint's limit in both min_angles_ and max_angles_ lists
         if(joint->type != urdf::Joint::CONTINUOUS)
@@ -104,7 +106,7 @@ namespace davinci_moveit_kinematics
             {
               min_angles_.push_back(0.0);
               max_angles_.push_back(0.0);
-              ROS_WARN("No joint limits or joint '%s'", joint->name.c_str());
+              ROS_WARN("No joint limits for joint '%s'", joint->name.c_str());
             }
           }
           continuous_joint_.push_back(false);
@@ -135,7 +137,8 @@ namespace davinci_moveit_kinematics
 
     if(num_joints != NUM_JOINTS_ARM7DOF)
     {
-      ROS_FATAL("PR2ArmIK:: Chain from %s to %s does not have 7 joints", root_name.c_str(), tip_name.c_str());
+      ROS_FATAL("DavinciIK:: Chain from %s to %s does not have %d joints", root_name.c_str(), tip_name.c_str(),
+                NUM_JOINTS_ARM7DOF);
       return false;
     }
 
@@ -166,17 +169,23 @@ namespace davinci_moveit_kinematics
   {
     solution.clear();
 
-    int ik_solve_return_val = davinci_inverse_.ik_solve(g_in);
+//    ROS_INFO_STREAM("IK input goal pose translation: \n" << g_in.translation());
+//    ROS_INFO_STREAM("IK input goal pose rotation: \n" << g_in.rotation());
 
+    int ik_solve_return_val = davinci_inverse_.ik_solve(g_in);
+//    ROS_INFO("IK solution return value %d", ik_solve_return_val);
     switch(ik_solve_return_val)
     {
       case -6 :
       {
-        ROS_ERROR("davinci inverse kinematics solution has no solution");
+//        ROS_INFO("davinci ik solver has no solution");
+        //  davinci ik solver has no solution
         break;
       }
       case 1 :
       {
+//        ROS_INFO("davinci ik solver has one solution");
+        //  davinci ik solver has one solution
         std::vector<double> solution_ik;
         convertVectorq7x1ToStdVector(davinci_inverse_.get_soln(), solution_ik);
         solution.push_back(solution_ik);
@@ -185,10 +194,11 @@ namespace davinci_moveit_kinematics
 
       default:
       {
-        ROS_ERROR("davinci inverse kinematics solution has multiple solutions which is not allowed");
+        ROS_INFO("davinci ik solver has multiple solutions which is not allowed");
         break;
       }
     }
+//    ROS_INFO("Out of switch");
   }
 
   void DavinciMoveitIK::getSolverInfo(moveit_msgs::KinematicSolverInfo &info)
@@ -204,6 +214,8 @@ namespace davinci_moveit_kinematics
 =======
     moveit_msgs::JointLimits limit;
     info.joint_names.push_back(joint->name);  // Joints are coming in reverse order
+
+    ROS_INFO_STREAM("Added joints name %s " << joint->name.c_str() << " and its joint type %d " << joint->type);
 
     if(joint->type != urdf::Joint::CONTINUOUS)
     {
@@ -265,9 +277,9 @@ namespace davinci_moveit_kinematics
 
     vec_out.clear();
     vec_out.resize(NUM_JOINTS_ARM7DOF, 0.0);
-    for(int i = 0; i < vec_in.size(); i++)
+    for(int i = 0; i < vec_out.size(); i++)
     {
-      vec_out.push_back(vec_in(i));
+      vec_out[i] = vec_in(i);
     }
   }
 }

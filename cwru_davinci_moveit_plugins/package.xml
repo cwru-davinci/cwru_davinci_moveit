@@ -52,11 +52,31 @@
   <build_depend>moveit_core</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>cwru_davinci_kinematics</build_depend>
+<<<<<<< HEAD
   <build_export_depend>moveit_core</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>moveit_core</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>cwru_davinci_kinematics</exec_depend>
+=======
+  <build_depend>kdl_parser</build_depend>
+  <build_depend>urdf</build_depend>
+  <build_depend>tf_conversions</build_depend>
+  <test_depend>rostest</test_depend>
+
+  <!--<build_export_depend>moveit_core</build_export_depend>-->
+  <!--<build_export_depend>roscpp</build_export_depend>-->
+  <exec_depend>moveit_core</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>cwru_davinci_kinematics</exec_depend>
+  <exec_depend>kdl_parser</exec_depend>
+  <exec_depend>urdf</exec_depend>
+  <exec_depend>tf_conversions</exec_depend>
+
+  <exec_depend>rostest</exec_depend>
+  <!--<exec_depend>moveit_msgs</exec_depend>-->
+
+>>>>>>> cbe3dad... Testing kinematics plugin
 
 
   <!-- The export tag contains other, unspecified, tags -->

@@ -193,10 +193,22 @@ install(TARGETS ${MOVEIT_LIB_NAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DEST
 ##############
 #
 ### Add gtest based cpp test target and link libraries
-catkin_add_gtest(${PROJECT_NAME}-test test/test_davinci_moveit_kinematics_plugin.cpp)
- if(TARGET ${PROJECT_NAME}-test)
-   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
- endif()
+#catkin_add_gtest(test_davinci_moveit_kinematics_plugin test/test_davinci_moveit_kinematics_plugin.cpp)
+# if(TARGET test_davinci_moveit_kinematics_plugin)
+#   target_link_libraries(test_davinci_moveit_kinematics_plugin ${PROJECT_SOURCE_DIR} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+# endif()
 #
 ### Add folders to be run by python nosetests
 ## catkin_add_nosetests(test)
+
+# create a gtest executable with target name "test_mynode"
+# which is not built by "make all" but only by "make tests"
+# add one/multiple source files to the executable target
+# register the rostest launch file "test/mynode.test"
+if (CATKIN_ENABLE_TESTING)
+
+    add_rostest_gtest(test_davinci_moveit_kinematics_plugin test/test_davinci_moveit_kinematics_plugin.test test/test_davinci_moveit_kinematics_plugin.cpp)
+
+    # you will likely need to link other libraries to your test executable
+    target_link_libraries(test_davinci_moveit_kinematics_plugin ${PROJECT_SOURCE_DIR} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+endif()

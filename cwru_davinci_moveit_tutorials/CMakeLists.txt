@@ -140,6 +140,7 @@ include_directories(${catkin_INCLUDE_DIRS})
 add_executable(davinci_move_group_interface_tutorial src/davinci_move_group_interface_tutorial.cpp)
 add_executable(davinci_kinematic_model_tutorial src/davinci_kinematic_model_tutorial.cpp)
 add_executable(davinci_planning_scene_tutorial src/davinci_planning_scene_tutorial.cpp)
+add_executable(davinci_motion_planner_tutorial src/davinci_motion_planner_tutorial.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -155,6 +156,7 @@ add_executable(davinci_planning_scene_tutorial src/davinci_planning_scene_tutori
 target_link_libraries(davinci_move_group_interface_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(davinci_kinematic_model_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(davinci_planning_scene_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(davinci_motion_planner_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 #############
 ## Install ##

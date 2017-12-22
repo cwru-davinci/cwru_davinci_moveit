@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+    <!-- send davinci PSM1 urdf to param server -->
+    <!-- <param name="robot_description" command="$(find xacro)/xacro '$(find cwru_davinci_geometry_models)/model/PSM1.urdf.xacro'" />
+    <remap from="robot_description_semantic" to="robot_description"/> -->
+
+    <include file="$(find cwru_davinci_psm_one_moveit_config)/launch/planning_context.launch">
+        <arg name="load_robot_description" value="true"/>
+    </include>
+
+    <!--<test-->
+            <!--test-name="test_davinci_moveit_kinematics_plugin"-->
+            <!--pkg="cwru_davinci_moveit_plugins"-->
+            <!--type="test_davinci_moveit_kinematics_plugin"-->
+            <!--time-limit = "100000.00">-->
+        <!--<param name="tip_name" value="PSM1tool_tip_link" />-->
+        <!--<param name="root_name" value="world" />-->
+        <!--<param name="search_discretization" value="0.025" />-->
+        <!--<param name="plugin_name" value="davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin"/>-->
+    <!--</test>-->
+</launch>

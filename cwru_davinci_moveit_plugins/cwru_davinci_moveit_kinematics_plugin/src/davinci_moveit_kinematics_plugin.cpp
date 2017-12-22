@@ -34,8 +34,9 @@
 
 /* Author: Su Lu */
 
-#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_plugin.h>
 #include <pluginlib/class_list_macros.h>
+#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_plugin.h>
+#include <moveit/kinematics_base/kinematics_base.h>
 
 
 //register DavinciMoveitKinematicsPlugin as a KinematicsBase implementation
@@ -108,7 +109,7 @@ namespace davinci_moveit_kinematics
     }
     else
     {
-      ROS_DEBUG("An IK solution could not be found");
+      ROS_INFO("An IK solution could not be found");
       error_code.val = error_code.NO_IK_SOLUTION;
       return false;
     }
@@ -234,7 +235,7 @@ namespace davinci_moveit_kinematics
     }
     else
     {
-      ROS_DEBUG("An IK solution could not be found");
+      ROS_INFO("An IK solution could not be found");
       return false;
 >>>>>>> 1d679f4... Updated
     }
@@ -257,17 +258,20 @@ namespace davinci_moveit_kinematics
     tf::Stamped<tf::Pose> tf_pose;
 
     jnt_pos_in.resize(dimension_);
+//    ROS_INFO("Numebr of rows in KDL::JntArrary object jnt_pos_in: %d", jnt_pos_in.rows());
     for(int i=0; i < dimension_; i++)
     {
       jnt_pos_in(i) = joint_angles[i];
-      // ROS_DEBUG("Joint angle: %d %f",i,joint_angles[i]);
+//      ROS_ERROR("Joint angle: %d %f",i,jnt_pos_in(i));
     }
+
+//    ROS_ERROR("Number of joints %d", kdl_chain_.getNrOfJoints());
 
     poses.resize(link_names.size());
     bool valid = true;
     for(unsigned int i=0; i < poses.size(); i++)
     {
-      // ROS_DEBUG("End effector index: %d",davinci_moveit_kinematics::getKDLSegmentIndex(kdl_chain_,link_names[i]));
+//      ROS_INFO("End effector index: %d",davinci_moveit_kinematics::getKDLSegmentIndex(kdl_chain_,link_names[i]));
       if(jnt_to_pose_solver_ptr_->
         JntToCart(jnt_pos_in, p_out, davinci_moveit_kinematics::getKDLSegmentIndex(kdl_chain_, link_names[i])) >= 0)
       {
@@ -298,20 +302,20 @@ namespace davinci_moveit_kinematics
     ros::NodeHandle private_handle("~/" + group_name);
     dimension_ = davinci_kinematics::NUM_JOINTS_ARM7DOF;  // TODO left to decide
 
-    if(!davinci_moveit_kinematics::loadRobotModel(private_handle, robot_model, xml_string) && private_handle.ok())
+    while(!davinci_moveit_kinematics::loadRobotModel(private_handle, robot_model, xml_string) && private_handle.ok())
     {
       ROS_ERROR("Could not load robot model. Are you sure the robot model is on the parameter server?");
       ros::Duration(0.5).sleep();
     }
 
-    ROS_DEBUG("Loading KDL Tree");
+    ROS_INFO("Loading KDL Tree");
     if(!davinci_moveit_kinematics::getKDLChain(xml_string, base_frame, tip_frame, kdl_chain_))
     {
       active_ = false;
       ROS_ERROR("Could not load KDL tree");
     }
 
-    ROS_DEBUG("Advertising services");
+    ROS_INFO("Advertising services");
     jnt_to_pose_solver_ptr_.reset(
       new KDL::ChainFkSolverPos_recursive(kdl_chain_));  // reset() is a member method of boost::shared_ptr class
     private_handle.param<int>("free_angle", free_angle_, 2);  // TODO, need to change
@@ -330,21 +334,28 @@ namespace davinci_moveit_kinematics
     {
       davinci_moveit_ik_solver_ptr_->getSolverInfo(ik_solver_info_);
       davinci_moveit_kinematics::getKDLChainInfo(kdl_chain_, fk_solver_info_);
+      ROS_INFO("Number of joints in KDL::Chain object kdl_chain_: %d", kdl_chain_.getNrOfJoints());
+
+//      bool exit_value;
+//      KDL::Segment root_segment;
+//      KDL::Segment leaf_segment;
+//      exit_value = kdl_chain_.getSegment(0);
+
       fk_solver_info_.joint_names = ik_solver_info_.joint_names;
 
       for(unsigned int i = 0; i < ik_solver_info_.joint_names.size(); i++)
       {
-        ROS_DEBUG("daVinciKinematics:: joint name: %s", ik_solver_info_.joint_names[i].c_str());
+        ROS_INFO("daVinciKinematics:: joint name: %s", ik_solver_info_.joint_names[i].c_str());
       }
       for(unsigned int i = 0; i < ik_solver_info_.link_names.size(); i++)
       {
-        ROS_DEBUG("daVinciKinematics can solve IK for %s", ik_solver_info_.link_names[i].c_str());
+        ROS_INFO("daVinciKinematics can solve IK for %s", ik_solver_info_.link_names[i].c_str());
       }
       for(unsigned int i = 0; i < fk_solver_info_.link_names.size(); i++)
       {
-        ROS_DEBUG("daVinciKinematics can solve FK for %s", fk_solver_info_.link_names[i].c_str());
+        ROS_INFO("daVinciKinematics can solve FK for %s", fk_solver_info_.link_names[i].c_str());
       }
-      ROS_DEBUG("DavinciMoveitKinematicsPlugin::active for %s", group_name.c_str());
+      ROS_INFO("DavinciMoveitKinematicsPlugin::active for %s", group_name.c_str());
       active_ = true;
     }
 

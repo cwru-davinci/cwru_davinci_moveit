@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cwru_davinci_moveit_plugins)
 
+## For using gdb to debug ROS
+#SET(CMAKE_BUILD_TYPE "Debug")
+#SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
+#SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
@@ -9,9 +14,27 @@ add_compile_options(-std=c++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   moveit_core
+  pluginlib
   roscpp
+<<<<<<< HEAD
   davinci_kinematics
+=======
+  cwru_davinci_kinematics
+  urdf
+  kdl_parser
+  tf
+  tf_conversions
+  moveit_ros_planning
+<<<<<<< HEAD
+>>>>>>> cbe3dad... Testing kinematics plugin
+=======
+  moveit_ros_planning_interface
+>>>>>>> f5ceac8... updated
 )
+
+if (CATKIN_ENABLE_TESTING)
+    find_package(rostest REQUIRED)
+endif()
 
 ## System dependencies are found with CMake's conventions
 #find_package(Eigen REQUIRED)
@@ -112,7 +135,7 @@ catkin_package(
 =======
   INCLUDE_DIRS
   LIBRARIES
-  CATKIN_DEPENDS moveit_core roscpp
+  CATKIN_DEPENDS roscpp moveit_core
   DEPENDS moveit_core
 >>>>>>> 0f442f5... Updated
 )
