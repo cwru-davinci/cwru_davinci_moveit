@@ -1,6 +1,12 @@
 controller_list:
-  - name: dvrk_psm_one_controller
+  - name: "dvrk_psm/dvrk_psm_one_controller"
     action_ns: follow_joint_trajectory
     type: FollowJointTrajectory
-    default: true
-    joints: [outer_yaw, outer_pitch, outer_insertion, outer_roll, outer_wrist_pitch, outer_wrist_yaw, tool_tip_joint_]
+    joints:
+      - outer_yaw
+      - outer_pitch
+      - outer_insertion
+      - outer_roll
+      - outer_wrist_pitch
+      - outer_wrist_yaw
+      - PSM1tool_tip_joint_

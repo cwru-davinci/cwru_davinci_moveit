@@ -1,1 +1,1 @@
-controller_joint_names: [outer_yaw, outer_pitch, outer_insertion, outer_roll, outer_wrist_pitch, outer_wrist_yaw, tool_tip_joint_]
+controller_joint_names: [outer_yaw, outer_pitch, outer_insertion, outer_roll, outer_wrist_pitch, outer_wrist_yaw, PSM1tool_tip_joint_]
