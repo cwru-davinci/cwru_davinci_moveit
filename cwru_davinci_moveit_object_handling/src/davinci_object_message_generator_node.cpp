@@ -34,46 +34,18 @@
 
 /* Author: Su Lu */
 
-#ifndef CWRU_DAVINCI_MOVEIT_OBJECT_HANDLING_DAVINCI_MOVEIT_HELPER_H
-#define CWRU_DAVINCI_MOVEIT_OBJECT_HANDLING_DAVINCI_MOVEIT_HELPER_H
-
+#include <cwru_davinci_moveit_object_handling/davinci_object_message_generator.h>
 #include <ros/ros.h>
-#include <boost/thread/mutex.hpp>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/QuaternionStamped.h>
-#include <sensor_msgs/JointState.h>
-#include <shape_msgs/SolidPrimitive.h>
 
-#include <moveit_msgs/Constraints.h>
-#include <eigen_conversions/eigen_msg.h>
-
-namespace davinci_moveit_object_handling
+int main(int argc, char** argv)
 {
+  ros::init(argc, argv, "object_message_generator");
+  ros::NodeHandle node_priv("~");
+  ros::NodeHandle node("");
+  davinci_moveit_object_handling::DavinciObjectMessageGenerator generator(node_priv, node);
 
-  class DavinciMoveitHelper
-  {
-  public:
-    typedef boost::shared_ptr<moveit_msgs::PositionConstraint> PositionConstraintPtr;
-    typedef boost::shared_ptr<shape_msgs::SolidPrimitive> SolidPrimitivePtr;
+  ros::spin();
 
-    DavinciMoveitHelper(){};
-    ~DavinciMoveitHelper(){};
-
-    /**
-     * Adds goal constraints for the link to be at this pose.
-     * \param type if 0, only position is considered. If 1, position and
-     *      orientation are considered, and if 2 then only orientation is considered.
-     */
-    static moveit_msgs::Constraints getPoseConstraint(const std::string &link_name,
-                                                      const geometry_msgs::PoseStamped &pose,
-                                                      double tolerance_pos,
-                                                      double tolerance_angle,
-                                                      int type);
-
-
-
-  };
-
+  return 0;
 }
 
-#endif //CWRU_DAVINCI_MOVEIT_OBJECT_HANDLING_DAVINCI_MOVEIT_HELPER_H

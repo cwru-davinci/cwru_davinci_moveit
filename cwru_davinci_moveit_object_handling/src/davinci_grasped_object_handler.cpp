@@ -41,7 +41,7 @@
 
 namespace davinci_moveit_object_handling
 {
-  DavinciGraspedObjectHandlerMoveit::DavinciGraspedObjectHandlerMoveit(const ros::NodeHandle &nodeHandle,
+  DavinciMoveitGraspedObjectHandler::DavinciMoveitGraspedObjectHandler(const ros::NodeHandle &nodeHandle,
                                                                        const std::vector<std::string> &gripper_link_names,
                                                                        const std::string &get_planning_scene_service,
                                                                        const std::string &set_planning_scene_topic) :
@@ -51,7 +51,7 @@ namespace davinci_moveit_object_handling
     initializeClient();
   }
 
-  bool DavinciGraspedObjectHandlerMoveit::attachObjectToRobot(const std::string &object_name,
+  bool DavinciMoveitGraspedObjectHandler::attachObjectToRobot(const std::string &object_name,
                                                               const std::string &attach_link_name)
   {
     bool is_attached = false;
@@ -68,7 +68,7 @@ namespace davinci_moveit_object_handling
     return is_attached;
   }
 
-  bool DavinciGraspedObjectHandlerMoveit::detachObjectFromRobot(const std::string &object_name)
+  bool DavinciMoveitGraspedObjectHandler::detachObjectFromRobot(const std::string &object_name)
   {
     bool is_detached = false;
     if(moveit_planning_scene_diff_publisher_.getNumSubscribers() < 1)
@@ -93,7 +93,7 @@ namespace davinci_moveit_object_handling
     moveit_msgs::AttachedCollisionObject attached_obj;
     if(!hasObject(object_name, pscene_srv.response.scene.robot_state.attached_collision_objects, attached_obj))
     {
-      ROS_WARN("DavinciGraspedObjectHandlerMoveit: Object %s was not attached to robot, but it was tried to detach it.",
+      ROS_WARN("DavinciMoveitGraspedObjectHandler: Object %s was not attached to robot, but it was tried to detach it.",
                object_name.c_str());
       is_detached = true;
       return is_detached;
@@ -110,7 +110,7 @@ namespace davinci_moveit_object_handling
     // Transform the object into the link coordinate frame:
     /*moveit_msgs::CollisionObject collision_object=attached_obj.object;
     if (!transformCollisionObject(target_frame, collision_object)) {
-        ROS_ERROR("DavinciGraspedObjectHandlerMoveit: Could nto transform object to world frame");
+        ROS_ERROR("DavinciMoveitGraspedObjectHandler: Could nto transform object to world frame");
         return false;
     }
     //send object as MoveIt collision object:
@@ -125,18 +125,18 @@ namespace davinci_moveit_object_handling
     return is_detached;
   }
 
-  bool DavinciGraspedObjectHandlerMoveit::attachObjectToRobot(const std::string &name,
+  bool DavinciMoveitGraspedObjectHandler::attachObjectToRobot(const std::string &name,
                                                               const std::string &link_name,
                                                               const std::vector<std::string> &allowed_touched_links)
   {
     bool is_attached_to_robot = false;
 
-    ROS_INFO("DavinciGraspedObjectHandlerMoveit: Attaching %s to %s", name.c_str(), link_name.c_str());
+    ROS_INFO("DavinciMoveitGraspedObjectHandler: Attaching %s to %s", name.c_str(), link_name.c_str());
 
     if(moveit_planning_scene_diff_publisher_.getNumSubscribers() < 1)
     {
       ROS_ERROR(
-        "DavinciGraspedObjectHandlerMoveit: attachObjectToRobot: No node subscribed to planning scene publisher.");
+        "DavinciMoveitGraspedObjectHandler: attachObjectToRobot: No node subscribed to planning scene publisher.");
       return is_attached_to_robot;
     }
 
@@ -146,7 +146,7 @@ namespace davinci_moveit_object_handling
 
     if(!moveit_planning_scene_diff_client_.call(pscene_srv))
     {
-      ROS_ERROR("DavinciGraspedObjectHandlerMoveit: Can't obtain planning scene in order to attach object.");
+      ROS_ERROR("DavinciMoveitGraspedObjectHandler: Can't obtain planning scene in order to attach object.");
       return is_attached_to_robot;
     }
 
@@ -157,7 +157,7 @@ namespace davinci_moveit_object_handling
     if(!hasObject(name, pscene_srv.response.scene.world.collision_objects, remove_object))
     {
       ROS_ERROR(
-        "DavinciGraspedObjectHandlerMoveit: Object %s was not in the scene, but it was tried to attach it to robot.",
+        "DavinciMoveitGraspedObjectHandler: Object %s was not in the scene, but it was tried to attach it to robot.",
         name.c_str());
       return is_attached_to_robot;
     }
@@ -172,7 +172,7 @@ namespace davinci_moveit_object_handling
     //  transform the object into the link coordinate frame
     if(!transformCollisionObject(link_name, remove_object))
     {
-      ROS_ERROR("DavinciGraspedObjectHandlerMoveit: Could not transform object to link frame");
+      ROS_ERROR("DavinciMoveitGraspedObjectHandler: Could not transform object to link frame");
       return is_attached_to_robot;
     }
 
@@ -194,7 +194,7 @@ namespace davinci_moveit_object_handling
 
       if(!moveit_planning_scene_diff_client_.call(pscene_srv))
       {
-        ROS_ERROR("DavinciGraspedObjectHandlerMoveit: Can't obtain planning scene");
+        ROS_ERROR("DavinciMoveitGraspedObjectHandler: Can't obtain planning scene");
         return is_attached_to_robot;
       }
 
@@ -202,10 +202,10 @@ namespace davinci_moveit_object_handling
 
       if(hasObject(name, pscene_srv.response.scene.robot_state.attached_collision_objects, obj))
       {
-        ROS_INFO("DavinciGraspedObjectHandlerMoveit: Scene is updated with attached object.");
+        ROS_INFO("DavinciMoveitGraspedObjectHandler: Scene is updated with attached object.");
         break;
       }
-      ROS_INFO("DavinciGraspedObjectHandlerMoveit: Waiting for scene update to attach object...");
+      ROS_INFO("DavinciMoveitGraspedObjectHandler: Waiting for scene update to attach object...");
       ros::Duration(0.5).sleep();
     }
 
@@ -216,7 +216,7 @@ namespace davinci_moveit_object_handling
   }
 
 
-  bool DavinciGraspedObjectHandlerMoveit::hasObject(const std::string &name,
+  bool DavinciMoveitGraspedObjectHandler::hasObject(const std::string &name,
                                                     const std::vector<moveit_msgs::AttachedCollisionObject> &objs,
                                                     moveit_msgs::AttachedCollisionObject &obj)
   {
@@ -231,7 +231,7 @@ namespace davinci_moveit_object_handling
     return false;
   }
 
-  bool DavinciGraspedObjectHandlerMoveit::hasObject(const std::string &name,
+  bool DavinciMoveitGraspedObjectHandler::hasObject(const std::string &name,
                                                     const std::vector<moveit_msgs::CollisionObject> &objs,
                                                     moveit_msgs::CollisionObject &obj)
   {
@@ -247,7 +247,7 @@ namespace davinci_moveit_object_handling
   }
 
 
-  bool DavinciGraspedObjectHandlerMoveit::removeObject(const std::string &name,
+  bool DavinciMoveitGraspedObjectHandler::removeObject(const std::string &name,
                                                        std::vector<moveit_msgs::CollisionObject> &objs)
   {
 
@@ -263,7 +263,7 @@ namespace davinci_moveit_object_handling
   }
 
 
-  bool DavinciGraspedObjectHandlerMoveit::removeObject(const std::string &name,
+  bool DavinciMoveitGraspedObjectHandler::removeObject(const std::string &name,
                                                        std::vector<moveit_msgs::AttachedCollisionObject> &objs)
   {
     for(int i = 0; i < objs.size(); ++i)
@@ -278,24 +278,24 @@ namespace davinci_moveit_object_handling
   }
 
 
-  void DavinciGraspedObjectHandlerMoveit::initializePublisher(const std::string &set_planning_scene_topic)
+  void DavinciMoveitGraspedObjectHandler::initializePublisher(const std::string &set_planning_scene_topic)
   {
     moveit_planning_scene_diff_publisher_ = nh_.advertise<moveit_msgs::PlanningScene>(set_planning_scene_topic, 1);
   }
 
-  void DavinciGraspedObjectHandlerMoveit::initializeClient(const std::string &get_planning_scene_service)
+  void DavinciMoveitGraspedObjectHandler::initializeClient(const std::string &get_planning_scene_service)
   {
     moveit_planning_scene_diff_client_ = nh_.serviceClient<moveit_msgs::GetPlanningScene>(get_planning_scene_service);
   }
 
 
-  bool DavinciGraspedObjectHandlerMoveit::transformPose(const geometry_msgs::Pose &pose, const std::string &from_frame,
+  bool DavinciMoveitGraspedObjectHandler::transformPose(const geometry_msgs::Pose &pose, const std::string &from_frame,
                                                         const std::string &to_frame, geometry_msgs::Pose &p)
   {
     bool is_transformed = false;
     if(to_frame.empty() || from_frame.empty())
     {
-      ROS_ERROR("DavinciGraspedObjectHandlerMoveit::transformPose(): Both frames must be set.");
+      ROS_ERROR("DavinciMoveitGraspedObjectHandler::transformPose(): Both frames must be set.");
       return is_transformed;
     }
 
@@ -312,7 +312,7 @@ namespace davinci_moveit_object_handling
     new_pose.header.stamp = ros::Time(0); //in order to get the most recent transform
     if(convenience_ros_functions::ROSFunctions::Singleton()->transformPose(new_pose, to_frame, result_pose, 1) != 0)
     {
-      ROS_ERROR("DavinciGraspedObjectHandlerMoveit: Transform into frame %s failed. Ignoring transform.",
+      ROS_ERROR("DavinciMoveitGraspedObjectHandler: Transform into frame %s failed. Ignoring transform.",
                 to_frame.c_str());
       return is_transformed;
     }
@@ -322,7 +322,7 @@ namespace davinci_moveit_object_handling
     return is_transformed;
   }
 
-  bool DavinciGraspedObjectHandlerMoveit::transformCollisionObject(const std::string &to_frame,
+  bool DavinciMoveitGraspedObjectHandler::transformCollisionObject(const std::string &to_frame,
                                                                    moveit_msgs::CollisionObject &collision_object)
   {
     bool is_transformed = false;
@@ -332,7 +332,7 @@ namespace davinci_moveit_object_handling
       geometry_msgs::Pose &p = collision_object.primitive_poses[i];
       if(!transformPose(p, collision_object.header.frame_id, to_frame, p))
       {
-        ROS_ERROR("DavinciGraspedObjectHandlerMoveit: Could not transform object to link frame %s", to_frame.c_str());
+        ROS_ERROR("DavinciMoveitGraspedObjectHandler: Could not transform object to link frame %s", to_frame.c_str());
         return is_transformed;
       }
 
@@ -342,7 +342,7 @@ namespace davinci_moveit_object_handling
         collision_object.mesh_poses[i] = p;
         if(!transformPose(p, collision_object.header.frame_id, to_frame, p))
         {
-          ROS_ERROR("DavinciGraspedObjectHandlerMoveit: Could not transform object mesh to link frame %s",
+          ROS_ERROR("DavinciMoveitGraspedObjectHandler: Could not transform object mesh to link frame %s",
                     to_frame.c_str());
           return is_transformed;
         }

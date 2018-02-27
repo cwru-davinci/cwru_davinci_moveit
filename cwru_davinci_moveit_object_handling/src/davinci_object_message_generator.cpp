@@ -433,9 +433,9 @@ namespace davinci_moveit_object_handling
 
     std::set<std::string> ret;
 
-    for(std::vector<moveit_msgs::CollisionObject>::iterator itr = obj.begin(); itr != obj.end(), ++itr)
+    for(std::vector<moveit_msgs::CollisionObject>::iterator itr = obj.begin(); itr != obj.end(); ++itr)
     {
-      ret.insert(itr->object.id);
+      ret.insert(itr->id);
     }
 
     return ret;
@@ -467,9 +467,11 @@ namespace davinci_moveit_object_handling
     std::vector<moveit_msgs::AttachedCollisionObject> attached_obj = getCurrentAttachedCollisionObjects();
 
     std::set<std::string> ret;
-    for(std::vector<moveit_msgs::AttachedCollisionObject>::iterator it = obj.begin(); it != obj.end(); ++it)
+    for(std::vector<moveit_msgs::AttachedCollisionObject>::iterator it = attached_obj.begin();
+        it != attached_obj.end(); ++it)
     {
-      ret.insert(it -> object.id);
+
+      ret.insert(it->object.id);
     }
 
     return ret;

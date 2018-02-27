@@ -143,7 +143,7 @@ namespace davinci_moveit_object_handling
     ros::ServiceClient planning_scene_client_;
 
     // all objects which were already added
-    std::string<std::string> added_objects_;
+    std::set<std::string> added_objects_;
 
     // objects to skip as collision objects:
     // whenever an Object.msg message arrives to

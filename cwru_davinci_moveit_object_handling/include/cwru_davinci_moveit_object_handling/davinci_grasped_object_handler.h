@@ -73,11 +73,11 @@ namespace davinci_moveit_object_handling
    * @brief Implementation of GraspedObjectHandler for MoveIt! collision object.
    */
 
-  class DavinciGraspedObjectHandlerMoveit : public DavinciGraspedObjectHandler
+  class DavinciMoveitGraspedObjectHandler : public DavinciGraspedObjectHandler
   {
   public:
 
-    DavinciGraspedObjectHandlerMoveit(const ros::NodeHandle &nodeHandle,
+    DavinciMoveitGraspedObjectHandler(const ros::NodeHandle &nodeHandle,
                                       const std::vector <std::string> &gripper_link_names,
                                       const std::string &get_planning_scene_service = "/get_planning_scene",
                                       const std::string &set_planning_scene_topic = "/planning_scene");

@@ -37,6 +37,7 @@
 #include <cwru_davinci_moveit_object_handling/davinci_moveit_helper.h>
 #include <geometric_shapes/solid_primitive_dims.h>
 
+
 namespace davinci_moveit_object_handling
 {
 //  std::ostream& operator<<(std::ostream& o, const Eigen::Quaterniond& q)
@@ -55,8 +56,24 @@ namespace davinci_moveit_object_handling
 //    return bv;
 //  }
 
-  DavinciMoveitHelper::DavinciMoveitHelper();
-  DavinciMoveitHelper::~DavinciMoveitHelper();
+  shape_msgs::SolidPrimitive getSphere(const double& radius)
+  {
+    shape_msgs::SolidPrimitive bv;
+    bv.type = shape_msgs::SolidPrimitive::SPHERE;
+    bv.dimensions.resize(geometric_shapes::SolidPrimitiveDimCount<shape_msgs::SolidPrimitive::SPHERE>::value);
+    bv.dimensions[shape_msgs::SolidPrimitive::SPHERE_RADIUS] = radius;
+    return bv;
+  }
+
+//  DavinciMoveitHelper::DavinciMoveitHelper()
+//  {
+//
+//  }
+//
+//  DavinciMoveitHelper::~DavinciMoveitHelper()
+//  {
+//
+//  }
 
   moveit_msgs::Constraints DavinciMoveitHelper::getPoseConstraint(const std::string &link_name,
                                                                   const geometry_msgs::PoseStamped &pose,
