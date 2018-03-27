@@ -3,5 +3,3 @@ psm_one:
   kinematics_solver_search_resolution: 0.005
   kinematics_solver_timeout: 0.005
   kinematics_solver_attempts: 3
-
-  # davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin kdl_kinematics_plugin/KDLKinematicsPlugin

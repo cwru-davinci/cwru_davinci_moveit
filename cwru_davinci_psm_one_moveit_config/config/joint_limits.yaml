@@ -2,7 +2,17 @@
 # Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
 # Joint limits can be turned off with [has_velocity_limits, has_acceleration_limits]
 joint_limits:
-  PSM1tool_tip_joint_:
+  jaw:
+    has_velocity_limits: true
+    max_velocity: 10
+    has_acceleration_limits: false
+    max_acceleration: 0
+  jaw_mimic_1:
+    has_velocity_limits: true
+    max_velocity: 10
+    has_acceleration_limits: false
+    max_acceleration: 0
+  jaw_mimic_2:
     has_velocity_limits: true
     max_velocity: 10
     has_acceleration_limits: false

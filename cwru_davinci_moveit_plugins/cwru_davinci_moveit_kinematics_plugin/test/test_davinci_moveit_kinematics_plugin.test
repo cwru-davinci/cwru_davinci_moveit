@@ -12,9 +12,10 @@
     <test
             test-name="test_davinci_moveit_kinematics_plugin"
             pkg="cwru_davinci_moveit_plugins"
-            type="test_davinci_moveit_kinematics_plugin">
+            type="test_davinci_moveit_kinematics_plugin"
+            launch-prefix="terminator -x gdb --data-directory=/usr/share/gdb/ --args">
         <param name="tip_name" value="PSM1tool_tip_link" />
-        <param name="root_name" value="world" />
+        <param name="root_name" value="PSM1psm_base_link" />
         <param name="search_discretization" value="0.025" />
         <param name="plugin_name" value="davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin"/>
     </test>

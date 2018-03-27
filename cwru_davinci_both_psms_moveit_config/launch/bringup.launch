@@ -1,0 +1,18 @@
+<launch>
+    <!-- <include file="$(find cwru_davinci_both_psms_moveit_config)/launch/dvrk_psm_both_sim.launch" /> -->s
+
+    <include file="$(find cwru_davinci_control)/launch/dvrk_psm_joint_state_controller.launch" />
+
+    <include file="$(find cwru_davinci_control)/launch/dvrk_psm_one_controller.launch" />
+    <include file="$(find cwru_davinci_control)/launch/dvrk_psm_two_controller.launch" />
+
+    <include file="$(find cwru_davinci_both_psms_moveit_config)/launch/moveit_planning_execution.launch" />
+    <!--     <include file="$(find cwru_davinci_psm_one_moveit_config)/launch/move_group.launch" />
+        <include file="$(find cwru_davinci_psm_one_moveit_config)/launch/moveit_rviz.launch">
+            <arg name="config" value="true" />
+        </include> -->
+
+    <!-- <include file="$(find cwru_davinci_psm_one_moveit_config)/launch/default_warehouse_db.launch" /> -->
+
+
+</launch>

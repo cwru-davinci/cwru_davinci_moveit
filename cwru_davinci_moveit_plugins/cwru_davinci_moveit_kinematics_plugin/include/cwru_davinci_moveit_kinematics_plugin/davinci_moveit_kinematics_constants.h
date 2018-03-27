@@ -39,7 +39,7 @@
 
 namespace davinci_moveit_kinematics
 {
-  static const int NUM_JOINTS_ARM7DOF = 7;
+  static const int NUM_JOINTS_ARM7DOF = 6;
   static const double IK_EPS = 1e-5;
 }
 

@@ -10,25 +10,24 @@
     <!--CHAINS: When a chain is specified, all the links along the chain (including endpoints) are included in the group. Additionally, all the joints that are parents to included links are also included. This means that joints along the chain and the parent joint of the base link are included in the group-->
     <!--SUBGROUPS: Groups can also be formed by referencing to already defined group names-->
     <group name="psm_one">
-        <chain base_link="world" tip_link="PSM1tool_tip_link" />
+        <chain base_link="PSM1psm_base_link" tip_link="PSM1tool_tip_link" />
     </group>
-    <!--GROUP STATES: Purpose: Define a named state for a particular group, in terms of joint values. This is useful to define states like 'folded arms'-->
-    <group_state name="home" group="psm_one">
-        <joint name="outer_insertion" value="0" />
-        <joint name="outer_pitch" value="0" />
-        <joint name="outer_roll" value="0" />
-        <joint name="outer_wrist_pitch" value="0" />
-        <joint name="outer_wrist_yaw" value="0" />
-        <joint name="outer_yaw" value="0" />
-    </group_state>
+    <group name="psm_one_gripper">
+        <link name="PSM1tool_tip_link" />
+        <link name="PSM1tool_wrist_sca_ee_link_0" />
+        <link name="PSM1tool_wrist_sca_ee_link_1" />
+        <link name="PSM1tool_wrist_sca_ee_link_2" />
+    </group>
+    <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
+    <end_effector name="psm_one_gripper" parent_link="PSM1tool_wrist_sca_shaft_link" group="psm_one_gripper" />
     <!--PASSIVE JOINT: Purpose: this element is used to mark joints that are not actuated-->
+    <passive_joint name="jaw_mimic_1" />
+    <passive_joint name="jaw_mimic_2" />
     <passive_joint name="outer_pitch_1" />
     <passive_joint name="outer_pitch_3" />
     <passive_joint name="outer_pitch_5" />
     <passive_joint name="outer_pitch_4" />
     <passive_joint name="outer_pitch_2" />
-    <passive_joint name="jaw_mimic_1" />
-    <passive_joint name="jaw_mimic_2" />
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
     <disable_collisions link1="PSM1outer_insertion_link" link2="PSM1outer_pitch_back_link" reason="Never" />
     <disable_collisions link1="PSM1outer_insertion_link" link2="PSM1outer_pitch_bottom_link" reason="Adjacent" />
@@ -126,10 +125,8 @@
     <disable_collisions link1="PSM1tool_wrist_link" link2="PSM1tool_wrist_sca_shaft_link" reason="Never" />
     <disable_collisions link1="PSM1tool_wrist_link" link2="PSM1tool_wrist_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM1tool_wrist_sca_ee_link_1" link2="PSM1tool_wrist_sca_ee_link_2" reason="Default" />
-    <disable_collisions link1="PSM1tool_wrist_sca_ee_link_1" link2="PSM1tool_wrist_sca_link" reason="User" />
     <disable_collisions link1="PSM1tool_wrist_sca_ee_link_1" link2="PSM1tool_wrist_sca_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM1tool_wrist_sca_ee_link_1" link2="PSM1tool_wrist_shaft_link" reason="Never" />
-    <disable_collisions link1="PSM1tool_wrist_sca_ee_link_2" link2="PSM1tool_wrist_sca_link" reason="User" />
     <disable_collisions link1="PSM1tool_wrist_sca_ee_link_2" link2="PSM1tool_wrist_sca_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM1tool_wrist_sca_ee_link_2" link2="PSM1tool_wrist_shaft_link" reason="Never" />
     <disable_collisions link1="PSM1tool_wrist_sca_link" link2="PSM1tool_wrist_sca_shaft_link" reason="Adjacent" />

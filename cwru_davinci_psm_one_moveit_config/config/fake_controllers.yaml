@@ -7,4 +7,6 @@ controller_list:
       - outer_roll
       - outer_wrist_pitch
       - outer_wrist_yaw
-      - PSM1tool_tip_joint_
+  - name: fake_psm_one_gripper_controller
+    joints:
+      - jaw

@@ -8,5 +8,5 @@
     <param name="use_controller_manager" value="$(arg use_controller_manager)" />
 
     <!-- Load joint controller configurations from YAML file to parameter server -->
-    <rosparam file="$(find cwru_davinci_psm_one_moveit_config)/config/controllers.yaml"/>
+    <rosparam file="$(find cwru_davinci_both_psms_moveit_config)/config/controllers.yaml"/>
 </launch>
