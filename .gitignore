@@ -7,5 +7,15 @@ cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
+cwru_davinci_moveit.config
+cwru_davinci_moveit.creator
+cwru_davinci_moveit.creator.user
+cwru_davinci_moveit.files
+cwru_davinci_moveit.includes
 cmake-build-debug
 .idea
+.config
+.creator
+.user
+.files
+.includes

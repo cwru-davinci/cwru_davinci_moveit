@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2008, Willow Garage, Inc.
+ *  Copyright (c) 2018, Case Western Reserve University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Willow Garage nor the names of its
+ *   * Neither the name of SRI International nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -47,8 +47,9 @@ namespace davinci_moveit_object_handling
                                                                        const std::string &set_planning_scene_topic) :
     nh_(nodeHandle), gripper_link_names_(gripper_link_names)
   {
-    initializePublisher();
-    initializeClient();
+    convenience_ros_functions::ROSFunctions::initSingleton();
+    initializePublisher(set_planning_scene_topic);
+    initializeClient(get_planning_scene_service);
   }
 
   bool DavinciMoveitGraspedObjectHandler::attachObjectToRobot(const std::string &object_name,
@@ -123,6 +124,16 @@ namespace davinci_moveit_object_handling
     //ROS_INFO("Successfully detached object.");
     is_detached = true;
     return is_detached;
+  }
+
+
+  void DavinciMoveitGraspedObjectHandler::waitForSubscribers()
+  {
+    while (moveit_planning_scene_diff_publisher_.getNumSubscribers() == 0)
+    {
+      ROS_INFO("Waiting for subscribers...");
+      ros::Duration(0.5).sleep();
+    }
   }
 
   bool DavinciMoveitGraspedObjectHandler::attachObjectToRobot(const std::string &name,

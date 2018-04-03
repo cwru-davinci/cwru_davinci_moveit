@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(cwru_davinci_moveit_object_handling)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+#add_compile_options(-std=c++11)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -111,7 +112,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES cwru_davinci_moveit_object_handling
+  LIBRARIES davinci_moveit_grasped_object_handler davinci_moveit_collision_matrix_manipulator
   CATKIN_DEPENDS geometry_msgs moveit_msgs roscpp convenience_ros_functions
 #  DEPENDS system_lib
 )
@@ -191,11 +192,10 @@ target_link_libraries(davinci_moveit_grasped_object_handler ${catkin_LIBRARIES})
 # )
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+ install(DIRECTORY include/${PROJECT_NAME}/
+   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+   FILES_MATCHING PATTERN "*.h"
+ )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

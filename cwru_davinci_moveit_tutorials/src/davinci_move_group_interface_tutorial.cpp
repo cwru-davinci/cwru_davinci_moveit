@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2013, SRI International
+ *  Copyright (c) 2018, Case Western Reserve University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -66,16 +66,16 @@ void defineToolTipGoal(const moveit::core::RobotStatePtr &current_state,
 
   goal_wrt_current.translation() = translation;
 
-//  current_state->setToDefaultValues();
-//  current_state->updateLinkTransforms();
+//  current_state = move_group.getCurrentState();
+  current_state->updateLinkTransforms();
 
   Eigen::Affine3d current_wrt_planning_frame = current_state->getFrameTransform(
-    "/PSM1tool_tip_link");
+    "/one_tool_tip_link");
   ROS_INFO_STREAM("current_wrt_planning_frame \n" << current_wrt_planning_frame.matrix());
 
 
-  Eigen::Affine3d base_wrt_world = current_state->getFrameTransform(
-    "/PSM1psm_base_link");
+//  Eigen::Affine3d base_wrt_world = current_state->getFrameTransform(
+//    "/one_psm_base_link");
 
 //  ROS_INFO("The end effector link is %s", move_group.getEndEffectorLink().c_str());
 
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "move_group_interface_tutorial");
   ros::NodeHandle node_handle;
   ros::AsyncSpinner spinner(1);
-  ros::Duration(4.0).sleep();
+//  ros::Duration(4.0).sleep();
   spinner.start();
 
   //***********************************************************************************************************
@@ -132,7 +132,6 @@ int main(int argc, char **argv)
   // Raw pointers are frequently used to refer to the planning group for improved performance.
   const robot_state::JointModelGroup *joint_model_group =
     move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
-
   // Visualization
   // ^^^^^^^^^^^^^
   //
@@ -165,6 +164,11 @@ int main(int argc, char **argv)
   // We can also print the name of the end-effector link for this group.
   ROS_INFO_NAMED("tutorial", "End effector link: %s", move_group.getEndEffectorLink().c_str());
 
+  ROS_INFO_NAMED("tutorial", "End effector name: %s", move_group.getEndEffector().c_str());
+
+  // get camera to world transformation
+  Eigen::Affine3d camera_to_world_transfom = daVinciRobotState->getFrameTransform("/camera");
+
 
   // Planning to a Pose goal
   // ^^^^^^^^^^^^^^^^^^^^^^^
@@ -175,15 +179,17 @@ int main(int argc, char **argv)
 
   Eigen::Affine3d target_pose_1;
 
-  Eigen::Matrix3d orientaion;  // orientation part
-  orientaion << 1.0, 0.0, 0.0,
+  Eigen::Matrix3d orientation;  // orientation part
+  orientation << 1.0, 0.0, 0.0,
     0.0, 1.0, 0.0,
     0.0, 0.0, 1.0;
 
   Eigen::Vector3d translation;  // translation part
   translation << 0.0, 0.0, 0.1;
 
-  defineToolTipGoal(daVinciRobotState, orientaion, translation, target_pose_1);
+  daVinciRobotState = move_group.getCurrentState();
+
+  defineToolTipGoal(daVinciRobotState, orientation, translation, target_pose_1);
 
   move_group.setPoseTarget(target_pose_1);
 
@@ -217,7 +223,16 @@ int main(int argc, char **argv)
   visual_tools.publishText(text_pose, "Pose Goal", rvt::WHITE, rvt::XLARGE);
   visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
   visual_tools.trigger();
+  moveit_msgs::MoveItErrorCodes error_code = move_group.move();
+  if (error_code.val == 1)
+  {
+    ROS_INFO("Planning is successful");
+  } else
+  {
+    ROS_INFO("Planning is failed");
+  }
   visual_tools.prompt("next step");
+
 
   // Moving to a pose goal
   // ^^^^^^^^^^^^^^^^^^^^^
@@ -231,7 +246,7 @@ int main(int argc, char **argv)
   // and report success on execution of a trajectory.
 
   /* Uncomment below line when working with a real robot */
-  /* move_group.move() */
+//  move_group.move();
 
   // Planning to a joint-space goal
   // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -247,10 +262,10 @@ int main(int argc, char **argv)
   std::vector<double> joint_group_positions;
   current_state->copyJointGroupPositions(joint_model_group, joint_group_positions);
 
-//  for(int i = 0; i < joint_group_positions.size(); i++)
-//  {
-//    ROS_INFO("%dth joint value: %f \n", i, joint_group_positions[i]);
-//  }
+  for(int i = 0; i < joint_group_positions.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, joint_group_positions[i]);
+  }
 
   // Now, let's modify one of the joints, plan to the new joint space goal and visualize the lan.
   joint_group_positions[1] = -0.5;  // radians
@@ -264,7 +279,16 @@ int main(int argc, char **argv)
   visual_tools.publishText(text_pose, "Joint Space Goal", rvt::WHITE, rvt::XLARGE);
   visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
   visual_tools.trigger();
+  error_code = move_group.move();
+  if (error_code.val == 1)
+  {
+    ROS_INFO("Planning is successful");
+  } else
+  {
+    ROS_INFO("Planning is failed");
+  }
   visual_tools.prompt("next step");
+
 
   // Planning with Path Constraints
   // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -277,7 +301,7 @@ int main(int argc, char **argv)
   Eigen::Quaterniond q1(rotate_mat);
 
   moveit_msgs::OrientationConstraint ocm;
-  ocm.link_name = "PSM1tool_tip_link";
+  ocm.link_name = "one_tool_tip_link";
   ocm.header.frame_id = "world";
   ocm.orientation.w = q1.w();
   ocm.orientation.x = q1.x();
@@ -303,32 +327,60 @@ int main(int argc, char **argv)
 
   daVinciRobotState = move_group.getCurrentState();
 
-  defineToolTipGoal(daVinciRobotState, orientaion, translation, target_pose_2);
+//  robot_state::RobotState start_state(*move_group.getCurrentState());
 
-  daVinciRobotState->setFromIK(joint_model_group, target_pose_2);
+  defineToolTipGoal(daVinciRobotState, orientation, translation, target_pose_2);
 
-  move_group.setStartState(*daVinciRobotState);
+//  daVinciRobotState->setFromIK(joint_model_group, target_pose_2);
 
+//  move_group.setStartState(*daVinciRobotState);
+
+  move_group.setStartStateToCurrentState();
   // Now we will plan to the earlier pose target from the new
   // start state that we have just created.
-  move_group.setPoseTarget(target_pose_1);
+  move_group.setPoseTarget(target_pose_2);
 
   // Planning with constraints can be slow because every sample must call an inverse kinematics solver.
   // Lets increase the planning time from the default 5 seconds to be sure the planner has enough time to succeed.
   move_group.setPlanningTime(10.0);
 
   success = (bool) move_group.plan(my_plan);
+
   ROS_INFO_NAMED("tutorial", "Visualizing plan 3 (constraints) %s", success ? "" : "FAILED");
+
+  ROS_INFO_STREAM("target_pose_2_wrt_planning_frame \n" << target_pose_2.matrix());
+
+  target_pose_1= daVinciRobotState->getFrameTransform("/one_tool_tip_link");
+  ROS_INFO_STREAM("target_pose_1_wrt_planning_frame \n" << target_pose_1.matrix());
+
 
   // Visualize the plan in Rviz
   visual_tools.deleteAllMarkers();
-  visual_tools.publishAxisLabeled(target_pose_2, "start");
-  visual_tools.publishAxisLabeled(target_pose_1, "goal");
+  visual_tools.publishAxisLabeled(target_pose_2, "goal");
+  visual_tools.publishAxisLabeled(target_pose_1, "start");
   visual_tools.publishText(text_pose, "Constrained Goal", rvt::WHITE, rvt::XLARGE);
   visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
   visual_tools.trigger();
+  error_code = move_group.move();
+  if (error_code.val == 1)
+  {
+    ROS_INFO("Planning is successful");
+  } else
+  {
+    ROS_INFO("Planning is failed");
+  }
   visual_tools.prompt("next step");
 
+
+  move_group.clearPathConstraints();
+//  error_code = move_group.move();
+//  if (error_code.val == 1)
+//  {
+//    ROS_INFO("Planning is successful");
+//  } else
+//  {
+//    ROS_INFO("Planning is failed");
+//  }
 
   // Cartesian Paths
   // ^^^^^^^^^^^^^^
@@ -343,34 +395,51 @@ int main(int argc, char **argv)
   waypoints.push_back(start_pose2);
 
   translation << 0.01, 0.01, 0.05;
+  Eigen::Affine3d goal_wrt_current;
+  goal_wrt_current.linear() = orientation;
+  goal_wrt_current.translation() = translation;
   Eigen::Affine3d target_pose_3;
-  daVinciRobotState = move_group.getCurrentState();
-  defineToolTipGoal(daVinciRobotState, orientaion, translation, target_pose_3);
+//  daVinciRobotState = move_group.getCurrentState();
+//  defineToolTipGoal(daVinciRobotState, orientation, translation, target_pose_3);
+
+  target_pose_3 = target_pose_1 * goal_wrt_current;
   geometry_msgs::Pose target_pose3;
   tf::poseEigenToMsg(target_pose_3, target_pose3);
   waypoints.push_back(target_pose3);
 
   translation << 0.01, -0.01, 0.05;
+  goal_wrt_current.translation() = translation;
   Eigen::Affine3d target_pose_4;
-  daVinciRobotState = move_group.getCurrentState();
-  defineToolTipGoal(daVinciRobotState, orientaion, translation, target_pose_4);
+  target_pose_4 = target_pose_1 * goal_wrt_current;
+//  daVinciRobotState = move_group.getCurrentState();
+//  defineToolTipGoal(daVinciRobotState, orientation, translation, target_pose_4);
   geometry_msgs::Pose target_pose4;
   tf::poseEigenToMsg(target_pose_4, target_pose4);
   waypoints.push_back(target_pose4);
 
   translation << -0.01, -0.01, 0.05;
+  goal_wrt_current.translation() = translation;
   Eigen::Affine3d target_pose_5;
-  daVinciRobotState = move_group.getCurrentState();
-  defineToolTipGoal(daVinciRobotState, orientaion, translation, target_pose_5);
+  target_pose_5 = target_pose_1 * goal_wrt_current;
+//  daVinciRobotState = move_group.getCurrentState();
+//  defineToolTipGoal(daVinciRobotState, orientation, translation, target_pose_5);
   geometry_msgs::Pose target_pose5;
   tf::poseEigenToMsg(target_pose_5, target_pose5);
   waypoints.push_back(target_pose5);
+
+  ROS_INFO_STREAM("target_pose_2_wrt_planning_frame \n" << target_pose_2.matrix());
+
+  ROS_INFO_STREAM("target_pose_3_wrt_planning_frame \n" << target_pose_3.matrix());
+
+  ROS_INFO_STREAM("target_pose_4_wrt_planning_frame \n" << target_pose_4.matrix());
+
+  ROS_INFO_STREAM("target_pose_5_wrt_planning_frame \n" << target_pose_5.matrix());
 
   // Cartesian motions are frequently needed to be slower for actions such as approach and retreat
   // grasp motions. Here we demonstrate how to reduce the speed of the robot arm via a scaling factor
   // of the maxiumum speed of each joint. Note this is not the speed of the end effector point.
   move_group.setMaxVelocityScalingFactor(0.1);
-
+//  move_group.setStartStateToCurrentState();
   // We want the cartesian path to be interpolated at a resolution of 1 mm
   // which is why we will specify 0.001 as the max step in cartesian
   // translation.  We will specify the jump threshold as 0.0, effectively disabling it.
@@ -390,8 +459,26 @@ int main(int argc, char **argv)
     visual_tools.publishAxisLabeled(waypoints[i], "pt" + std::to_string(i), rvt::SMALL);
   }
   visual_tools.trigger();
+  error_code = move_group.move();
+  if (error_code.val == 1)
+  {
+    ROS_INFO("Planning is successful");
+  } else
+  {
+    ROS_INFO("Planning is failed");
+  }
   visual_tools.prompt("next step");
 
+
+
+//  error_code = move_group.move();
+//  if (error_code.val == 1)
+//  {
+//    ROS_INFO("Planning is successful");
+//  } else
+//  {
+//    ROS_INFO("Planning is failed");
+//  }
 //  // Adding/Removing Objects and Attaching/Detaching Objects
 //  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 //  //
@@ -413,15 +500,15 @@ int main(int argc, char **argv)
 //  // Define a pose for the box (specified relative to frame_id)
 ////    Eigen::Affine3d box_pose;
 ////
-////    Eigen::Matrix3d box_orientaion;  // orientation part
-////    box_orientaion << 1.0, 0.0, 0.0,
+////    Eigen::Matrix3d box_orientation;  // orientation part
+////    box_orientation << 1.0, 0.0, 0.0,
 ////            0.0, 1.0, 0.0,
 ////            0.0, 0.0, 1.0;
 ////
 ////    Eigen::Vector3d box_translation;  // translation part
 ////    translation << 0.0, 0.5, 0.0;
 ////
-////    box_pose.linear() = box_orientaion;
+////    box_pose.linear() = box_orientation;
 ////
 ////    box_pose.translation() = box_translation;
 ////
@@ -469,13 +556,13 @@ int main(int argc, char **argv)
 //  move_group.setStartState(*move_group.getCurrentState());
 //
 //
-//  orientaion << 1.0, 0.0, 0.0,
+//  orientation << 1.0, 0.0, 0.0,
 //    0.0, 1.0, 0.0,
 //    0.0, 0.0, 1.0;
 //
 //  translation << 0.02, 0.0, 0.05;
 //
-//  psm_1_tool_tip_goal_pose.linear() = orientaion;
+//  psm_1_tool_tip_goal_pose.linear() = orientation;
 //
 //  psm_1_tool_tip_goal_pose.translation() = translation;
 //

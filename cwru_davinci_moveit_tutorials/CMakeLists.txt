@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(cwru_davinci_moveit_tutorials)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+#add_compile_options(-std=c++11)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -14,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   pluginlib
   geometric_shapes
   moveit_visual_tools
+  cwru_davinci_moveit_object_handling
 )
 
 ## System dependencies are found with CMake's conventions
@@ -109,9 +111,11 @@ catkin_package(
   # INCLUDE_DIRS include
   # LIBRARIES cwru_davinci_moveit_tutorials
   CATKIN_DEPENDS
+        roscpp
         moveit_core
         moveit_ros_planning_interface
         interactive_markers
+        cwru_davinci_moveit_object_handling
   DEPENDS EIGEN3
 )
 
@@ -132,7 +136,7 @@ include_directories(${catkin_INCLUDE_DIRS})
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-#add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(davinci_attach_needle_moveit_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -141,6 +145,7 @@ add_executable(davinci_move_group_interface_tutorial src/davinci_move_group_inte
 add_executable(davinci_kinematic_model_tutorial src/davinci_kinematic_model_tutorial.cpp)
 add_executable(davinci_planning_scene_tutorial src/davinci_planning_scene_tutorial.cpp)
 add_executable(davinci_motion_planner_tutorial src/davinci_motion_planner_tutorial.cpp)
+add_executable(davinci_attach_needle_moveit_test test/davinci_attach_needle_moveit_test.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -150,14 +155,14 @@ add_executable(davinci_motion_planner_tutorial src/davinci_motion_planner_tutori
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(davinci_attach_needle_moveit_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(davinci_move_group_interface_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(davinci_kinematic_model_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(davinci_planning_scene_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(davinci_motion_planner_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
-
+target_link_libraries(davinci_attach_needle_moveit_test ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############

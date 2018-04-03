@@ -10,6 +10,12 @@ controller_list:
       - one_outer_wrist_pitch
       - one_outer_wrist_yaw
 
+  - name: "dvrk_psm/dvrk_psm_one_gripper_controller"
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    joints:
+      - one_jaw
+
   - name: "dvrk_psm/dvrk_psm_two_controller"
     action_ns: follow_joint_trajectory
     type: FollowJointTrajectory
@@ -20,3 +26,9 @@ controller_list:
       - two_outer_roll
       - two_outer_wrist_pitch
       - two_outer_wrist_yaw
+
+  - name: "dvrk_psm/dvrk_psm_two_gripper_controller"
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    joints:
+      - two_jaw
