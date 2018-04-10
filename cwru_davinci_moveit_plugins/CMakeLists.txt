@@ -16,20 +16,13 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_core
   pluginlib
   roscpp
-<<<<<<< HEAD
-  davinci_kinematics
-=======
   cwru_davinci_kinematics
   urdf
   kdl_parser
   tf
   tf_conversions
   moveit_ros_planning
-<<<<<<< HEAD
->>>>>>> cbe3dad... Testing kinematics plugin
-=======
   moveit_ros_planning_interface
->>>>>>> f5ceac8... updated
 )
 
 if (CATKIN_ENABLE_TESTING)
@@ -127,17 +120,10 @@ find_package(Boost REQUIRED thread)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-<<<<<<< HEAD
-#  INCLUDE_DIRS
-#  LIBRARIES
-#  CATKIN_DEPENDS moveit_core roscpp cwru_davinci_kinematics
-#  DEPENDS moveit_core
-=======
   INCLUDE_DIRS
   LIBRARIES
   CATKIN_DEPENDS roscpp moveit_core
   DEPENDS moveit_core
->>>>>>> 0f442f5... Updated
 )
 
 ###########
