@@ -44,72 +44,113 @@
 #include "ompl/base/spaces/DiscreteStateSpace.h"
 #include "ompl/base/spaces/SE3StateSpace.h"
 
-namespace ompl
+namespace dual_arm_manipulation_planner_interface
 {
-  namespace base
+class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
+{
+public:
+
+  class StateType : public ompl::base::CompoundStateSpace::StateType
   {
-    class HybridObjectStateSpace : public CompoundStateSpace
+  public:
+    StateType() : CompoundStateSpace::StateType()
     {
-    public:
+    }
 
-      class StateType : public CompoundStateSpace::StateType
-      {
-      public:
-        StateType() : CompoundStateSpace::StateType()
-        {
-        }
+    const ompl::base::SE3StateSpace::StateType &se3State() const
+    {
+      return *as<ompl::base::SE3StateSpace::StateType>(0);
+    }
 
-        const SE3StateSpace::StateType & se3State() const
-        {
-          return *as<SE3StateSpace::StateType>(0);
-        }
+    ompl::base::SE3StateSpace::StateType &se3State()
+    {
+      return *as<ompl::base::SE3StateSpace::StateType>(0);
+    }
 
-        SE3StateSpace::StateType & se3State()
-        {
-          return *as<SE3StateSpace::StateType>(0);
-        }
+    const ompl::base::DiscreteStateSpace::StateType &armIndex() const
+    {
+      return *as<ompl::base::DiscreteStateSpace::StateType>(1);
+    }
 
-        const DiscreteStateSpace::StateType & armIndex() const
-        {
-          return *as<DiscreteStateSpace::StateType>(1);
-        }
+    ompl::base::DiscreteStateSpace::StateType &armIndex()
+    {
+      return *as<ompl::base::DiscreteStateSpace::StateType>(1);
+    }
 
-        DiscreteStateSpace::StateType & armIndex()
-        {
-          return *as<DiscreteStateSpace::StateType>(1);
-        }
+    const ompl::base::DiscreteStateSpace::StateType &graspIndex() const
+    {
+      return *as<ompl::base::DiscreteStateSpace::StateType>(2);
+    }
 
-        const DiscreteStateSpace::StateType & graspIndex() const
-        {
-          return *as<DiscreteStateSpace::StateType>(2);
-        }
-
-        DiscreteStateSpace::StateType & graspIndex()
-        {
-          return *as<DiscreteStateSpace::StateType>(2);
-        }
-      };
+    ompl::base::DiscreteStateSpace::StateType &graspIndex()
+    {
+      return *as<ompl::base::DiscreteStateSpace::StateType>(2);
+    }
+  };
 
 
-      HybridObjectStateSpace(int armIndexLowerBound, int armIndexUpperBound, int graspIndexLowerBound,
-                             int graspIndexUpperBound);
+  HybridObjectStateSpace(int armIndexLowerBound, int armIndexUpperBound, int graspIndexLowerBound,
+                         int graspIndexUpperBound);
 
-      virtual ~HybridObjectStateSpace() {}
+  virtual ~HybridObjectStateSpace()
+  {}
 
-      void setArmIndexBounds(int lowerBound, int upperBound);
+  void setArmIndexBounds(int lowerBound, int upperBound);
 
-      void setGraspIndexBounds(int lowerBound, int upperBound);
+  void setGraspIndexBounds(int lowerBound, int upperBound);
 
-      virtual double distance(const State *state1, const State *state2) const override;
+  virtual double distance(const ompl::base::State *state1, const ompl::base::State *state2) const override;
 
-      virtual ompl::base::State* allocState() const override;
+  virtual ompl::base::State *allocState() const override;
 
-      const RealVectorBounds getBounds() const;
+  virtual void freeState(ompl::base::State *state) const;
 
-    private:
-      StateSpacePtr state_space_;
-    };
-  }
+  virtual void copyState(ompl::base::State *destination, const ompl::base::State *source) const;
+
+  virtual void interpolate(const ompl::base::State *from,
+                           const ompl::base::State *to,
+                           const double t,
+                           ompl::base::State *state) const;
+
+  virtual double getMaximumExtent() const;
+
+  virtual ompl::base::StateSamplerPtr allocDefaultStateSampler() const;
+
+  bool computeStateFK(ompl::base::State *state) const;
+
+  bool computeStateIK(ompl::base::State *state) const;
+
+  bool computeStateK(ompl::base::State *state) const;
+
+  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
+
+  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
+
+  virtual void sanityChecks() const;
+  
+private:
+  struct PoseComponent
+  {
+    PoseComponent(const robot_model::JointModelGroup *subgroup,
+                  const robot_model::JointModelGroup::KinematicsSolver &k);
+
+    bool computeStateFK(StateType *full_state, unsigned int idx) const;
+
+    bool computeStateIK(StateType *full_state, unsigned int idx) const;
+
+    bool operator<(const PoseComponent &o) const
+    {
+      return subgroup_->getName() < o.subgroup_->getName();
+    }
+
+    const robot_model::JointModelGroup *subgroup_;
+    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
+    std::vector<unsigned int> bijection_;
+    ompl::base::StateSpacePtr state_space_;
+    std::vector<std::string> fk_link_;
+  };
+
+};
 }
 
 #endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_STATE_SPACE_H
