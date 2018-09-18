@@ -43,6 +43,9 @@
 #include "ompl/base/StateSpace.h"
 #include "ompl/base/spaces/DiscreteStateSpace.h"
 #include "ompl/base/spaces/SE3StateSpace.h"
+#include "moveit/ompl_interface/parameterization/work_space/pose_model_state_space.h"
+#include <boost/scoped_ptr.hpp>
+
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -53,8 +56,41 @@ public:
   class StateType : public ompl::base::CompoundStateSpace::StateType
   {
   public:
-    StateType() : CompoundStateSpace::StateType()
+    enum
     {
+      JOINTS_COMPUTED = 256,
+      POSE_COMPUTED = 512
+    };
+
+    StateType() : CompoundStateSpace::StateType(), values(NULL), flags(0)
+    {
+      flags |= JOINTS_COMPUTED;
+    }
+
+    bool jointsComputed() const
+    {
+      return flags & JOINTS_COMPUTED;
+    }
+
+    bool poseComputed() const
+    {
+      return flags & POSE_COMPUTED;
+    }
+
+    void setJointsComputed(bool value)
+    {
+      if (value)
+        flags |= JOINTS_COMPUTED;
+      else
+        flags &= ~JOINTS_COMPUTED;
+    }
+
+    void setPoseComputed(bool value)
+    {
+      if (value)
+        flags |= POSE_COMPUTED;
+      else
+        flags &= ~POSE_COMPUTED;
     }
 
     const ompl::base::SE3StateSpace::StateType &se3State() const
@@ -86,11 +122,17 @@ public:
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(2);
     }
+
+    double *values;
+//    int tag;
+    int flags;
+//    double distance;
+
   };
 
 
   HybridObjectStateSpace(int armIndexLowerBound, int armIndexUpperBound, int graspIndexLowerBound,
-                         int graspIndexUpperBound);
+                         int graspIndexUpperBound, const ompl_interface::ModelBasedStateSpaceSpecification &spec);
 
   virtual ~HybridObjectStateSpace()
   {}
@@ -119,37 +161,44 @@ public:
   bool computeStateFK(ompl::base::State *state) const;
 
   bool computeStateIK(ompl::base::State *state) const;
+//
+//  bool computeStateK(ompl::base::State *state) const;
+//
+//  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
+//
+//  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
+//
+//  virtual void sanityChecks() const;
 
-  bool computeStateK(ompl::base::State *state) const;
-
-  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
-
-  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
-
-  virtual void sanityChecks() const;
-  
 private:
-  struct PoseComponent
-  {
-    PoseComponent(const robot_model::JointModelGroup *subgroup,
-                  const robot_model::JointModelGroup::KinematicsSolver &k);
+//  struct HybridObjectPoseComponent
+//  {
+//    HybridObjectPoseComponent(const robot_model::JointModelGroup *subgroup,
+//                              const robot_model::JointModelGroup::KinematicsSolver &k,
+//                              const std::vector<moveit_msgs::Grasp> &grasp_list);
+//
+//    bool computeStateFK(StateType *full_state, unsigned int idx) const;
+//
+//    bool computeStateIK(StateType *full_state, unsigned int idx) const;
+//
+//    bool operator<(const PoseComponent &o) const
+//    {
+//      return subgroup_->getName() < o.subgroup_->getName();
+//    }
+//
+//    const robot_model::JointModelGroup *subgroup_;
+//    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
+//    std::vector<moveit_msgs::Grasp> grasp_list_;
+//    std::vector<unsigned int> bijection_;
+//    ompl::base::StateSpacePtr state_space_;
+//    std::vector<std::string> fk_link_;
+//  };
+//
+//  HybridObjectPoseComponent object_pose_;
 
-    bool computeStateFK(StateType *full_state, unsigned int idx) const;
+  boost::scoped_ptr<ompl_interface::PoseModelStateSpace> pose_model_ss_;
 
-    bool computeStateIK(StateType *full_state, unsigned int idx) const;
-
-    bool operator<(const PoseComponent &o) const
-    {
-      return subgroup_->getName() < o.subgroup_->getName();
-    }
-
-    const robot_model::JointModelGroup *subgroup_;
-    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
-    std::vector<unsigned int> bijection_;
-    ompl::base::StateSpacePtr state_space_;
-    std::vector<std::string> fk_link_;
-  };
-
+//  ompl_interface::ModelBasedStateSpaceSpecification spec_;
 };
 }
 

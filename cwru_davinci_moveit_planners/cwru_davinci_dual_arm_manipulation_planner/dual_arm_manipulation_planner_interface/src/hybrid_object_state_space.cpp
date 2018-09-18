@@ -40,27 +40,35 @@
 #include "ompl/base/spaces/SE3StateSpace.h"
 #include "ompl/base/spaces/DiscreteStateSpace.h"
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+//#include "moveit/ompl_interface/parameterization/model_based_state_space.h"
 
 using namespace dual_arm_manipulation_planner_interface;
 
 HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
-                                                           int armIndexUpperBound,
-                                                           int graspIndexLowerBound,
-                                                           int graspIndexUpperBound) : CompoundStateSpace()
+                                               int armIndexUpperBound,
+                                               int graspIndexLowerBound,
+                                               int graspIndexUpperBound,
+                                               const ompl_interface::ModelBasedStateSpaceSpecification &spec)
+  : ompl::base::CompoundStateSpace()
 {
+
   setName("HybridObject" + getName());
   type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 1;
 
   addSubspace(std::make_shared<ompl::base::SE3StateSpace>(), 1.0);  // object pose space
   components_.back()->setName(components_.back()->getName() + ":ObjectPose");
 
-  addSubspace(std::make_shared<ompl::base::DiscreteStateSpace>(armIndexLowerBound, armIndexUpperBound), 1.0);  // arm index
+  addSubspace(std::make_shared<ompl::base::DiscreteStateSpace>(armIndexLowerBound, armIndexUpperBound),
+              1.0);  // arm index
   components_.back()->setName(components_.back()->getName() + ":ArmIndex");
 
-  addSubspace(std::make_shared<ompl::base::DiscreteStateSpace>(graspIndexLowerBound, graspIndexUpperBound), 1.0);  // grasp index
+  addSubspace(std::make_shared<ompl::base::DiscreteStateSpace>(graspIndexLowerBound, graspIndexUpperBound),
+              1.0);  // grasp index
   components_.back()->setName(components_.back()->getName() + ":GraspIndex");
 
   lock();
+
+  pose_model_ss_.reset(new ompl_interface::PoseModelStateSpace(spec));
 }
 
 void HybridObjectStateSpace::setArmIndexBounds(int lowerBound, int upperBound)
@@ -75,14 +83,14 @@ void HybridObjectStateSpace::setGraspIndexBounds(int lowerBound, int upperBound)
 
 double HybridObjectStateSpace::distance(const ompl::base::State *state1, const ompl::base::State *state2) const
 {
-  double se3_dist_trans, se3_dist_rot;
+//  double se3_dist_trans, se3_dist_rot;
+  double se3_dist;
   int num_handoff;
 
   const auto *ps1 = static_cast<const HybridObjectStateSpace::StateType *>(state1);
   const auto *ps2 = static_cast<const HybridObjectStateSpace::StateType *>(state2);
 
-  se3_dist_trans = distance(ps1->se3State().components[0], ps2->se3State().components[0]);
-  se3_dist_rot = distance(ps1->se3State().components[1], ps2->se3State().components[1]);
+  se3_dist = components_[0]->distance(ps1->components[0], ps2->components[0]);
 
 //  num_handoff =
 }
@@ -92,4 +100,30 @@ ompl::base::State* HybridObjectStateSpace::allocState() const
   auto *state = new StateType();
   allocStateComponents(state);
   return state;
+}
+
+
+void HybridObjectStateSpace::freeState(ompl::base::State *state) const
+{
+  ompl::base::CompoundStateSpace::freeState(state);
+}
+
+void HybridObjectStateSpace::copyState(ompl::base::State *destination, const ompl::base::State *source) const
+{
+  ompl::base::CompoundStateSpace::copyState(destination, source);
+}
+
+//void HybridObjectStateSpace::interpolate(const ompl::base::State *from,
+//                                         const ompl::base::State *to,
+//                                         const double t,
+//                                         ompl::base::State *state) const
+//{
+//  return;
+//}
+//
+//
+bool HybridObjectStateSpace::computeStateFK(ompl::base::State *state) const
+{
+  
+  pose_model_ss_->computeStateFK(state);
 }

@@ -47,6 +47,8 @@
 #include <moveit_msgs/KinematicSolverInfo.h>
 #include <moveit_msgs/MoveItErrorCodes.h>
 
+#include <kdl/chainfksolverpos_recursive.hpp>
+
 #include <tf_conversions/tf_kdl.h>
 
 #include <moveit/kinematics_base/kinematics_base.h>
@@ -54,7 +56,8 @@
 
 #include <urdf/model.h>
 
-#include <cwru_davinci_kinematics/davinci_inv_kinematics.h>
+#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_ik_solver.h>
+#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_constants.h>
 
 /** @brief Namespace for the DavinciMoveitKinematicsPlugin */
 namespace davinci_moveit_kinematics
@@ -145,7 +148,7 @@ namespace davinci_moveit_kinematics
   protected:
 
     bool active_;
-    int free_angle_;
+//    int free_angle_;
     urdf::Model robot_model_;
     ros::NodeHandle node_handle_, root_handle_;
     boost::shared_ptr<davinci_moveit_kinematics::DavinciMoveitIKSolver> davinci_moveit_ik_solver_ptr_;

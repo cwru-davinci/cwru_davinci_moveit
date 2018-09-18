@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
+ *  Copyright (c) 2008, Willow Garage, Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of SRI International nor the names of its
+ *   * Neither the name of Willow Garage nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,15 +40,10 @@ namespace davinci_moveit_kinematics
 {
   DavinciMoveitIKSolver::DavinciMoveitIKSolver(const urdf::Model &robot_model,
                                                const std::string &root_frame_name,
-                                               const double &search_discretization_angle,
                                                const std::string &tip_frame_name,
-<<<<<<< HEAD
-                                               const int &free_angle)
-=======
                                                const double &search_discretization_angle):KDL::ChainIkSolverPos()
->>>>>>> 2368e4e... Updated
   {
-    davinci_psm_ik_ = new davinci_kinematics::Inverse();
+    davinci_psm_ik_ = new DavinciMoveitIK();
     search_discretization_angle_ = search_discretization_angle;
 //    free_angle_ = free_angle;
     root_frame_name_ = root_frame_name;
@@ -72,7 +67,7 @@ namespace davinci_moveit_kinematics
                                        KDL::JntArray &q_out)
   {
     Eigen::Affine3d b = davinci_moveit_kinematics::KDLToEigenMatrix(p_in);
-    std::vector<double> solution_ik;
+    std::vector<std::vector<double>> solution_ik;
 
 //    if (free_angle_ == 0)
 //    {

@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
+ *  Copyright (c) 2008, Willow Garage, Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of SRI International nor the names of its
+ *   * Neither the name of Willow Garage nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -56,7 +56,7 @@ namespace davinci_moveit_kinematics
     while(link && num_joints < davinci_moveit_kinematics::NUM_JOINTS_ARM7DOF)
     {
       boost::shared_ptr<const urdf::Joint> joint;
-      boost_shared_ptr <urdf::Joint> parent_joint = link->parent_joint;  // get joint ptr by current link's parent_joint
+      boost::shared_ptr<urdf::Joint> parent_joint = link->parent_joint;  // get joint ptr by current link's parent_joint
 
       if(parent_joint)
       {
@@ -117,7 +117,7 @@ namespace davinci_moveit_kinematics
           max_angles_.push_back(M_PI);
           continuous_joint_.push_back(true);
         }
-        davinci_moveit_kinematics::addJointToChainInfo(parent_joint, solver_info_);
+        addJointToChainInfo(parent_joint, solver_info_);
         num_joints++;
       }
       link = robot_model.getLink(link->getParent()->name);  // assign current link with its parent link
@@ -157,15 +157,11 @@ namespace davinci_moveit_kinematics
 //    home_inv_ = home.inverse();
 //    grhs_ = home;
 //    gf_ = home_inv_;
-    solution_.resize( NUM_JOINTS_ARM7DOF);
+    solution_.resize(NUM_JOINTS_ARM7DOF);
     return true;
   }
 
-<<<<<<< HEAD
-  void DavinciMoveitIK::computeIKSolution(const Eigen::Affine3d &g_in, std::vector<double> &solution) const
-=======
   void DavinciMoveitIK::computeIKSolution(const Eigen::Affine3d &g_in, std::vector<std::vector<double>> &solution)
->>>>>>> 2368e4e... Updated
   {
     solution.clear();
 
@@ -209,9 +205,6 @@ namespace davinci_moveit_kinematics
   void DavinciMoveitIK::addJointToChainInfo(boost::shared_ptr<const urdf::Joint> joint,
                                             moveit_msgs::KinematicSolverInfo &info)
   {
-<<<<<<< HEAD
-
-=======
     moveit_msgs::JointLimits limit;
     info.joint_names.push_back(joint->name);  // Joints are coming in reverse order
 
@@ -258,7 +251,6 @@ namespace davinci_moveit_kinematics
 
     info.limits.push_back(limit);
     return;
->>>>>>> 0f442f5... Updated
   }
 
 //  bool DavinciMoveitIK::checkJointLimits(const std::vector<double> &joint_values) const

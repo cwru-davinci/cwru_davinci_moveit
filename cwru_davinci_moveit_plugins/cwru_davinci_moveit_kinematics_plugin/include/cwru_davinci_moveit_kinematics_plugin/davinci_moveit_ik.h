@@ -38,13 +38,13 @@
 #define CWRU_DAVINCI_MOVEIT_DAVINCI_MOVEIT_IK_H
 
 #include <urdf/model.h>
-#include <Eigen/Core>cwru_davinci_kinematics
+#include <Eigen/Core>
 //#include <Eigen/LU>// provides LU decomposition
 #include <kdl/chainiksolver.hpp>
 
-#include <cwru_davinci_kinematics/pr2_arm_kinematics_utils.h>
-#include <cwru_davinci_kinematics/davinci_moveit_kinematics_constants.h>
-#include <cwru_davinci_kinematics/davinci_moveit_kinematics_utils.h>
+#include <cwru_davinci_kinematics/davinci_inv_kinematics.h>
+#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_constants.h>
+#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_utils.h>
 
 namespace davinci_moveit_kinematics
 {
@@ -53,43 +53,6 @@ namespace davinci_moveit_kinematics
   public:
 
 
-<<<<<<< HEAD
-  /** @class
-   *  @brief Inverse kinematics for the davinci PSM.
-   */
-  DavinciMoveitIK();
-
-  ~DavinciMoveitIK();
-
-  /**
-   *  @brief Initialize the solver by providing a urdf::Model and a root and tip name.
-   *  @param A urdf::Model representation of the PR2 robot model
-   *  @param The root joint name of the arm
-   *  @param The tip joint name of the arm
-   *  @return true if initialization was successful, false otherwise.
-   */
-  bool init(const urdf::Model &robot_model, const std::string &root_name, const std::string &tip_name);
-
-  /**
-   * @brief compute IK solution.
-   * @param Input pose for end-effector
-   */
-  void computeIKSolution(const Eigen::Affine3d &g_in, std::vector<double> &solution) const;
-
-
-  //  std::vector<std::vector<double> > solution_ik_;/// a vector of ik solutions
-
-  /**
-   *  @brief get chain information about the arm. This populates the IK query response, filling in joint level information including names and joint limits.
-   *  @param The response structure to be filled in.
-   */
-  void getSolverInfo(moveit_msgs::KinematicSolverInfo &info);
-
-  /**
-   *  @brief get chain information about the arm.
-   */
-  moveit_msgs::KinematicSolverInfo solver_info_;
-=======
     /** @class
      *  @brief Inverse kinematics for the davinci PSM.
      */
@@ -125,15 +88,10 @@ namespace davinci_moveit_kinematics
      *  @brief get chain information about the arm.
      */
     moveit_msgs::KinematicSolverInfo solver_info_;
->>>>>>> 0f442f5... Updated
 
   private:
 
-<<<<<<< HEAD
-  void addJointToChainInfo(boost::shared_ptr<const urdf::Joint> joint,moveit_msgs::KinematicSolverInfo &info);
-=======
     void addJointToChainInfo(boost::shared_ptr<const urdf::Joint> joint, moveit_msgs::KinematicSolverInfo &info);
->>>>>>> 0f442f5... Updated
 
 //    bool checkJointLimits(const std::vector<double> &joint_values) const;
 //
@@ -154,12 +112,9 @@ namespace davinci_moveit_kinematics
 
     std::vector<double> max_angles_;
 
-<<<<<<< HEAD
-=======
     std::vector<bool> continuous_joint_;
 
     davinci_kinematics::Inverse davinci_inverse_;
->>>>>>> 0f442f5... Updated
   };
 
 }

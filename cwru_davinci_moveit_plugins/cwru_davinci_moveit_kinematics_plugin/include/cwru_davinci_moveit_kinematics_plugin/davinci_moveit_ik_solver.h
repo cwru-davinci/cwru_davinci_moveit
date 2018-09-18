@@ -38,12 +38,15 @@
 #define CWRU_DAVINCI_MOVEIT_PLUGINS_DAVINCI_MOVEIT_IK_SOLVER_H
 
 #include <urdf/model.h>
-#include <Eigen/Core>
+
+//#include <Eigen/Core>
+//#include <Eigen/Geometry>
+
 #include <kdl/chainiksolver.hpp>
 
 #include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_ik.h>
+#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_utils.h>
 
-#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_utils.h.h>
 #include <moveit/kinematics_base/kinematics_base.h>
 #include <moveit_msgs/KinematicSolverInfo.h>
 #include <moveit_msgs/PositionIKRequest.h>
@@ -68,9 +71,8 @@ namespace davinci_moveit_kinematics
       */
     DavinciMoveitIKSolver(const urdf::Model &robot_model,
                           const std::string &root_frame_name,
-                          const double &search_discretization_angle,
                           const std::string &tip_frame_name,
-                          const int &free_angle);
+                          const double &search_discretization_angle);
 
     ~DavinciMoveitIKSolver()
     { delete davinci_psm_ik_; }
@@ -78,7 +80,7 @@ namespace davinci_moveit_kinematics
     /**
       * @brief The PR2 inverse kinematics solver
       */
-    davinci_kinematics::Inverse *davinci_psm_ik_;
+    DavinciMoveitIK *davinci_psm_ik_;
 
     /**
       * @brief Indicates whether the solver has been successfully initialized
@@ -91,9 +93,7 @@ namespace davinci_moveit_kinematics
       * if it exists for the free parameter value passed in. To search for a solution in the entire workspace use the
       * CartToJntSearch method detailed below.
       * @return < 0 if no solution is found
-      * @param q_init The initial guess for the inverse kinematics solution.
-      * The solver uses the joint value q_init(pr2_ik_->free_angle_) as
-      * as an input to the inverse kinematics. pr2_ik_->free_angle_ can either be 0 or 2 corresponding
+      * @param q_init The initial guess for the inverse kinematics solution. (The initial guess is for Numerical IK)
       * to the shoulder pan or shoulder roll angle.
       * @param p_in A KDL::Frame representation of the position of the end-effector for which the IK is being solved.
       * @param q_out A single inverse kinematic solution (if it exists).
@@ -122,9 +122,7 @@ namespace davinci_moveit_kinematics
       * @brief This method searches for and returns the closest solution to
       * the initial guess in the first set of solutions it finds.
       * @return < 0 if no solution is found
-      * @param q_in The initial guess for the inverse kinematics solution. The solver uses the joint value q_init(pr2_ik_->free_angle_) as
-      * as an input to the inverse kinematics. pr2_ik_->free_angle_ can either be 0 or 2
-      * corresponding to the shoulder pan or shoulder roll angle
+      * @param q_in The initial guess for the inverse kinematics solution. (The initial guess is for Numerical IK)
       * @param p_in A KDL::Frame representation of the position of the end-effector for which the IK is being solved.
       * @param q_out The solution.
       * @param timeout The amount of time (in seconds) to spend looking for a solution.
@@ -138,10 +136,7 @@ namespace davinci_moveit_kinematics
       * @brief This method searches for and returns the closest solution to
       * the initial guess in the first set of solutions it finds.
       * @return < 0 if no solution is found
-      * @param q_in The initial guess for the inverse kinematics solution. The solver uses the
-      * joint value q_init(pr2_ik_->free_angle_) as an input to the inverse kinematics.
-      * pr2_ik_->free_angle_ can either be 0 or 2 corresponding to the shoulder pan
-      * or shoulder roll angle.
+      * @param q_in The initial guess for the inverse kinematics solution. (The initial guess is for Numerical IK)
       * @param p_in A KDL::Frame representation of the position of the end-effector for which the IK is being solved.
       * @param consistency_limit search for a solution only by varying the redundant angle
       * by a maximum of consistency_limit from the current initial guess
@@ -205,15 +200,15 @@ namespace davinci_moveit_kinematics
 
     std::string getFrameId();
 
-    unsigned int getFreeAngle() const
-    {
-      return free_angle_;
-    }
-
-    void setFreeAngle(const unsigned int &free_angle)
-    {
-      free_angle_ = free_angle;
-    }
+//    unsigned int getFreeAngle() const
+//    {
+//      return free_angle_;
+//    }
+//
+//    void setFreeAngle(const unsigned int &free_angle)
+//    {
+//      free_angle_ = free_angle;
+//    }
 
   private:
 
@@ -245,7 +240,7 @@ namespace davinci_moveit_kinematics
 
     double search_discretization_angle_;
 
-    int free_angle_;
+//    int free_angle_;
 
     std::string root_frame_name_;
   };

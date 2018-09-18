@@ -40,7 +40,7 @@
 #include <ros/ros.h>
 #include <vector>
 #include <angles/angles.h>
-#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <kdl/frames.hpp>
 #include <kdl/jntarray.hpp>
 #include <kdl/tree.hpp>
@@ -124,9 +124,9 @@ namespace davinci_moveit_kinematics
 //
   int getKDLSegmentIndex(const KDL::Chain &chain,
                          const std::string &name);
-//
-//    void getKDLChainInfo(const KDL::Chain &chain,
-//                         moveit_msgs::KinematicSolverInfo &chain_info);
+
+  void getKDLChainInfo(const KDL::Chain &chain,
+                       moveit_msgs::KinematicSolverInfo &chain_info);
 }
 
 

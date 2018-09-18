@@ -1,7 +1,8 @@
+
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
+ *  Copyright (c) 2008, Willow Garage, Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +15,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of SRI International nor the names of its
+ *   * Neither the name of Willow Garage nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -48,7 +49,7 @@ namespace davinci_moveit_kinematics
     TiXmlDocument xml;
     ROS_INFO("Reading xml file from parameter server\n");
     std::string result;
-    if(node_handle.getParam(full_urdf_xml, result))
+    if (node_handle.getParam(full_urdf_xml, result))
     {
       xml.Parse(result.c_str());
     }
@@ -60,7 +61,7 @@ namespace davinci_moveit_kinematics
     xml_string = result;
     TiXmlElement *root_element = xml.RootElement();
     TiXmlElement *root = xml.FirstChildElement("robot");
-    if(!root || !root_element)
+    if (!root || !root_element)
     {
       ROS_FATAL("Could not parse the xml from %s\n", urdf_xml.c_str());
       exit(1);
@@ -74,13 +75,13 @@ namespace davinci_moveit_kinematics
   {
     // create robot chain from root to tip
     KDL::Tree tree;
-    if(!kdl_parser::treeFromString(xml_string, tree))
+    if (!kdl_parser::treeFromString(xml_string, tree))
     {
       ROS_ERROR("Could not initialize tree object");
       return false;
     }
-    if(!tree.getChain(root_name, tip_name,
-                      kdl_chain))  //  tree.getChain Request the chain of the tree between chain_root and chain_tip
+    if (!tree.getChain(root_name, tip_name,
+                       kdl_chain))  //  tree.getChain Request the chain of the tree between chain_root and chain_tip
     {
       ROS_ERROR_STREAM("Could not initialize chain object for base " << root_name << " tip " << tip_name);
       return false;
@@ -91,14 +92,14 @@ namespace davinci_moveit_kinematics
   bool getKDLTree(const std::string &xml_string, KDL::Tree &kdl_tree)
   {
     // create robot chain from root to tip
-    if(!kdl_parser::treeFromString(xml_string, kdl_tree))
+    if (!kdl_parser::treeFromString(xml_string, kdl_tree))
     {
       ROS_ERROR("Could not initialize tree object");
       return false;
     }
     return true;
-
   }
+
 
   Eigen::Affine3d KDLToEigenMatrix(const KDL::Frame &p)
   {
@@ -113,13 +114,13 @@ namespace davinci_moveit_kinematics
 //                                                         << p.p(2) << "\n");
 
     Eigen::Affine3d b = Eigen::Affine3d::Identity();
-    for(int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
-      for(int j = 0; j < 3; j++)
+      for (int j = 0; j < 3; j++)
       {
         b.matrix()(i, j) = p.M(i, j);
       }
-      b..matrix()(i, 3) = p.p(i);
+      b.matrix()(i, 3) = p.p(i);
     }
 
 //    ROS_INFO_STREAM("Inside utils b matrix Translation: \n" << b.translation());
@@ -130,7 +131,7 @@ namespace davinci_moveit_kinematics
   double computeEuclideanDistance(const std::vector<double> &array_1, const KDL::JntArray &array_2)
   {
     double distance = 0.0;
-    for(int i = 0; i < (int) array_1.size(); i++)
+    for (int i = 0; i < (int) array_1.size(); i++)
     {
       distance += (array_1[i] - array_2(i)) * (array_1[i] - array_2(i));
     }
@@ -424,19 +425,6 @@ namespace davinci_moveit_kinematics
 //        return -1;
 //    }
 //
-<<<<<<< HEAD
-//    void getKDLChainInfo(const KDL::Chain &chain,
-//                         moveit_msgs::KinematicSolverInfo &chain_info)
-//    {
-//        int i=0; // segment number
-//        while(i < (int)chain.getNrOfSegments())
-//        {
-//            chain_info.link_names.push_back(chain.getSegment(i).getName());
-//            i++;
-//        }
-//    }
-//
-=======
   void getKDLChainInfo(const KDL::Chain &chain,
                        moveit_msgs::KinematicSolverInfo &chain_info)
   {
@@ -449,14 +437,13 @@ namespace davinci_moveit_kinematics
     }
   }
 
->>>>>>> cbe3dad... Testing kinematics plugin
   int getKDLSegmentIndex(const KDL::Chain &chain,
                          const std::string &name)
   {
     int i = 0; // segment number
-    while(i < (int) chain.getNrOfSegments())
+    while (i < (int) chain.getNrOfSegments())
     {
-      if(chain.getSegment(i).getName() == name)
+      if (chain.getSegment(i).getName() == name)
       {
         return i + 1;
       }

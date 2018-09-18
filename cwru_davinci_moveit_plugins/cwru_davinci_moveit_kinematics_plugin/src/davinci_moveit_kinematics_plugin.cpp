@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
+ *  Copyright (c) 2013, SRI International
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
+
 /* Author: Su Lu */
 
 #include <pluginlib/class_list_macros.h>
@@ -39,8 +40,7 @@
 
 
 //register DavinciMoveitKinematicsPlugin as a KinematicsBase implementation
-PLUGINLIB_EXPORT_CLASS(cwru_davinci_moveit_kinematics_plugin::DavinciMoveitKinematicsPlugin, kinematics::KinematicsBase
-);
+PLUGINLIB_EXPORT_CLASS(davinci_moveit_kinematics::DavinciMoveitKinematicsPlugin, kinematics::KinematicsBase);
 
 namespace davinci_moveit_kinematics
 {
@@ -200,18 +200,11 @@ namespace davinci_moveit_kinematics
     }
     else
     {
-<<<<<<< HEAD
-
-=======
       ik_valid = davinci_moveit_ik_solver_ptr_->CartToJntSearch(jnt_pos_in,
                                                                 pose_desired,
                                                                 jnt_pos_out,
                                                                 timeout,
-<<<<<<< HEAD
-                                                                consistency_limits[free_angle_],
-=======
                                                                 consistency_limits[0],
->>>>>>> aec2428... Added test folder under package cwru_davinci_moveit_kinematics_plugin
                                                                 error_code,
                                                                 solution_callback ?
                                                                 boost::bind(solution_callback, _1, _2, _3) :
@@ -236,7 +229,6 @@ namespace davinci_moveit_kinematics
     {
       ROS_INFO("An IK solution could not be found");
       return false;
->>>>>>> 1d679f4... Updated
     }
   }
 
@@ -247,7 +239,6 @@ namespace davinci_moveit_kinematics
     if(!active_)
     {
       ROS_ERROR("kinematics not active");
-      error_code.val = error_code.NO_IK_SOLUTION;
       return false;
     }
 
@@ -299,7 +290,7 @@ namespace davinci_moveit_kinematics
     urdf::Model robot_model;
     std::string xml_string;
     ros::NodeHandle private_handle("~/" + group_name);
-    dimension_ = davinci_kinematics::NUM_JOINTS_ARM7DOF;  // TODO left to decide
+    dimension_ = davinci_moveit_kinematics::NUM_JOINTS_ARM7DOF;  // TODO left to decide
 
     while(!davinci_moveit_kinematics::loadRobotModel(private_handle, robot_model, xml_string) && private_handle.ok())
     {
@@ -317,12 +308,11 @@ namespace davinci_moveit_kinematics
     ROS_INFO("Advertising services");
     jnt_to_pose_solver_ptr_.reset(
       new KDL::ChainFkSolverPos_recursive(kdl_chain_));  // reset() is a member method of boost::shared_ptr class
-    private_handle.param<int>("free_angle", free_angle_, 2);  // TODO, need to change
+//    private_handle.param<int>("free_angle", free_angle_, 2);  // TODO, need to change
 
     // TODO, need to implement this reset function in davinci_kinematics library
     davinci_moveit_ik_solver_ptr_.reset(
-      new davinci_kinematics::davinci_kinematics::Inverse(robot_model, base_frame, tip_frame, search_discretization,
-                                                          free_angle_));
+      new davinci_moveit_kinematics::DavinciMoveitIKSolver(robot_model, base_frame, tip_frame, search_discretization));
 
     if(!davinci_moveit_ik_solver_ptr_->active_)
     {
@@ -358,7 +348,7 @@ namespace davinci_moveit_kinematics
       active_ = true;
     }
 
-    davinci_moveit_ik_solver_ptr_->setFreeAngle(2);  // TODO
+//    davinci_moveit_ik_solver_ptr_->setFreeAngle(2);  // TODO
     return active_;
   }
 

@@ -50,15 +50,9 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>moveit_core</build_depend>
+  <!--<build_depend>moveit_msgs</build_depend>-->
   <build_depend>roscpp</build_depend>
   <build_depend>cwru_davinci_kinematics</build_depend>
-<<<<<<< HEAD
-  <build_export_depend>moveit_core</build_export_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <exec_depend>moveit_core</exec_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>cwru_davinci_kinematics</exec_depend>
-=======
   <build_depend>kdl_parser</build_depend>
   <build_depend>urdf</build_depend>
   <build_depend>tf_conversions</build_depend>
@@ -76,7 +70,6 @@
   <exec_depend>rostest</exec_depend>
   <!--<exec_depend>moveit_msgs</exec_depend>-->
 
->>>>>>> cbe3dad... Testing kinematics plugin
 
 
   <!-- The export tag contains other, unspecified, tags -->
