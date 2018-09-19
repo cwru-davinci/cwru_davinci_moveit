@@ -43,8 +43,8 @@
 #include "ompl/base/StateSpace.h"
 #include "ompl/base/spaces/DiscreteStateSpace.h"
 #include "ompl/base/spaces/SE3StateSpace.h"
-#include "moveit/ompl_interface/parameterization/work_space/pose_model_state_space.h"
-#include <boost/scoped_ptr.hpp>
+//#include "moveit/ompl_interface/parameterization/work_space/pose_model_state_space.h"
+//#include <boost/scoped_ptr.hpp>
 
 
 namespace dual_arm_manipulation_planner_interface
@@ -131,8 +131,10 @@ public:
   };
 
 
-  HybridObjectStateSpace(int armIndexLowerBound, int armIndexUpperBound, int graspIndexLowerBound,
-                         int graspIndexUpperBound, const ompl_interface::ModelBasedStateSpaceSpecification &spec);
+  HybridObjectStateSpace(int armIndexLowerBound,
+                         int armIndexUpperBound,
+                         int graspIndexLowerBound,
+                         int graspIndexUpperBound);
 
   virtual ~HybridObjectStateSpace()
   {}
@@ -145,22 +147,26 @@ public:
 
   virtual ompl::base::State *allocState() const override;
 
-  virtual void freeState(ompl::base::State *state) const;
+  virtual void freeState(ompl::base::State *state) const override;
 
-  virtual void copyState(ompl::base::State *destination, const ompl::base::State *source) const;
+  virtual void copyState(ompl::base::State *destination, const ompl::base::State *source) const override;
+
+  virtual bool equalStates(const State *state1, const State *state2) const override;
 
   virtual void interpolate(const ompl::base::State *from,
                            const ompl::base::State *to,
                            const double t,
-                           ompl::base::State *state) const;
+                           ompl::base::State *state) const override;
 
-  virtual double getMaximumExtent() const;
+//  virtual double getMaximumExtent() const;
 
-  virtual ompl::base::StateSamplerPtr allocDefaultStateSampler() const;
+  virtual ompl::base::StateSamplerPtr allocDefaultStateSampler() const override;
 
-  bool computeStateFK(ompl::base::State *state) const;
+  virtual ompl::base::StateSamplerPtr allocStateSampler() const override;
 
-  bool computeStateIK(ompl::base::State *state) const;
+//  bool computeStateFK(ompl::base::State *state) const;
+//
+//  bool computeStateIK(ompl::base::State *state) const;
 //
 //  bool computeStateK(ompl::base::State *state) const;
 //
@@ -196,7 +202,7 @@ private:
 //
 //  HybridObjectPoseComponent object_pose_;
 
-  boost::scoped_ptr<ompl_interface::PoseModelStateSpace> pose_model_ss_;
+//  boost::scoped_ptr<ompl_interface::PoseModelStateSpace> pose_model_ss_;
 
 //  ompl_interface::ModelBasedStateSpaceSpecification spec_;
 };

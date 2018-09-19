@@ -47,13 +47,12 @@ using namespace dual_arm_manipulation_planner_interface;
 HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
                                                int armIndexUpperBound,
                                                int graspIndexLowerBound,
-                                               int graspIndexUpperBound,
-                                               const ompl_interface::ModelBasedStateSpaceSpecification &spec)
+                                               int graspIndexUpperBound)
   : ompl::base::CompoundStateSpace()
 {
 
   setName("HybridObject" + getName());
-  type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 1;
+  type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
 
   addSubspace(std::make_shared<ompl::base::SE3StateSpace>(), 1.0);  // object pose space
   components_.back()->setName(components_.back()->getName() + ":ObjectPose");
@@ -67,8 +66,6 @@ HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
   components_.back()->setName(components_.back()->getName() + ":GraspIndex");
 
   lock();
-
-  pose_model_ss_.reset(new ompl_interface::PoseModelStateSpace(spec));
 }
 
 void HybridObjectStateSpace::setArmIndexBounds(int lowerBound, int upperBound)
@@ -98,8 +95,8 @@ double HybridObjectStateSpace::distance(const ompl::base::State *state1, const o
 ompl::base::State* HybridObjectStateSpace::allocState() const
 {
   auto *state = new StateType();
-  allocStateComponents(state);
-  return state;
+  ompl::base::CompoundStateSpace::allocStateComponents(state);
+  return static_cast<ompl::base::State *>(state);
 }
 
 
@@ -113,17 +110,17 @@ void HybridObjectStateSpace::copyState(ompl::base::State *destination, const omp
   ompl::base::CompoundStateSpace::copyState(destination, source);
 }
 
-//void HybridObjectStateSpace::interpolate(const ompl::base::State *from,
-//                                         const ompl::base::State *to,
-//                                         const double t,
-//                                         ompl::base::State *state) const
-//{
-//  return;
-//}
-//
-//
-bool HybridObjectStateSpace::computeStateFK(ompl::base::State *state) const
+bool HybridObjectStateSpace::equalStates(const ompl::base::State *state1, const ompl::base::State *state2) const
 {
-  
-  pose_model_ss_->computeStateFK(state);
+  ompl::base::CompoundStateSpace::equalStates(state1, state2);
+}
+
+ompl::base::StateSamplerPtr HybridObjectStateSpace::allocDefaultStateSampler() const override
+{
+  return ompl::base::CompoundStateSpace::allocDefaultStateSampler();
+}
+
+ompl::base::StateSamplerPtr HybridObjectStateSpace::allocStateSampler() const override
+{
+  return ompl::base::CompoundStateSpace::allocDefaultStateSampler();
 }
