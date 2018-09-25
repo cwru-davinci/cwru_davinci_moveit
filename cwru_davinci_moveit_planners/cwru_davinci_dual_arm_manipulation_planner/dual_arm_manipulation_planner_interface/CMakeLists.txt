@@ -2,18 +2,18 @@ set(MOVEIT_LIB_NAME dual_arm_manipulation_planner_interface)
 
 add_library(${MOVEIT_LIB_NAME}
   src/hybrid_object_state_space.cpp
-#  src/ompl_interface.cpp
-#  src/planning_context_manager.cpp
-#  src/constraints_library.cpp
-#  src/model_based_planning_context.cpp
-#  src/parameterization/model_based_state_space.cpp
-#  src/parameterization/model_based_state_space_factory.cpp
-#  src/parameterization/joint_space/joint_model_state_space.cpp
-#  src/parameterization/joint_space/joint_model_state_space_factory.cpp
-#  src/parameterization/work_space/pose_model_state_space.cpp
-#  src/parameterization/work_space/pose_model_state_space_factory.cpp
-#  src/detail/threadsafe_state_storage.cpp
-#  src/detail/state_validity_checker.cpp
+  src/state_validity_checker.cpp
+  #  src/ompl_interface.cpp
+  #  src/planning_context_manager.cpp
+  #  src/constraints_library.cpp
+  #  src/model_based_planning_context.cpp
+  #  src/parameterization/model_based_state_space.cpp
+  #  src/parameterization/model_based_state_space_factory.cpp
+  #  src/parameterization/joint_space/joint_model_state_space.cpp
+  #  src/parameterization/joint_space/joint_model_state_space_factory.cpp
+  #  src/parameterization/work_space/pose_model_state_space.cpp
+  #  src/parameterization/work_space/pose_model_state_space_factory.cpp
+  #  src/detail/threadsafe_state_storage.cpp
 #  src/detail/projection_evaluators.cpp
 #  src/detail/goal_union.cpp
 #  src/detail/constrained_sampler.cpp
@@ -28,6 +28,7 @@ target_link_libraries(${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} $
 #set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 #set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
 
+add_executable(main src/main.cpp)
 #add_executable(moveit_ompl_planner src/ompl_planner.cpp)
 #target_link_libraries(moveit_ompl_planner ${MOVEIT_LIB_NAME})
 #set_target_properties(moveit_ompl_planner PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")

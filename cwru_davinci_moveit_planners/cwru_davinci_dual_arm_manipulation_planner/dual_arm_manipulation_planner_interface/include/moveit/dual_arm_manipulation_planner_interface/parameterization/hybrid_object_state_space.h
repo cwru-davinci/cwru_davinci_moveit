@@ -40,9 +40,9 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_STATE_SPACE_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_STATE_SPACE_H
 
-#include "ompl/base/StateSpace.h"
-#include "ompl/base/spaces/DiscreteStateSpace.h"
-#include "ompl/base/spaces/SE3StateSpace.h"
+#include <ompl/base/StateSpace.h>
+#include <ompl/base/spaces/DiscreteStateSpace.h>
+#include <ompl/base/spaces/SE3StateSpace.h>
 //#include "moveit/ompl_interface/parameterization/work_space/pose_model_state_space.h"
 //#include <boost/scoped_ptr.hpp>
 
@@ -151,7 +151,7 @@ public:
 
   virtual void copyState(ompl::base::State *destination, const ompl::base::State *source) const override;
 
-  virtual bool equalStates(const State *state1, const State *state2) const override;
+  virtual bool equalStates(const ompl::base::State *state1, const ompl::base::State *state2) const override;
 
   virtual void interpolate(const ompl::base::State *from,
                            const ompl::base::State *to,

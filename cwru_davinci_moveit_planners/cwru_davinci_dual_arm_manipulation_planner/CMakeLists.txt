@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   moveit_core
   moveit_ros_planning
+  moveit_ompl_planning_interface
+  cwru_davinci_grasp
   roscpp
   tf
 )

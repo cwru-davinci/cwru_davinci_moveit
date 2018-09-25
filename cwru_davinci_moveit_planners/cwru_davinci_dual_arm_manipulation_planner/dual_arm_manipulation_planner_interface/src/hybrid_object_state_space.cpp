@@ -37,10 +37,7 @@
  * in addition of two discrete state space (Arm index and Grasp index)
  */
 
-#include "ompl/base/spaces/SE3StateSpace.h"
-#include "ompl/base/spaces/DiscreteStateSpace.h"
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-//#include "moveit/ompl_interface/parameterization/model_based_state_space.h"
 
 using namespace dual_arm_manipulation_planner_interface;
 

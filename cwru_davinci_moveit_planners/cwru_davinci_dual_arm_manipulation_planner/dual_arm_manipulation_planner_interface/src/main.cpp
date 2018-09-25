@@ -75,15 +75,21 @@
 //
 //};
 #include <ompl/base/SpaceInformation.h>
-//#include <ompl/base/spaces/SE3StateSpace.h>
+#include <ompl/base/spaces/SE3StateSpace.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/SimpleSetup.h>
 
 #include <ompl/config.h>
 #include <iostream>
+#include <geometry_msgs/PoseStamped.h>
 
 //moveit
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+
+// Grasp generation and visualization
+#include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
 
 namespace ob = ompl::base;
@@ -93,25 +99,33 @@ using namespace dual_arm_manipulation_planner_interface;
 bool isStateValid(const ob::State *state)
 {
   // cast the abstract state type to the type we expect
-  const auto *se3state = state->as<ob::SE3StateSpace::StateType>();
+  const auto *hybrid_state = state->as<HybridObjectStateSpace::StateType>();
 
   // extract the first component of the state and cast it to what we expect
-  const auto *pos = se3state->as<ob::RealVectorStateSpace::StateType>(0);
+  const auto *object_se3state = hybrid_state->as<ob::SE3StateSpace::StateType>(0);
+
+  const auto *object_pos = object_se3state->as<ob::RealVectorStateSpace::StateType>(0);
+  const auto *object_rot = object_se3state->as<ob::SO3StateSpace::StateType>(1);
 
   // extract the second component of the state and cast it to what we expect
-  const auto *rot = se3state->as<ob::SO3StateSpace::StateType>(1);
+  const auto *arm_index = hybrid_state->as<ob::DiscreteStateSpace::StateType>(1);
 
-  // check validity of state defined by pos & rot
+  // extract the third component of the state and cast it to what we expect
+  const auto *grasp_index = hybrid_state->as<ob::DiscreteStateSpace::StateType>(2);
+
 
 
   // return a value that is always true but uses the two variables we define, so we avoid compiler warnings
-  return (const void*)rot != (const void*)pos;
+//  return (const void*)rot != (const void*)pos;
 }
 
-void plan()
+void plan(const geometry_msgs::PoseStamped &object_init_pose, const geometry_msgs::PoseStamped &object_goal_pose,
+          const int &initial_arm_index, const int &initial_grasp_id, const int &goal_arm_index,
+          const int &goal_grasp_id)
 {
+
   // construct the state space we are planning in
-  auto space(std::make_shared<HybridObjectStateSpace>(1,2,0,100));
+  auto space(std::make_shared<HybridObjectStateSpace>(1, 2, 0, 100));
 
   // construct an instance of  space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(space));
@@ -119,13 +133,36 @@ void plan()
   // set state validity checking for this space
   si->setStateValidityChecker(isStateValid);
 
+
   // create a random start state
-  ob::ScopedState<> start(space);
-  start.random();
+  ob::ScopedState<HybridObjectStateSpace> start(space);
+
+  start->as<ob::SE3StateSpace::StateType>(0)->setXYZ(object_init_pose.pose.position.x,
+                                                     object_init_pose.pose.position.y,
+                                                     object_init_pose.pose.position.z);
+
+  start->as<ob::SE3StateSpace::StateType>(0)->rotation().x = object_init_pose.pose.orientation.x;
+  start->as<ob::SE3StateSpace::StateType>(0)->rotation().y = object_init_pose.pose.orientation.y;
+  start->as<ob::SE3StateSpace::StateType>(0)->rotation().z = object_init_pose.pose.orientation.z;
+  start->as<ob::SE3StateSpace::StateType>(0)->rotation().w = object_init_pose.pose.orientation.w;
+
+  start->as<ob::DiscreteStateSpace::StateType>(1)->value = initial_arm_index;  // set arm index
+  start->as<ob::DiscreteStateSpace::StateType>(2)->value = initial_grasp_id;  // set grasp index
 
   // create a random goal state
-  ob::ScopedState<> goal(space);
-  goal.random();
+  ob::ScopedState<HybridObjectStateSpace> goal(space);
+
+  goal->as<ob::SE3StateSpace::StateType>(0)->setXYZ(object_goal_pose.pose.position.x,
+                                                    object_goal_pose.pose.position.y,
+                                                    object_goal_pose.pose.position.z);
+
+  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().x = object_goal_pose.pose.orientation.x;
+  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().y = object_goal_pose.pose.orientation.y;
+  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().z = object_goal_pose.pose.orientation.z;
+  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().w = object_goal_pose.pose.orientation.w;
+
+  goal->as<ob::DiscreteStateSpace::StateType>(1)->value = goal_arm_index;  // set arm index
+  goal->as<ob::DiscreteStateSpace::StateType>(2)->value = goal_grasp_id;  // set grasp index
 
   // create a problem instance
   auto pdef(std::make_shared<ob::ProblemDefinition>(si));
@@ -166,62 +203,50 @@ void plan()
     std::cout << "No solution found" << std::endl;
 }
 
-void planWithSimpleSetup()
+
+int main(int argc, char** argv)
 {
-  // construct the state space we are planning in
-  auto space(std::make_shared<ob::SE3StateSpace>());
-
-  // set the bounds for the R^3 part of SE(3)
-  ob::RealVectorBounds bounds(3);
-  bounds.setLow(-1);
-  bounds.setHigh(1);
-
-  space->setBounds(bounds);
-
-  // define a simple setup class
-  og::SimpleSetup ss(space);
-
-  // set state validity checking for this space
-  ss.setStateValidityChecker([](const ob::State *state) { return isStateValid(state); });
-
-  // create a random start state
-  ob::ScopedState<> start(space);
-  start.random();
-
-  // create a random goal state
-  ob::ScopedState<> goal(space);
-  goal.random();
-
-  // set the start and goal states
-  ss.setStartAndGoalStates(start, goal);
-
-  // this call is optional, but we put it in to get more output information
-  ss.setup();
-  ss.print();
-
-  // attempt to solve the problem within one second of planning time
-  ob::PlannerStatus solved = ss.solve(1.0);
-
-  if (solved)
+  if (argc < 2)
   {
-    std::cout << "Found solution:" << std::endl;
-    // print the path to screen
-    ss.simplifySolution();
-    ss.getSolutionPath().print(std::cout);
+    std::cerr << "Usage: " << argv[0] << "<which_arm> <needle_name> [place]"
+              << std::endl;
+    return 1;
+  }
+
+  std::string which_arm = argv[1];
+  std::string needle_name = argv[2];
+
+  bool is_place = false;
+  if (argc > 3)
+  {
+    std::string arg = argv[3];
+    if (arg == "place")
+    {
+      ROS_INFO("Place %s", needle_name.c_str());
+      is_place = true;
+    }
   }
   else
-    std::cout << "No solution found" << std::endl;
-}
+  {
+    ROS_INFO("Pick %s", needle_name.c_str());
+  }
 
-int main(int /*argc*/, char ** /*argv*/)
-{
-  std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
+  ros::init(argc, argv, "dual_arm_planning_main_node ");
+  ros::NodeHandle node_handle;
+  ros::NodeHandle node_handle_priv("~");
 
-  plan();
+  ros::AsyncSpinner spinner(1);
+  ros::Duration(5.0).sleep();
+  spinner.start();
 
-  std::cout << std::endl << std::endl;
+  cwru_davinci_grasp::DavinciSimpleNeedleGrasper needleGrasper(node_handle,
+                                                               node_handle_priv,
+                                                               needle_name,
+                                                               which_arm);
 
-  planWithSimpleSetup();
+  geometry_msgs::Pose needle_pose_goal;
+
+  std::vector<moveit_msgs::Grasp> possible_grasps = needleGrasper.getAllPossibleNeedleGrasps();
 
   return 0;
 }
