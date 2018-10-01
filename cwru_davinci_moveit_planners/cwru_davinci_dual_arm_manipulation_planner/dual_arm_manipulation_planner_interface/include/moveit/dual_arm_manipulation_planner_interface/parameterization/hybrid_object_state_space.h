@@ -46,6 +46,8 @@
 //#include "moveit/ompl_interface/parameterization/work_space/pose_model_state_space.h"
 //#include <boost/scoped_ptr.hpp>
 
+#include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
+
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -134,7 +136,8 @@ public:
   HybridObjectStateSpace(int armIndexLowerBound,
                          int armIndexUpperBound,
                          int graspIndexLowerBound,
-                         int graspIndexUpperBound);
+                         int graspIndexUpperBound,
+                         const std::vector<cwru_davinvi_grasp::GraspInfo>& possible_grasps);
 
   virtual ~HybridObjectStateSpace()
   {}
@@ -164,6 +167,14 @@ public:
 
   virtual ompl::base::StateSamplerPtr allocStateSampler() const override;
 
+  /**
+   * @brief Count how many segments of the "longest valid length" fit on the motion from state1 to state2.
+   * @param state1
+   * @param state2
+   * @return
+   */
+  virtual unsigned int 	validSegmentCount (const State *state1, const State *state2) const;
+
 //  bool computeStateFK(ompl::base::State *state) const;
 //
 //  bool computeStateIK(ompl::base::State *state) const;
@@ -177,6 +188,17 @@ public:
 //  virtual void sanityChecks() const;
 
 private:
+  std::vector<cwru_davinvi_grasp::GraspInfo> possible_grasps_;
+
+  int chooseSupportArm(int from_arm_index, int to_arm_index) const;
+
+  /**
+   * @brief Return the first grasp_id which its part_id different than @param from_part_id and @param @to_part_id
+   * @param from_part_id
+   * @param to_part_id
+   * @return
+   */
+  int chooseGraspPart(int from_part_id, int to_part_id) const;
 //  struct HybridObjectPoseComponent
 //  {
 //    HybridObjectPoseComponent(const robot_model::JointModelGroup *subgroup,

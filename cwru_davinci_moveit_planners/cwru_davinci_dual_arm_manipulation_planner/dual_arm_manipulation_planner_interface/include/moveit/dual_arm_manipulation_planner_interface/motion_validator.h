@@ -33,7 +33,7 @@
  *********************************************************************/
 
 /* Author: Su Lu <sxl924@case.edu>
- * Description: This is the derived validity checker inherited from ompl::base::StateValidityChecker
+ * Description: This is the derived motion validator inherited from ompl::base::MotionValidator
  */
 
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_STATE_VALIDITY_CHECKER_H
@@ -53,61 +53,17 @@
 
 namespace dual_arm_manipulation_planner_interface
 {
-class StateValidityChecker : public ompl::base::StateValidityChecker
+
+class MotionValidator : public ompl::base::MotionValidator
 {
 public:
-  StateValidityChecker(const std::string& robot_name = "robot_description",
-                       const std::string& group_name,
-                       const std::string& object_name,
-                       const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
-                       const ompl::base::SpaceInformationPtr &si);
-
-  virtual ~StateValidityChecker(){};
-
-  virtual bool isValid(const ompl::base::State* state) const override
-  {
-    return isValid(state, verbose_);
-  }
-
-  bool isValid(const ompl::base::State* state, bool verbose) const;
-
-  virtual double cost(const ompl::base::State* state) const override;
-
-  virtual double clearance(const ompl::base::State* state) const override;
-
-  void setVerbose(bool flag);
-
-protected:
-
-  bool isValidWithoutCache(const ompl::base::State* state, bool verbose) const;
-
-  bool isValidWithCache(const ompl::base::State* state, bool verbose) const;
-
-  bool convertObjectToRobotState(const ompl::base::State* state, robot_state::RobotState* robot_state);
-
-  planning_scene::PlanningScenePtr planning_scene_;
-
-  robot_model_loader::RobotModelLoader robot_model_loader_;
-
-  robot_model::RobotModelPtr kmodel_;
-
-  /// \brief Robot state containing the initial position of all joints
-  robot_state::RobotStatePtr complete_initial_robot_state_;
-
-  TSStateStorage tss_;
-
-  std::string group_name_;
-
-  collision_detection::CollisionRequest collision_request_simple_;
-
-  collision_detection::CollisionRequest collision_request_simple_verbose_;
-
-  collision_detection::CollisionRequest collision_request_with_cost_;
-
-  bool verbose_;
-
-  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
+  // implement checkMotion()
 };
 }
 
-#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_STATE_VALIDITY_CHECKER_H
+
+
+#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_MOTION_VALIDATOR_H
+#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_MOTION_VALIDATOR_H
+
+#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_MOTION_VALIDATOR_H

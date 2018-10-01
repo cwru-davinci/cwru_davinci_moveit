@@ -48,8 +48,9 @@ using namespace dual_arm_manipulation_planner_interface;
 StateValidityChecker::StateValidityChecker(const std::string& robot_name,
                                            const std::string& group_name,
                                            const std::string& object_name,
+                                           const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
                                            const ompl::base::SpaceInformationPtr &si)
-  : ompl::base::StateValidityChecker(si), robot_model_loader_(robot_name)
+  : ompl::base::StateValidityChecker(si), robot_model_loader_(robot_name), possible_grasps_(possible_grasps)
 
 {
   kmodel_.reset(

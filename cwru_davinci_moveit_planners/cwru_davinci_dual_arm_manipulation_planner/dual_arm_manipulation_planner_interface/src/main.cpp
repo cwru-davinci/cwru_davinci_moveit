@@ -121,7 +121,7 @@ bool isStateValid(const ob::State *state)
 
 void plan(const geometry_msgs::PoseStamped &object_init_pose, const geometry_msgs::PoseStamped &object_goal_pose,
           const int &initial_arm_index, const int &initial_grasp_id, const int &goal_arm_index,
-          const int &goal_grasp_id)
+          const int &goal_grasp_id, std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps)
 {
 
   // construct the state space we are planning in
@@ -244,9 +244,59 @@ int main(int argc, char** argv)
                                                                needle_name,
                                                                which_arm);
 
+  if (!is_place)
+  {
+    int pick_mode = 0;
+
+    std::cout << "How do you want to pick needle 0 for defined pick, other number is for random pic: ";
+    std::cin >> pick_mode;
+    if (pick_mode == 0)
+    {
+      // defined needle pick up
+      if(!needleGrasper.pickNeedle(needle_name, cwru_davinci_grasp::NeedlePickMode::DEFINED))
+      {
+        ROS_INFO("Main function: failed to perform DEFINED needle pick up, now try random needle pick up");
+        // try random needle pick up
+        if (!needleGrasper.pickNeedle(needle_name, cwru_davinci_grasp::NeedlePickMode::RANDOM))
+        {
+          ROS_INFO("Main function: failed to perform RANDOM needle pick up");
+          ros::shutdown();
+          return 0;
+        }
+        ROS_INFO("Main function: successfully performed RANDOM needle pick up");
+        ros::shutdown();
+        return 0;
+      }
+      ROS_INFO("Main function: successfully performed DEFINED needle pick up");
+    }
+    else
+    {
+      // random needle pick up
+      if (!needleGrasper.pickNeedle(needle_name, cwru_davinci_grasp::NeedlePickMode::RANDOM))
+      {
+        ROS_INFO("Main function: failed to perform RANDOM needle pick up");
+        ros::shutdown();
+        return 0;
+      }
+      ROS_INFO("Main function: successfully performed RANDOM needle pick up");
+    }
+  }
+
+  geometry_msgs::PoseStamped needle_init_pose = needleGrasper.getNeedlePose();
   geometry_msgs::Pose needle_pose_goal;
 
-  std::vector<moveit_msgs::Grasp> possible_grasps = needleGrasper.getAllPossibleNeedleGrasps();
+  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps = needleGrasper.getAllPossibleNeedleGrasps();
+
+  int initial_arm_index;
+  if(which_arm == "psm_one")
+  {
+    initial_arm_index = 1;
+  }
+  initial_arm_index = 2;
+
+  int goal_arm_index = 1;
+
+//  plan(needle_init_pose, needle_pose_goal, initial_arm_index, initial_grasp_id, goal_arm_index, goal_grasp_id);
 
   return 0;
 }
