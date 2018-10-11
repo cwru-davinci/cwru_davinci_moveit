@@ -40,9 +40,11 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_STATE_VALIDITY_CHECKER_H
 
 #include <moveit/ompl_interface/detail/threadsafe_state_storage.h>
-#include <moveit/ompl_interface/ompl_planning_context.h>
+//#include <moveit/ompl_interface/ompl_planning_context.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/planning_interface/planning_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/collision_detection/collision_common.h>
 #include <moveit_msgs/Grasp.h>
@@ -50,16 +52,19 @@
 #include <ompl/base/StateValidityChecker.h>
 
 #include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
+#include <cwru_davinci_moveit_object_handling/davinci_object_message_generator.h>
+
 
 namespace dual_arm_manipulation_planner_interface
 {
 class StateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
-  StateValidityChecker(const std::string& robot_name = "robot_description",
-                       const std::string& group_name,
-                       const std::string& object_name,
-                       const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
+  StateValidityChecker(const ros::NodeHandle &node_handle,
+                       const ros::NodeHandle &node_priv,
+                       const std::string &robot_name,
+                       const std::string &object_name,
+                       const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                        const ompl::base::SpaceInformationPtr &si);
 
   virtual ~StateValidityChecker(){};
@@ -78,23 +83,42 @@ public:
   void setVerbose(bool flag);
 
 protected:
+  void initializePlannerPlugin();
 
   bool isValidWithoutCache(const ompl::base::State* state, bool verbose) const;
 
   bool isValidWithCache(const ompl::base::State* state, bool verbose) const;
 
-  bool convertObjectToRobotState(const ompl::base::State* state, robot_state::RobotState* robot_state);
+  void convertObjectToRobotState(robot_state::RobotState* robot_state, const ompl::base::State* state);
+
+  /**
+   * @brief Has certain arm group /@param group_name hold object /param object_name
+   * @param group_name
+   * @param object_name
+   * @return
+   */
+  bool hasAttachedObject(const std::string& group_name, const std::string& object_name);
+
+  ros::NodeHandle node_handle_;
+
+  planning_interface::PlannerManagerPtr planner_instance_;
+
+  planning_interface::PlanningSceneInterface planning_scene_interface_;
 
   planning_scene::PlanningScenePtr planning_scene_;
+
+  planning_interface::PlanningContextPtr planning_context_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
   robot_model::RobotModelPtr kmodel_;
 
-  /// \brief Robot state containing the initial position of all joints
+  /// @brief Robot state containing the current position of all joints
   robot_state::RobotStatePtr complete_initial_robot_state_;
 
   TSStateStorage tss_;
+
+  DavinciObjectMessageGenerator objectMessageGenerator_;
 
   std::string group_name_;
 
@@ -107,6 +131,8 @@ protected:
   bool verbose_;
 
   std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
+
+  std::string object_name_;
 };
 }
 

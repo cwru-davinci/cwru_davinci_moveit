@@ -137,32 +137,32 @@ void plan(const geometry_msgs::PoseStamped &object_init_pose, const geometry_msg
   // create a random start state
   ob::ScopedState<HybridObjectStateSpace> start(space);
 
-  start->as<ob::SE3StateSpace::StateType>(0)->setXYZ(object_init_pose.pose.position.x,
-                                                     object_init_pose.pose.position.y,
-                                                     object_init_pose.pose.position.z);
+  start->se3State().setXYZ(object_init_pose.pose.position.x,
+                           object_init_pose.pose.position.y,
+                           object_init_pose.pose.position.z);
 
-  start->as<ob::SE3StateSpace::StateType>(0)->rotation().x = object_init_pose.pose.orientation.x;
-  start->as<ob::SE3StateSpace::StateType>(0)->rotation().y = object_init_pose.pose.orientation.y;
-  start->as<ob::SE3StateSpace::StateType>(0)->rotation().z = object_init_pose.pose.orientation.z;
-  start->as<ob::SE3StateSpace::StateType>(0)->rotation().w = object_init_pose.pose.orientation.w;
+  start->se3State().rotation().x = object_init_pose.pose.orientation.x;
+  start->se3State().rotation().y = object_init_pose.pose.orientation.y;
+  start->se3State().rotation().z = object_init_pose.pose.orientation.z;
+  start->se3State().rotation().w = object_init_pose.pose.orientation.w;
 
-  start->as<ob::DiscreteStateSpace::StateType>(1)->value = initial_arm_index;  // set arm index
-  start->as<ob::DiscreteStateSpace::StateType>(2)->value = initial_grasp_id;  // set grasp index
+  start->armIndex().value = initial_arm_index;  // set arm index
+  start->graspIndex().value = initial_grasp_id;  // set grasp index
 
   // create a random goal state
   ob::ScopedState<HybridObjectStateSpace> goal(space);
 
-  goal->as<ob::SE3StateSpace::StateType>(0)->setXYZ(object_goal_pose.pose.position.x,
-                                                    object_goal_pose.pose.position.y,
-                                                    object_goal_pose.pose.position.z);
+  goal->se3State().setXYZ(object_goal_pose.pose.position.x,
+                          object_goal_pose.pose.position.y,
+                          object_goal_pose.pose.position.z);
 
-  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().x = object_goal_pose.pose.orientation.x;
-  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().y = object_goal_pose.pose.orientation.y;
-  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().z = object_goal_pose.pose.orientation.z;
-  goal->as<ob::SE3StateSpace::StateType>(0)->rotation().w = object_goal_pose.pose.orientation.w;
+  goal->se3State().rotation().x = object_goal_pose.pose.orientation.x;
+  goal->se3State().rotation().y = object_goal_pose.pose.orientation.y;
+  goal->se3State().rotation().z = object_goal_pose.pose.orientation.z;
+  goal->se3State().rotation().w = object_goal_pose.pose.orientation.w;
 
-  goal->as<ob::DiscreteStateSpace::StateType>(1)->value = goal_arm_index;  // set arm index
-  goal->as<ob::DiscreteStateSpace::StateType>(2)->value = goal_grasp_id;  // set grasp index
+  goal->armIndex().value = goal_arm_index;  // set arm index
+  goal->graspIndex().value = goal_grasp_id;  // set grasp index
 
   // create a problem instance
   auto pdef(std::make_shared<ob::ProblemDefinition>(si));

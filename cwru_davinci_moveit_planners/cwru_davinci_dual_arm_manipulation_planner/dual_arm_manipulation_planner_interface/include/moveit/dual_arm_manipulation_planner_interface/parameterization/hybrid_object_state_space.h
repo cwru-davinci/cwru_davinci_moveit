@@ -43,8 +43,6 @@
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/spaces/DiscreteStateSpace.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
-//#include "moveit/ompl_interface/parameterization/work_space/pose_model_state_space.h"
-//#include <boost/scoped_ptr.hpp>
 
 #include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
 
@@ -60,6 +58,11 @@ public:
   public:
     enum
     {
+      VALIDITY_KNOWN = 1,
+      GOAL_DISTANCE_KNOWN = 2,
+      VALIDITY_TRUE = 4,
+      IS_START_STATE = 8,
+      IS_GOAL_STATE = 16,
       JOINTS_COMPUTED = 256,
       POSE_COMPUTED = 512
     };
@@ -67,6 +70,71 @@ public:
     StateType() : CompoundStateSpace::StateType(), values(NULL), flags(0)
     {
       flags |= JOINTS_COMPUTED;
+    }
+
+    void markValid(double d)
+    {
+      distance = d;
+      flags |= GOAL_DISTANCE_KNOWN;
+      markValid();
+    }
+
+    void markValid()
+    {
+      flags |= (VALIDITY_KNOWN | VALIDITY_TRUE);
+    }
+
+    void markInvalid(double d)
+    {
+      distance = d;
+      flags |= GOAL_DISTANCE_KNOWN;
+      markInvalid();
+    }
+
+    void markInvalid()
+    {
+      flags &= ~VALIDITY_TRUE;
+      flage |= VALIDITY_KNOWN;
+    }
+
+    void clearKnownInformation()
+    {
+      flags = 0;
+    }
+
+    bool isMarkedValid() const
+    {
+      return flags & VALIDITY_TRUE;
+    }
+
+    bool isGoalDistanceKnown() const
+    {
+      return flags & GOAL_DISTANCE_KNOWN;
+    }
+
+    bool isStartState() const
+    {
+      return flags & IS_START_STATE;
+    }
+
+    bool isGoalState() const
+    {
+      return flags & IS_GOAL_STATE;
+    }
+
+    bool isInputState() const
+    {
+      return flags & (IS_START_STATE | IS_GOAL_STATE);
+    }
+
+    void markStartState()
+    {
+      flags |= IS_START_STATE;
+    }
+
+    void markGoalState()
+    {
+      flags |= IS_GOAL_STATE;
     }
 
     bool jointsComputed() const
@@ -95,6 +163,10 @@ public:
         flags &= ~POSE_COMPUTED;
     }
 
+    /**
+     * @brief Get the SE(3) components of the state and allow changing it as well
+     * @return
+     */
     const ompl::base::SE3StateSpace::StateType &se3State() const
     {
       return *as<ompl::base::SE3StateSpace::StateType>(0);
@@ -105,21 +177,38 @@ public:
       return *as<ompl::base::SE3StateSpace::StateType>(0);
     }
 
+    /**
+     * @brief Get the Arm index components of the state and allow changing it as well
+     * @return
+     */
     const ompl::base::DiscreteStateSpace::StateType &armIndex() const
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(1);
     }
 
+    /**
+     * @brief Get the arm index components of the state and allow changing it as well
+     * @return
+     */
     ompl::base::DiscreteStateSpace::StateType &armIndex()
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(1);
     }
 
+
+    /**
+     * @brief Get the grasp index components of the state and allow changing it as well
+     * @return
+     */
     const ompl::base::DiscreteStateSpace::StateType &graspIndex() const
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(2);
     }
 
+    /**
+     * @brief Get the grasp index components of the state and allow changing it as well
+     * @return
+     */
     ompl::base::DiscreteStateSpace::StateType &graspIndex()
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(2);
@@ -128,7 +217,7 @@ public:
     double *values;
 //    int tag;
     int flags;
-//    double distance;
+    double distance;
 
   };
 
@@ -175,6 +264,8 @@ public:
    */
   virtual unsigned int 	validSegmentCount (const State *state1, const State *state2) const;
 
+  bool discreteGeodesic(const State *from, const State *to, bool interpolate,
+                        std::vector<ompl::base::State *> *geodesic) const;
 //  bool computeStateFK(ompl::base::State *state) const;
 //
 //  bool computeStateIK(ompl::base::State *state) const;
@@ -186,6 +277,24 @@ public:
 //  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
 //
 //  virtual void sanityChecks() const;
+protected:
+  /** \brief SpaceInformation associated with this space. Required
+   * for early collision checking in manifold traversal.
+   */
+  SpaceInformation *si_{nullptr};
+
+  /** \brief Step size when traversing the manifold and collision checking. */
+  double delta_;
+
+  /** \brief Manifold traversal from x to y is stopped if accumulated
+   * distance is greater than d(x,y) times this. Additionally, if d(x,
+   * y) is greater than lambda * delta between two points, search is
+   * discontinued.
+   */
+  double lambda_;
+
+  /** \brief Whether setup() has been called. */
+  bool setup_{false};
 
 private:
   std::vector<cwru_davinvi_grasp::GraspInfo> possible_grasps_;

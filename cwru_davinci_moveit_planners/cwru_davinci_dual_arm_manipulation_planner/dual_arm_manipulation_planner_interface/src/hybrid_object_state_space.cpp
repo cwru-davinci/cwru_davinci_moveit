@@ -84,16 +84,16 @@ double HybridObjectStateSpace::distance(const State *state1, const State *state2
   double se3_dist;
   int num_handoff;
 
-  const auto *hs1 = static_cast<const HybridObjectStateSpace::StateType *>(state1);
-  const auto *hs2 = static_cast<const HybridObjectStateSpace::StateType *>(state2);
+  const auto *hs1 = static_cast<const StateType *>(state1);
+  const auto *hs2 = static_cast<const StateType *>(state2);
 
   se3_dist = components_[0]->distance(hs1->components[0], hs2->components[0]);
 
-  const int s1_arm_index = hs1->components[1]->as<DiscreteStateSpace::StateType>()->value;
-  const int s2_arm_index = hs2->components[1]->as<DiscreteStateSpace::StateType>()->value;
+  const int s1_arm_index = hs1->armIndex().value;
+  const int s2_arm_index = hs2->armIndex().value;
 
-  const int s1_grasp_index = hs1->components[2]->as<DiscreteStateSpace::StateType>()->value;
-  const int s2_grasp_index = hs2->components[2]->as<DiscreteStateSpace::StateType>()->value;
+  const int s1_grasp_index = hs1->graspIndex().value;
+  const int s2_grasp_index = hs2->graspIndex().value;
 
   const int s1_part_id = possible_grasps_[s1_grasp_index].part_id;
   const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
@@ -152,21 +152,58 @@ StateSamplerPtr HybridObjectStateSpace::allocStateSampler() const override
   return ompl::base::CompoundStateSpace::allocDefaultStateSampler();
 }
 
-unsigned int HybridObjectStateSpace::validSegmentCount (const State *state1, const State *state2) const
+unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, const State *state2) const
 {
-  const auto *hs1 = static_cast<const HybridObjectStateSpace::StateType *>(state1);
-  const auto *hs2 = static_cast<const HybridObjectStateSpace::StateType *>(state2);
+  const auto *hs1 = static_cast<const StateType *>(state1);
+  const auto *hs2 = static_cast<const StateType *>(state2);
 
-  const int hs1_arm_index = hs1->components[1]->as<DiscreteStateSpace::StateType>()->value;
-  const int hs2_arm_index = hs2->components[1]->as<DiscreteStateSpace::StateType>()->value;
+  const int s1_arm_index = hs1->armIndex().value;
+  const int s2_arm_index = hs2->armIndex().value;
 
-  const int hs1_grasp_index = hs1->components[2]->as<DiscreteStateSpace::StateType>()->value;
-  const int hs2_grasp_index = hs2->components[2]->as<DiscreteStateSpace::StateType>()->value;
+  const int s1_grasp_index = hs1->graspIndex().value;
+  const int s2_grasp_index = hs2->graspIndex().value;
 
-  if(hs1_arm_index == hs2_arm_index && hs1_grasp_index == hs2_grasp_index)
+  const int s1_part_id = possible_grasps_[s1_grasp_index].part_id;
+  const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
+
+  if (s1_arm_index == s2_arm_index && s1_grasp_index == s2_grasp_index)
   {
-
+    // need implementation
   }
+}
+
+bool HybridObjectStateSpace::discreteGeodesic(const State *from, const State *to, bool interpolate,
+                                              std::vector<ompl::base::State *> *geodesic) const
+{
+  auto &&svc = si_->getStateValidityChecker();
+
+  // We can't traverse the manifold if we don't start on it.
+  if (!(interpolate || svc->isValid(from)))
+    return false;
+
+  auto afrom = from->as<StateType>();
+  auto ato = to->as<StateType>();
+
+  if (geodesic != nullptr)
+  {
+    geodesic->clear();
+    geodesic->push_back(cloneState(from));
+  }
+
+  // No need to traverse the manifold if we are already there
+  const double tolerance = delta_;
+  const double distTo = distance(from, to);
+  if (distTo <= tolerance)
+    return true;
+
+
+
+  // Create a scratch state to use for movement.
+  auto scratch = cloneState(from)->as<StateType>();
+  auto temp = allocState()->as<StateType>();
+
+
+
 }
 
 void HybridObjectStateSpace::interpolate(const State *from,
@@ -174,19 +211,19 @@ void HybridObjectStateSpace::interpolate(const State *from,
                                          const double t,
                                          State *state) const
 {
-  auto *cstate = static_cast<HybridObjectStateSpace::StateType *>(state);
+  auto *cstate = static_cast<StateType *>(state);
 
-  const auto *hys_from = static_cast<const HybridObjectStateSpace::StateType *>(from);
-  const auto *hys_to = static_cast<const HybridObjectStateSpace::StateType *>(to);
+  const auto *hys_from = static_cast<const StateType *>(from);
+  const auto *hys_to = static_cast<const StateType *>(to);
 
   components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t,
                               cstate->components[0]);  // interpolation of se3 state sapce
 
-  const int from_arm_index = hys_from->components[1]->as<DiscreteStateSpace::StateType>()->value;
-  const int to_arm_index = hys_to->components[1]->as<DiscreteStateSpace::StateType>()->value;
+  const int from_arm_index = hys_from->armIndex().value;
+  const int to_arm_index = hys_to->armIndex().value;
 
-  const int from_grasp_index = hys_from->components[2]->as<DiscreteStateSpace::StateType>()->value;
-  const int to_grasp_index = hys_to->components[2]->as<DiscreteStateSpace::StateType>()->value;
+  const int from_grasp_index = hys_from->graspIndex().value;
+  const int to_grasp_index = hys_to->graspIndex().value;
 
   const int from_part_id = possible_grasps_[from_grasp_index].part_id;
   const int to_part_id = possible_grasps_[to_grasp_index].part_id;
@@ -196,26 +233,26 @@ void HybridObjectStateSpace::interpolate(const State *from,
 
     if (from_grasp_index == to_grasp_index)
     {
-      cstate->components[1]->as<DiscreteStateSpace::StateType>()->value = from_arm_index;
-      cstate->components[2]->as<DiscreteStateSpace::StateType>()->value = from_grasp_index;
+      cstate->armIndex().value = from_arm_index;
+      cstate->graspIndex().value = from_grasp_index;
     }
     else
     {
-      cstate->components[1]->as<DiscreteStateSpace::StateType>()->value = chooseSupportArm(from_arm_index, to_arm_index);
-      cstate->components[2]->as<DiscreteStateSpace::StateType>()->value = chooseGraspPart(from_part_id, to_part_id);
+      cstate->armIndex().value = chooseSupportArm(from_arm_index, to_arm_index);
+      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
     }
   }
   else
   {
     if (from_arm_index == 1)  // if from state is PSM1
     {
-      cstate->components[1]->as<DiscreteStateSpace::StateType>()->value = 2;  // cstate should be PSM2, may also be PSM1
-      cstate->components[2]->as<DiscreteStateSpace::StateType>()->value = chooseGraspPart(from_part_id, to_part_id);
+      cstate->armIndex().value = 2;  // cstate should be PSM2, may also be PSM1
+      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
     }
     else if (from_arm_index == 2)  // if from state is PSM2
     {
-      cstate->components[1]->as<DiscreteStateSpace::StateType>()->value = 1;  // cstate should be PSM1, may also be PSM2
-      cstate->components[2]->as<DiscreteStateSpace::StateType>()->value = chooseGraspPart(from_part_id, to_part_id);
+      cstate->armIndex().value = 1;  // cstate should be PSM1, may also be PSM2
+      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
     }
   }
 }
@@ -224,7 +261,7 @@ int HybridObjectStateSpace::chooseSupportArm(int from_arm_index, int to_arm_inde
 {
   int cs_arm_id;
 
-  if((from_arm_index == to_arm_index) == 1)
+  if ((from_arm_index == to_arm_index) == 1)
   {
     cs_arm_id = 2;
   }
