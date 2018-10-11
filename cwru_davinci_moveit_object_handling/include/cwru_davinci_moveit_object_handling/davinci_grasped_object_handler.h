@@ -165,8 +165,9 @@ namespace davinci_moveit_object_handling
     ros::NodeHandle nh_;
 
     std::vector<std::string> gripper_link_names_;
-
   };
+
+typedef boost::shared_ptr<DavinciMoveitGraspedObjectHandler> DavinciMoveitGraspedObjectHandlerPtr;
 }
 
 
