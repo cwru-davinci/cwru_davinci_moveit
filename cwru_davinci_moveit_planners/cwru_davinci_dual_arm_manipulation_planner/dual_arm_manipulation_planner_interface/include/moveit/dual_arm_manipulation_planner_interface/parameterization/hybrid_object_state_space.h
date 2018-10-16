@@ -46,6 +46,7 @@
 
 #include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
 
+#include <moveit/profiler/profiler.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -235,6 +236,8 @@ public:
 
   void setGraspIndexBounds(int lowerBound, int upperBound);
 
+  virtual bool isHybrid() const;
+
   virtual double distance(const ompl::base::State *state1, const ompl::base::State *state2) const override;
 
   virtual ompl::base::State *allocState() const override;
@@ -266,11 +269,11 @@ public:
 
   bool discreteGeodesic(const State *from, const State *to, bool interpolate,
                         std::vector<ompl::base::State *> *geodesic) const;
-//  bool computeStateFK(ompl::base::State *state) const;
-//
-//  bool computeStateIK(ompl::base::State *state) const;
-//
-//  bool computeStateK(ompl::base::State *state) const;
+  bool computeStateFK(ompl::base::State *state) const;
+
+  bool computeStateIK(ompl::base::State *state) const;
+
+  bool computeStateK(ompl::base::State *state) const;
 //
 //  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
 //
@@ -308,34 +311,31 @@ private:
    * @return
    */
   int chooseGraspPart(int from_part_id, int to_part_id) const;
-//  struct HybridObjectPoseComponent
-//  {
-//    HybridObjectPoseComponent(const robot_model::JointModelGroup *subgroup,
-//                              const robot_model::JointModelGroup::KinematicsSolver &k,
-//                              const std::vector<moveit_msgs::Grasp> &grasp_list);
-//
-//    bool computeStateFK(StateType *full_state, unsigned int idx) const;
-//
-//    bool computeStateIK(StateType *full_state, unsigned int idx) const;
-//
-//    bool operator<(const PoseComponent &o) const
-//    {
-//      return subgroup_->getName() < o.subgroup_->getName();
-//    }
-//
-//    const robot_model::JointModelGroup *subgroup_;
-//    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
-//    std::vector<moveit_msgs::Grasp> grasp_list_;
+
+  struct PoseComponent
+  {
+    PoseComponent(const robot_model::JointModelGroup *subgroup,
+                  const robot_model::JointModelGroup::KinematicsSolver &k,
+                  const moveit_msgs::Grasp &grasp);
+
+    bool computeStateFK(StateType *full_state) const;
+
+    bool computeStateIK(StateType *full_state) const;
+
+    bool operator<(const PoseComponent &o) const
+    {
+      return subgroup_->getName() < o.subgroup_->getName();
+    }
+
+    const robot_model::JointModelGroup *subgroup_;
+    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
+    moveit_msgs::Grasp grasp_;
 //    std::vector<unsigned int> bijection_;
-//    ompl::base::StateSpacePtr state_space_;
-//    std::vector<std::string> fk_link_;
-//  };
-//
-//  HybridObjectPoseComponent object_pose_;
+    ompl::base::StateSpacePtr state_space_;
+    std::vector<std::string> fk_link_;
+  };
 
-//  boost::scoped_ptr<ompl_interface::PoseModelStateSpace> pose_model_ss_;
-
-//  ompl_interface::ModelBasedStateSpaceSpecification spec_;
+  PoseComponent object_pose_;
 };
 }
 

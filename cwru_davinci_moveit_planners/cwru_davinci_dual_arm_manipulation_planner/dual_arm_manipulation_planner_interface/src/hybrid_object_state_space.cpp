@@ -76,6 +76,11 @@ void HybridObjectStateSpace::setGraspIndexBounds(int lowerBound, int upperBound)
   components_[2]->as<DiscreteStateSpace>()->setBounds(lowerBound, upperBound);
 }
 
+bool HybridObjectStateSpace::isHybrid() const
+{
+  return true;
+}
+
 double HybridObjectStateSpace::distance(const State *state1, const State *state2) const
 {
 //  double se3_dist_trans, se3_dist_rot;
@@ -166,9 +171,33 @@ unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, cons
   const int s1_part_id = possible_grasps_[s1_grasp_index].part_id;
   const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
 
+  unsigned int se3_count = ompl::base::CompoundStateSpace::validSegmentCount(hs1->components[0], hs2->components[0]);
+  unsigned int handoff_count = 0;
+
   if (s1_arm_index == s2_arm_index && s1_grasp_index == s2_grasp_index)
   {
-    // need implementation
+    return se3_count;
+  }
+  else
+  {
+    if (s1_arm_index != s2_arm_index)
+    {
+      if (s1_part_id != s2_part_id)
+      {
+        handoff_count = 1;
+        return handoff_count + se3_count;
+      }
+      else
+      {
+        handoff_count = 3;
+        return handoff_count + se3_count;
+      }
+    }
+    else  // s1_arm_index == s2_arm_index
+    {
+      handoff_count = 2;
+      return handoff_count + se3_count;
+    }
   }
 }
 
@@ -206,6 +235,70 @@ bool HybridObjectStateSpace::discreteGeodesic(const State *from, const State *to
 
 }
 
+
+bool HybridObjectStateSpace::computeStateFK(ompl::base::State *state) const
+{
+
+}
+
+bool HybridObjectStateSpace::computeStateIK(ompl::base::State *state) const
+{
+  if (state->as<StateType>()->jointsComputed())
+    return true;
+  for (std::size_t i = 0 ; i < poses_.size() ; ++i)
+    if (!poses_[i].computeStateIK(state->as<StateType>(), i))
+    {
+      state->as<StateType>()->markInvalid();
+      return false;
+    }
+  state->as<StateType>()->setJointsComputed(true);
+  return true;
+}
+
+bool HybridObjectStateSpace::computeStateK(ompl::base::State *state) const
+{
+  if (state->as<StateType>()->jointsComputed() && !state->as<StateType>()->poseComputed())
+    return computeStateFK(state);
+  if (!state->as<StateType>()->jointsComputed() && state->as<StateType>()->poseComputed())
+    return computeStateIK(state);
+  if (state->as<StateType>()->jointsComputed() && state->as<StateType>()->poseComputed())
+    return true;
+  state->as<StateType>()->markInvalid();
+  return false;
+}
+
+bool HybridObjectStateSpace::computeStateIK(StateType *state) const
+{
+  // construct the pose
+  geometry_msgs::Pose pose;
+  const ompl::base::SE3StateSpace::StateType *se3_state = full_state->poses[idx];
+  pose.position.x = se3_state->getX();
+  pose.position.y = se3_state->getY();
+  pose.position.z = se3_state->getZ();
+  const ompl::base::SO3StateSpace::StateType &so3_state = se3_state->rotation();
+  pose.orientation.x = so3_state.x;
+  pose.orientation.y = so3_state.y;
+  pose.orientation.z = so3_state.z;
+  pose.orientation.w = so3_state.w;
+
+  // run IK
+  std::vector<double> solution(kinematics_solver_->getJointNames().size(), 0.0);
+  std::vector<double> seed(kinematics_solver_->getJointNames().size(), 0.0);
+  moveit_msgs::MoveItErrorCodes err_code;
+  if (!kinematics_solver_->searchPositionIK(pose, seed, timeout, solution,
+                                                                           error_code))
+  {
+    if (err_code.val != moveit_msgs::MoveItErrorCodes::TIMED_OUT ||
+        !kinematics_solver_->searchPositionIK(pose, seed_values, kinematics_solver_->getDefaultTimeout() * 2.0, solution, err_code))
+      return false;
+  }
+
+  for (std::size_t i = 0 ; i < bijection_.size() ; ++i)
+    full_state->values[bijection_[i]] = solution[i];
+
+  return true;
+}
+
 void HybridObjectStateSpace::interpolate(const State *from,
                                          const State *to,
                                          const double t,
@@ -216,8 +309,15 @@ void HybridObjectStateSpace::interpolate(const State *from,
   const auto *hys_from = static_cast<const StateType *>(from);
   const auto *hys_to = static_cast<const StateType *>(to);
 
-  components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t,
-                              cstate->components[0]);  // interpolation of se3 state sapce
+  cstate->components[0] = hys_from->components[0];
+  if(!computeStateIK(cstate))
+  {
+    cstate->components[0] = hys_to->components[0];
+    if(!computeStateIK(cstate))
+    {
+      cstate->as<StateType>()->markInvalid();
+    }
+  }
 
   const int from_arm_index = hys_from->armIndex().value;
   const int to_arm_index = hys_to->armIndex().value;
@@ -289,4 +389,19 @@ int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) co
   }
 
   return cs_grasp_id;
+}
+
+HybridObjectStateSpace::PoseComponent::PoseComponent(const robot_model::JointModelGroup *subgroup,
+                                                     const robot_model::JointModelGroup::KinematicsSolver &k,
+                                                     const moveit_msgs::Grasp& grasp)
+  : subgroup_(subgroup)
+  , kinematics_solver_(k.allocator_(subgroup))
+  , grasp_(grasp)
+{
+
+  state_space_.reset(new ompl::base::SE3StateSpace());
+  state_space_->setName(subgroup_->getName() + "_Workspace");
+  fk_link_.resize(1, kinematics_solver_->getTipFrame());
+  if (!fk_link_[0].empty() && fk_link_[0][0] == '/')
+    fk_link_[0] = fk_link_[0].substr(1);
 }
