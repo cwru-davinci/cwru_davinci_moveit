@@ -1,8 +1,8 @@
 set(MOVEIT_LIB_NAME dual_arm_manipulation_planner_interface)
 
 add_library(${MOVEIT_LIB_NAME}
-  src/hybrid_object_state_space.cpp
-  src/state_validity_checker.cpp
+  #src/hybrid_object_state_space.cpp
+ # src/state_validity_checker.cpp
   #  src/ompl_interface.cpp
   #  src/planning_context_manager.cpp
   #  src/constraints_library.cpp
@@ -28,7 +28,7 @@ target_link_libraries(${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} $
 #set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 #set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
 
-add_executable(main src/main.cpp)
+#add_executable(main src/main.cpp)
 #add_executable(moveit_ompl_planner src/ompl_planner.cpp)
 #target_link_libraries(moveit_ompl_planner ${MOVEIT_LIB_NAME})
 #set_target_properties(moveit_ompl_planner PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")

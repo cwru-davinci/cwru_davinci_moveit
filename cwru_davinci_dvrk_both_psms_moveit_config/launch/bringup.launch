@@ -1,0 +1,46 @@
+<launch>
+	<!--Echo non-prefixed joint topics onto prefixed joint topics.-->
+	<node name="adapter" pkg="cwru_davinci_control" type="echo_node" respawn="false" output="screen"/>
+
+	<node name="hwi_1" pkg="cwru_davinci_control" type="davinci_traj_controller" ns="/prefixed/dvrk/PSM1" args="PSM1"/>
+	<node name="hwi_2" pkg="cwru_davinci_control" type="davinci_traj_controller" ns="/prefixed/dvrk/PSM2" args="PSM2"/>
+
+
+    <!--This should probably be made to launch the MoveIt controllers instead, unless one wants controllers on top of controllers. -->    
+    <include file="$(find cwru_davinci_control)/launch/control_both.launch"/>
+
+
+    <node name="both_psms_moveit_joint_state_publisher" pkg="cwru_davinci_dvrk_both_psms_moveit_config" type="both_psms_moveit_joint_state_publisher" respawn="false" output="screen"/>
+
+
+	<include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_planning_execution.launch">
+        <!--remap from="dvrk/PSM1/robot_description" to="robot_description"/>
+        <remap from="dvrk/PSM2/robot_description" to="robot_description"/-->
+
+    </include>
+
+<!--     <remap from="dvrk/PSM1/robot_description" to="robot_description">
+    	<include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_planning_execution.launch"/>
+    </remap>
+
+    <remap from="dvrk/PSM2/robot_description" to="robot_description">
+    	<include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_planning_execution.launch"/>
+    </remap> -->
+
+     
+     
+<!--      <include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_planning_execution.launch">
+        <remap from="dvrk/PSM2/robot_description" to="robot_description"/>
+     </include> -->
+
+
+<!-- 	<group ns="/dvrk/">
+
+    <include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_planning_execution.launch"/>
+
+	</group> -->
+
+    <!-- <include file="$(find cwru_davinci_psm_PSM1moveit_config)/launch/default_warehouse_db.launch" /> -->
+
+
+</launch>

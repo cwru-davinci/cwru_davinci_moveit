@@ -1,24 +1,19 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(cwru_davinci_dual_arm_manipulation_planner)
+project(cwru_davinci_dvrk_both_psms_moveit_config)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+#add_compile_options(-std=c++11)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  eigen_conversions
-  moveit_core
-  moveit_ros_planning
-  cwru_davinci_grasp
   roscpp
-  tf
-)
+  sensor_msgs
+  )
 
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
-find_package(ompl REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -35,10 +30,10 @@ find_package(ompl REQUIRED)
 ##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
 ## * In the file package.xml:
 ##   * add a build_depend tag for "message_generation"
-##   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
+##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
 ##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
 ##     but can be declared for certainty nonetheless:
-##     * add a exec_depend tag for "message_runtime"
+##     * add a run_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
 ##     find_package(catkin REQUIRED COMPONENTS ...)
@@ -83,7 +78,7 @@ find_package(ompl REQUIRED)
 ## To declare and build dynamic reconfigure parameters within this
 ## package, follow these steps:
 ## * In the file package.xml:
-##   * add a build_depend and a exec_depend tag for "dynamic_reconfigure"
+##   * add a build_depend and a run_depend tag for "dynamic_reconfigure"
 ## * In this file (CMakeLists.txt):
 ##   * add "dynamic_reconfigure" to
 ##     find_package(catkin REQUIRED COMPONENTS ...)
@@ -106,12 +101,10 @@ find_package(ompl REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS dual_arm_manipulation_planner_interface/include
-  ${OMPL_INCLUDE_DIRS}
-  LIBRARIES dual_arm_manipulation_planner_interface
-  ${OMPL_LIBRARIES}
-  CATKIN_DEPENDS eigen_conversions moveit_core moveit_ros_planning roscpp
-#  DEPENDS system_lib
+  # INCLUDE_DIRS include
+  # LIBRARIES
+  CATKIN_DEPENDS roscpp sensor_msgs
+  # DEPENDS
 )
 
 ###########
@@ -120,30 +113,22 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
-  dual_arm_manipulation_planner_interface/include
-  ${catkin_INCLUDE_DIRS}
-  ${OMPL_INCLUDE_DIRS}
-  ${OMPL_LIBRARIES}
-)
-
-link_directories(${catkin_LIBRARY_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
+include_directories(${catkin_INCLUDE_DIRS})
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/cwru_davinci_dual_arm_manipulation_planner.cpp
+#   src/${PROJECT_NAME}/cwru_davinci_moveit_tutorials.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(davinci_attach_needle_moveit_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/cwru_davinci_dual_arm_manipulation_planner_node.cpp)
+add_executable(both_psms_moveit_joint_state_publisher src/both_psms_moveit_joint_state_publisher.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -153,14 +138,11 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(davinci_attach_needle_moveit_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(both_psms_moveit_joint_state_publisher ${catkin_LIBRARIES})
 
-#add_subdirectory(dual_arm_manipulation_planner_interface)
 #############
 ## Install ##
 #############
@@ -201,7 +183,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_cwru_davinci_dual_arm_manipulation_planner.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_cwru_davinci_moveit_tutorials.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

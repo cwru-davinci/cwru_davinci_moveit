@@ -1,0 +1,23 @@
+controller_list:
+  - name: fake_psm_one_controller
+    joints:
+      - PSM1/outer_yaw
+      - PSM1/outer_pitch
+      - PSM1/outer_insertion
+      - PSM1/outer_roll
+      - PSM1/outer_wrist_pitch
+      - PSM1/outer_wrist_yaw
+  - name: fake_psm_two_controller
+    joints:
+      - PSM2/outer_yaw
+      - PSM2/outer_pitch
+      - PSM2/outer_insertion
+      - PSM2/outer_roll
+      - PSM2/outer_wrist_pitch
+      - PSM2/outer_wrist_yaw
+  - name: fake_psm_one_gripper_controller
+    joints:
+      - PSM1/jaw
+  - name: fake_psm_two_gripper_controller
+    joints:
+      - PSM2/jaw

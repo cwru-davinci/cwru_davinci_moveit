@@ -1,0 +1,26 @@
+<launch>
+    # set to true if the gazebo_state_plugin/gazebo_object_info world plugin should be loaded
+    <arg name="load_gazebo_objects_plugin" default="true"/>
+
+    # load the world plugin loader (in package gazebo_world_plugin_loader) which launches several
+    # world plugins according to the specification in the ROS parameters. Note that you will
+    # have to load those parameters on the ROS parameter server BEFORE gazebo gets launched.
+    <arg name="load_world_plugins" default="true"/>
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find cwru_davinci_simulation)/world/empty.world"/>
+        <arg if="$(arg load_world_plugins)" name="extra_gazebo_args" value="-s libgazebo_world_plugin_loader.so"/>
+    </include>
+
+    <!--Spawn in the camera.-->
+    <include file="$(find cwru_davinci_simulation)/launch/spawn_camera.launch">
+        <!--arg name="xyz" value="0 0 0"/>
+        <arg name="rpy" value="0 0 0"/-->
+    </include>
+
+
+    <!--Spawn PSMs-->
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(find cwru_davinci_geometry_models)/model_with_prefix/both_psms.urdf.xacro'"/>
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model dvrk_psm"/>
+    <!-- <node name="dvrk_both_psms_controllers" pkg="cwru_davinci_control" type="dvrk_both_psms_controllers"/> -->
+</launch>
