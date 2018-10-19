@@ -1,0 +1,28 @@
+<launch>
+  # The planning and execution components of MoveIt! configured to 
+  # publish the current configuration of the robot (simulated or real) 
+  # and the current state of the world as seen by the planner
+  
+  <include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/move_group.launch">
+    <arg name="publish_monitored_planning_scene" value="true" />
+  </include>
+
+  <!--<node name="dvrk_psm_one_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">-->
+    <!--<param name="/use_gui" value="false"/>-->
+    <!--<rosparam param="/source_list">[/dvrk/PSM1/joint_states]</rosparam>-->
+  <!--</node>-->
+
+<!--   <node name="dvrk_psm_two_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="/use_gui" value="false"/>
+    <rosparam param="/source_list">[/dvrk/PSM2/joint_states]</rosparam>
+  </node> -->
+<!--   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="/use_gui" value="false"/>
+    <rosparam param="/source_list">[/move_group/fake_controller_joint_states]</rosparam>
+    <rosparam param="/source_list">["/dvrk_psm/joint_states"]</rosparam>
+  </node> -->
+  
+  # The visualization component of MoveIt!
+  <!-- <include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_rviz.launch"/> -->
+
+</launch>
