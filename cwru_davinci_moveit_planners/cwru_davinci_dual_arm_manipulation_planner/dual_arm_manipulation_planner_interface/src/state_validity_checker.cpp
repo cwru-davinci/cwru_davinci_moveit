@@ -33,8 +33,7 @@
  *********************************************************************/
 
 /* Author: Su Lu <sxl924@case.edu>
- * Description:
- *
+ * Description: The class to do state validity check
  */
 
 #include <moveit/dual_arm_manipulation_planner_interface/state_validity_checker.h>

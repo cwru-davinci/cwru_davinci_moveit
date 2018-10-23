@@ -50,6 +50,8 @@
 
 namespace dual_arm_manipulation_planner_interface
 {
+enum class StateDiff {AllSame, ArmDiff, GraspDiff, PoseDiff, ArmGraspDiff, ArmPoseDiff, GraspPoseDiff, AllDiff};
+
 class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
 {
 public:
@@ -274,6 +276,8 @@ public:
   bool computeStateIK(ompl::base::State *state) const;
 
   bool computeStateK(ompl::base::State *state) const;
+
+  static StateDiff checkStateDiff(State *state1, State *state2);
 //
 //  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
 //

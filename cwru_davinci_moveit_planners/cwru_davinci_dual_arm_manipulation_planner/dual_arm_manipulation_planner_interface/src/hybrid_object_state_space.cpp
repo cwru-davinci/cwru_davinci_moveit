@@ -357,6 +357,28 @@ void HybridObjectStateSpace::interpolate(const State *from,
   }
 }
 
+StateDiff HybridObjectStateSpace::checkStateDiff(State *state1, State *state2)
+{
+  if(equalState(state1, state2))
+    return AllSame;
+
+  const auto *hs1 = static_cast<const StateType *>(state1);
+  const auto *hs2 = static_cast<const StateType *>(state2);
+
+  const int s1_arm_index = hs1->armIndex().value;
+  const int s2_arm_index = hs2->armIndex().value;
+
+  const int s1_grasp_index = hs1->graspIndex().value;
+  const int s2_grasp_index = hs2->graspIndex().value;
+
+  if(s1_arm_index == s2_arm_index)
+  {
+    if(s1_grasp_index == )
+  }
+
+}
+
+
 int HybridObjectStateSpace::chooseSupportArm(int from_arm_index, int to_arm_index) const
 {
   int cs_arm_id;
