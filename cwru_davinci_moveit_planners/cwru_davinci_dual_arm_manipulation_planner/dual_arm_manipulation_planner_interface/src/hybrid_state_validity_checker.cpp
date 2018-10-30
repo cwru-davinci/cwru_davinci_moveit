@@ -36,7 +36,7 @@
  * Description: The class to do state validity check
  */
 
-#include <moveit/dual_arm_manipulation_planner_interface/state_validity_checker.h>
+#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -47,16 +47,16 @@
 
 
 using namespace dual_arm_manipulation_planner_interface;
-using namespace davinci_moveit_object_handling;
+//using namespace davinci_moveit_object_handling;
 
-StateValidityChecker::StateValidityChecker(const ros::NodeHandle &node_handle,
+HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &node_handle,
                                            const ros::NodeHandle &node_priv,
                                            const std::string &robot_name,
                                            const std::string &object_name,
                                            const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                                            const ompl::base::SpaceInformationPtr &si)
   : node_handle_(node_handle), robot_model_loader_(robot_name), object_name_(object_name), possible_grasps_(possible_grasps),
-    ompl::base::StateValidityChecker(si), objectMessageGenerator_(node_priv, node_handle)
+    ompl::base::StateValidityChecker(si)
 {
 
   kmodel_.reset(
@@ -75,12 +75,12 @@ StateValidityChecker::StateValidityChecker(const ros::NodeHandle &node_handle,
 }
 
 
-void StateValidityChecker::setVerbose(bool flag)
+void HybridStateValidityChecker::setVerbose(bool flag)
 {
   verbose_ = flag;
 }
 
-double StateValidityChecker::cost(const ompl::base::State* state) const
+double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 {
   double cost = 0.0;
 
@@ -98,17 +98,17 @@ double StateValidityChecker::cost(const ompl::base::State* state) const
 }
 
 
-double StateValidityChecker::clearance(const ompl::base::State* state) const
+double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
 
 }
 
-bool StateValidityChecker::isValidWithoutCache(const ompl::base::State *state, bool verbose) const
+bool HybridStateValidityChecker::isValidWithoutCache(const ompl::base::State *state, bool verbose) const
 {
 
 }
 
-bool StateValidityChecker::isValidWithCache(const ompl::base::State* state, bool verbose) const
+bool HybridStateValidityChecker::isValidWithCache(const ompl::base::State* state, bool verbose) const
 {
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
 
@@ -119,7 +119,7 @@ bool StateValidityChecker::isValidWithCache(const ompl::base::State* state, bool
 
 }
 
-void StateValidityChecker::convertObjectToRobotState(robot_state::RobotState* robot_state, const ompl::base::State* state)
+void HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotState* robot_state, const ompl::base::State* state)
 {
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
 
@@ -161,7 +161,7 @@ void StateValidityChecker::convertObjectToRobotState(robot_state::RobotState* ro
   }
 }
 
-void StateValidityChecker::initializePlannerPlugin()
+void HybridStateValidityChecker::initializePlannerPlugin()
 {
   // We will now construct a loader to load a planner, by name.
   // Note that we are using the ROS pluginlib library here.
@@ -201,7 +201,7 @@ void StateValidityChecker::initializePlannerPlugin()
   }
 }
 
-bool StateValidityChecker::hasAttachedObject(const std::string& group_name, const std::string& object_name)
+bool HybridStateValidityChecker::hasAttachedObject(const std::string& group_name, const std::string& object_name)
 {
   std::map<std::string, moveit_msgs::AttachedCollisionObject> objs = planning_scene_interface_->getAttachedObjects();
 

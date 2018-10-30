@@ -50,7 +50,7 @@
 
 namespace dual_arm_manipulation_planner_interface
 {
-enum class StateDiff {AllSame, ArmDiff, GraspDiff, PoseDiff, ArmGraspDiff, ArmPoseDiff, GraspPoseDiff, AllDiff};
+enum class StateDiff {AllSame, ArmDiffGraspAndPoseSame, GraspDiffArmAndPoseSame, PoseDiffArmAndGraspSame, ArmAndGraspDiffPoseSame, ArmAndPoseDiffGraspSame, GraspAndPoseDiffArmSame, AllDiff};
 
 class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
 {
@@ -97,7 +97,7 @@ public:
     void markInvalid()
     {
       flags &= ~VALIDITY_TRUE;
-      flage |= VALIDITY_KNOWN;
+      flags |= VALIDITY_KNOWN;
     }
 
     void clearKnownInformation()
@@ -229,7 +229,7 @@ public:
                          int armIndexUpperBound,
                          int graspIndexLowerBound,
                          int graspIndexUpperBound,
-                         const std::vector<cwru_davinvi_grasp::GraspInfo>& possible_grasps);
+                         const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps);
 
   virtual ~HybridObjectStateSpace()
   {}
@@ -267,28 +267,31 @@ public:
    * @param state2
    * @return
    */
-  virtual unsigned int 	validSegmentCount (const State *state1, const State *state2) const;
+  virtual unsigned int 	validSegmentCount (const ompl::base::State *state1, const ompl::base::State *state2) const;
 
-  bool discreteGeodesic(const State *from, const State *to, bool interpolate,
-                        std::vector<ompl::base::State *> *geodesic) const;
-  bool computeStateFK(ompl::base::State *state) const;
+//                        std::vector<ompl::base::State *> *geodesic) const;
 
-  bool computeStateIK(ompl::base::State *state) const;
+//  bool computeStateK(ompl::base::State *state) const;
 
-  bool computeStateK(ompl::base::State *state) const;
-
-  static StateDiff checkStateDiff(State *state1, State *state2);
+//  bool discreteGeodesic(const State *from, const State *to, bool interpolate,
+//  bool computeStateFK(ompl::base::State *state) const;
 //
-//  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
+//  bool computeStateIK(ompl::base::State *state) const;
+//
+//  virtual void sanityChecks() const;
 //
 //  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
 //
-//  virtual void sanityChecks() const;
+//  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
+  StateDiff checkStateDiff(const StateType *state1, const StateType *state2) const;
+
+  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
 protected:
+
   /** \brief SpaceInformation associated with this space. Required
    * for early collision checking in manifold traversal.
    */
-  SpaceInformation *si_{nullptr};
+//  ompl::base::SpaceInformation *si_{nullptr};
 
   /** \brief Step size when traversing the manifold and collision checking. */
   double delta_;
@@ -304,9 +307,17 @@ protected:
   bool setup_{false};
 
 private:
-  std::vector<cwru_davinvi_grasp::GraspInfo> possible_grasps_;
 
-  int chooseSupportArm(int from_arm_index, int to_arm_index) const;
+  int chooseSupportArm(const int from_arm_index, const int to_arm_index) const;
+
+  void chooseGrasp(const StateType *from,
+                   const StateType *to,
+                   StateType* cstate) const;
+
+  int handOffsNum(const int from_arm_index,
+                  const int to_arm_index,
+                  const int from_part_id,
+                  const int to_part_id) const;
 
   /**
    * @brief Return the first grasp_id which its part_id different than @param from_part_id and @param @to_part_id
@@ -316,30 +327,30 @@ private:
    */
   int chooseGraspPart(int from_part_id, int to_part_id) const;
 
-  struct PoseComponent
-  {
-    PoseComponent(const robot_model::JointModelGroup *subgroup,
-                  const robot_model::JointModelGroup::KinematicsSolver &k,
-                  const moveit_msgs::Grasp &grasp);
-
-    bool computeStateFK(StateType *full_state) const;
-
-    bool computeStateIK(StateType *full_state) const;
-
-    bool operator<(const PoseComponent &o) const
-    {
-      return subgroup_->getName() < o.subgroup_->getName();
-    }
-
-    const robot_model::JointModelGroup *subgroup_;
-    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
-    moveit_msgs::Grasp grasp_;
-//    std::vector<unsigned int> bijection_;
-    ompl::base::StateSpacePtr state_space_;
-    std::vector<std::string> fk_link_;
-  };
-
-  PoseComponent object_pose_;
+//  struct PoseComponent
+//  {
+//    PoseComponent(const robot_model::JointModelGroup *subgroup,
+//                  const robot_model::JointModelGroup::KinematicsSolver &k,
+//                  const moveit_msgs::Grasp &grasp);
+//
+//    bool computeStateFK(StateType *full_state) const;
+//
+//    bool computeStateIK(StateType *full_state) const;
+//
+//    bool operator<(const PoseComponent &o) const
+//    {
+//      return subgroup_->getName() < o.subgroup_->getName();
+//    }
+//
+//    const robot_model::JointModelGroup *subgroup_;
+//    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
+//    moveit_msgs::Grasp grasp_;
+////    std::vector<unsigned int> bijection_;
+//    ompl::base::StateSpacePtr state_space_;
+//    std::vector<std::string> fk_link_;
+//  };
+//
+//  PoseComponent object_pose_;
 };
 }
 

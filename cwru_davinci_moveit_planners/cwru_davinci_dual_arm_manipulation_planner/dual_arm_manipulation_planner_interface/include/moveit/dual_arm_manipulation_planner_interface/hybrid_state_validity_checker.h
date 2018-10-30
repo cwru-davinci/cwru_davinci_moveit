@@ -52,22 +52,22 @@
 #include <ompl/base/StateValidityChecker.h>
 
 #include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
-#include <cwru_davinci_moveit_object_handling/davinci_object_message_generator.h>
+//#include <cwru_davinci_moveit_object_handling/davinci_object_message_generator.h>
 
 
 namespace dual_arm_manipulation_planner_interface
 {
-class StateValidityChecker : public ompl::base::StateValidityChecker
+class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
-  StateValidityChecker(const ros::NodeHandle &node_handle,
+  HybridStateValidityChecker(const ros::NodeHandle &node_handle,
                        const ros::NodeHandle &node_priv,
                        const std::string &robot_name,
                        const std::string &object_name,
                        const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                        const ompl::base::SpaceInformationPtr &si);
 
-  virtual ~StateValidityChecker(){};
+  virtual ~HybridStateValidityChecker(){};
 
   virtual bool isValid(const ompl::base::State* state) const override
   {
@@ -118,7 +118,7 @@ protected:
 
   TSStateStorage tss_;
 
-  DavinciObjectMessageGenerator objectMessageGenerator_;
+//  DavinciObjectMessageGenerator objectMessageGenerator_;
 
   std::string group_name_;
 

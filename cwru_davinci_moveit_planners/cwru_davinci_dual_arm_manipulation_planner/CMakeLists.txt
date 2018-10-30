@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(ompl REQUIRED)
+add_definitions(${baselib_binding_DEFINITIONS} ${convenience_ros_functions_DEFINITIONS} -std=c++11)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -110,7 +111,7 @@ catkin_package(
   ${OMPL_INCLUDE_DIRS}
   LIBRARIES dual_arm_manipulation_planner_interface
   ${OMPL_LIBRARIES}
-  CATKIN_DEPENDS eigen_conversions moveit_core moveit_ros_planning roscpp
+  CATKIN_DEPENDS eigen_conversions moveit_core moveit_ros_planning roscpp cwru_davinci_grasp
 #  DEPENDS system_lib
 )
 

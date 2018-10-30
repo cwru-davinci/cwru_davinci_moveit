@@ -49,6 +49,7 @@
 
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/MotionValidator.h>
+#include <ompl/base/SpaceInformation.h>
 
 #include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
 
@@ -58,21 +59,21 @@
 namespace dual_arm_manipulation_planner_interface
 {
 
-class MotionValidator : public ompl::base::MotionValidator
+class HybridMotionValidator : public ompl::base::MotionValidator
 {
 public:
-  MotionValidator(const ros::NodeHandle &node_handle,
+  HybridMotionValidator(const ros::NodeHandle &node_handle,
                   const ros::NodeHandle &node_priv,
                   const std::string &robot_name,
                   const std::string &object_name,
                   const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                   const ompl::base::SpaceInformationPtr &si);
 
-  virtual bool 	checkMotion (const State *s1, const State *s2) const = 0;
+  virtual bool 	checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const = 0;
 
 private:
 
-  StateValidityChecker stateValidityChecker_;
+  HybridStateValidityChecker stateValidityChecker_;
 };
 }
 
