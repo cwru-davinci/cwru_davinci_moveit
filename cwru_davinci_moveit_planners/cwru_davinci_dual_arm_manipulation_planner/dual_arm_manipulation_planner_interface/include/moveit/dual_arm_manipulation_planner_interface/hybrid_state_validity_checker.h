@@ -36,20 +36,19 @@
  * Description: This is the derived validity checker inherited from ompl::base::StateValidityChecker
  */
 
-#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_STATE_VALIDITY_CHECKER_H
-#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_STATE_VALIDITY_CHECKER_H
+#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
+#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
 
-#include <moveit/ompl_interface/detail/threadsafe_state_storage.h>
+#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 //#include <moveit/ompl_interface/ompl_planning_context.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
-#include <moveit/planning_interface/planning_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <moveit/planning_scene/planning_scene.h>
-#include <moveit/collision_detection/collision_common.h>
-#include <moveit_msgs/Grasp.h>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 
+#include <moveit/collision_detection/collision_common.h>
 #include <ompl/base/StateValidityChecker.h>
+#include <ompl/base/SpaceInformation.h>
 
 #include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
 //#include <cwru_davinci_moveit_object_handling/davinci_object_message_generator.h>
@@ -61,35 +60,23 @@ class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
   HybridStateValidityChecker(const ros::NodeHandle &node_handle,
-                       const ros::NodeHandle &node_priv,
-                       const std::string &robot_name,
-                       const std::string &object_name,
-                       const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
-                       const ompl::base::SpaceInformationPtr &si);
+                             const ros::NodeHandle &node_priv,
+                             const std::string &robot_name,
+                             const std::string &object_name,
+                             const ompl::base::SpaceInformationPtr &si);
 
   virtual ~HybridStateValidityChecker(){};
 
-  virtual bool isValid(const ompl::base::State* state) const override
-  {
-    return isValid(state, verbose_);
-  }
+  virtual bool isValid(const ompl::base::State* state) const override;
 
-  bool isValid(const ompl::base::State* state, bool verbose) const;
-
-  virtual double cost(const ompl::base::State* state) const override;
+  virtual double cost(const ompl::base::State* state) const;
 
   virtual double clearance(const ompl::base::State* state) const override;
 
-  void setVerbose(bool flag);
-
 protected:
-  void initializePlannerPlugin();
+//  void initializePlannerPlugin();
 
-  bool isValidWithoutCache(const ompl::base::State* state, bool verbose) const;
-
-  bool isValidWithCache(const ompl::base::State* state, bool verbose) const;
-
-  void convertObjectToRobotState(robot_state::RobotState* robot_state, const ompl::base::State* state);
+  void convertObjectToRobotState(robot_state::RobotState &rstate, const ompl::base::State *state) const;
 
   /**
    * @brief Has certain arm group /@param group_name hold object /param object_name
@@ -97,17 +84,20 @@ protected:
    * @param object_name
    * @return
    */
-  bool hasAttachedObject(const std::string& group_name, const std::string& object_name);
+  bool hasAttachedObject(const std::string& group_name, const std::string& object_name) const;
 
   ros::NodeHandle node_handle_;
 
-  planning_interface::PlannerManagerPtr planner_instance_;
+//  planning_interface::PlannerManagerPtr planner_instance_;
 
-  planning_interface::PlanningSceneInterface planning_scene_interface_;
+//  moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
 
-  planning_scene::PlanningScenePtr planning_scene_;
+//  planning_scene::PlanningScenePtr planning_scene_;
 
-  planning_interface::PlanningContextPtr planning_context_;
+//  planning_interface::PlanningContextPtr planning_context_;
+
+
+  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
@@ -116,24 +106,21 @@ protected:
   /// @brief Robot state containing the current position of all joints
   robot_state::RobotStatePtr complete_initial_robot_state_;
 
-  TSStateStorage tss_;
+  TSStateStoragePtr tss_;
 
 //  DavinciObjectMessageGenerator objectMessageGenerator_;
 
-  std::string group_name_;
+//  std::string group_name_;
 
   collision_detection::CollisionRequest collision_request_simple_;
 
-  collision_detection::CollisionRequest collision_request_simple_verbose_;
-
   collision_detection::CollisionRequest collision_request_with_cost_;
 
-  bool verbose_;
-
-  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
+  collision_detection::CollisionRequest collision_request_with_distance_;
 
   std::string object_name_;
+  std::string robot_name_;
 };
 }
 
-#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_STATE_VALIDITY_CHECKER_H
+#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H

@@ -161,7 +161,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 #   ${catkin_LIBRARIES}
 # )
 
-#add_subdirectory(dual_arm_manipulation_planner_interface)
+add_subdirectory(dual_arm_manipulation_planner_interface)
 #############
 ## Install ##
 #############

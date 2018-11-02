@@ -3,6 +3,7 @@ set(MOVEIT_LIB_NAME dual_arm_manipulation_planner_interface)
 add_library(${MOVEIT_LIB_NAME}
   src/hybrid_object_state_space.cpp
   src/hybrid_state_validity_checker.cpp
+  src/threadsafe_state_storage.cpp
   src/hybrid_motion_validator.cpp
   #  src/ompl_interface.cpp
   #  src/planning_context_manager.cpp

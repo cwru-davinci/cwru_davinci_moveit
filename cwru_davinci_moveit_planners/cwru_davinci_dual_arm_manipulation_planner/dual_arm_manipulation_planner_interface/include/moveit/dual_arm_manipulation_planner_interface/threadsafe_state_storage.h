@@ -32,58 +32,34 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Su Lu <sxl924@case.edu>
- * Description: This is the derived motion validator inherited from ompl::base::MotionValidator
- */
+/* Author: Su Lu <sxl924@case.edu> */
 
-#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
-#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
-
-//#include <moveit/ompl_interface/detail/threadsafe_state_storage.h>
-//#include <moveit/ompl_interface/ompl_planning_context.h>
-
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-
-#include <moveit/planning_interface/planning_interface.h>
-#include <moveit_msgs/Grasp.h>
-
-#include <ompl/base/StateValidityChecker.h>
-#include <ompl/base/MotionValidator.h>
-#include <ompl/base/SpaceInformation.h>
-#include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
+#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_THREADSAFE_STATE_STORAGE_H
+#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_THREADSAFE_STATE_STORAGE_H
+#include <moveit/robot_state/robot_state.h>
+#include <boost/thread.hpp>
 
 namespace dual_arm_manipulation_planner_interface
 {
 
-class HybridMotionValidator : public ompl::base::MotionValidator
+class TSStateStorage
 {
 public:
-  HybridMotionValidator(const ros::NodeHandle &node_handle,
-                  const ros::NodeHandle &node_priv,
-                  const std::string &robot_name,
-                  const std::string &object_name,
-                  const ompl::base::SpaceInformationPtr &si);
 
-  virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const = 0;
+  TSStateStorage(const robot_model::RobotModelPtr &kmodel);
+  TSStateStorage(const robot_state::RobotState &start_state);
+  ~TSStateStorage();
+
+  robot_state::RobotState* getStateStorage() const;
 
 private:
-  void initializePlannerPlugin();
 
-  HybridStateValidityChecker stateValidityChecker_;
-
-  robot_model::RobotModelPtr kmodel_;
-
-  robot_model_loader::RobotModelLoader robot_model_loader_;
-
-  planning_interface::PlannerManagerPtr planner_instance_;
-
-  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
-
-  ros::NodeHandle node_handle_;
-
-  std::string robot_name_;
+  robot_state::RobotState                                       start_state_;
+  mutable std::map<boost::thread::id, robot_state::RobotState*> thread_states_;
+  mutable boost::mutex                                                  lock_;
 };
+
+typedef boost::shared_ptr<TSStateStorage> TSStateStoragePtr;
 }
 
-#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
+#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_THREADSAFE_STATE_STORAGE_H

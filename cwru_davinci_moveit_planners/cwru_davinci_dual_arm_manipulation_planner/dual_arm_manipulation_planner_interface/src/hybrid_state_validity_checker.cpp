@@ -37,6 +37,7 @@
  */
 
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
+#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -50,47 +51,73 @@ using namespace dual_arm_manipulation_planner_interface;
 //using namespace davinci_moveit_object_handling;
 
 HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &node_handle,
-                                           const ros::NodeHandle &node_priv,
-                                           const std::string &robot_name,
-                                           const std::string &object_name,
-                                           const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
-                                           const ompl::base::SpaceInformationPtr &si)
-  : node_handle_(node_handle), robot_model_loader_(robot_name), object_name_(object_name), possible_grasps_(possible_grasps),
+                                                       const ros::NodeHandle &node_priv,
+                                                       const std::string &robot_name,
+                                                       const std::string &object_name,
+                                                       const ompl::base::SpaceInformationPtr &si)
+  : node_handle_(node_handle), robot_model_loader_(robot_name), robot_name_(robot_name),object_name_(object_name),
     ompl::base::StateValidityChecker(si)
 {
 
   kmodel_.reset(
     new robot_model::RobotModel(robot_model_loader_.getModel()->getURDF(), robot_model_loader_.getModel()->getSRDF()));
 
-  planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
+//  planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
+  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
 
   complete_initial_robot_state_.reset(new robot_state::RobotState(kmodel_));
 
-  tss_(complete_initial_robot_state_);
+  tss_.reset(new TSStateStorage(*complete_initial_robot_state_));
 
-  initializePlannerPlugin();
+  collision_request_with_distance_.distance = true;
 
-  collision_request_simple_verbose_ = collision_request_simple_;
-  collision_request_simple_verbose_.verbose = true;
+  collision_request_with_cost_.cost = true;
+
+//  initializePlannerPlugin();
+
 }
 
-
-void HybridStateValidityChecker::setVerbose(bool flag)
+bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 {
-  verbose_ = flag;
+// check bounds
+  if (!si_->satisfiesBounds(state))
+  {
+    return false;
+  }
+
+  // convert ompl state to moveit robot state
+  robot_state::RobotState *kstate = tss_->getStateStorage();
+  convertObjectToRobotState(*kstate, state);
+
+  pMonitor_->requestPlanningSceneState();
+  planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
+//  // check path constraints
+//  const kinematic_constraints::KinematicConstraintSetPtr &kset = planning_context_->getPathConstraints();
+//  if (kset && !kset->decide(*kstate, verbose).satisfied)
+//    return false;
+
+  // check feasibility
+  if (!ls->isStateFeasible(*kstate))
+    return false;
+
+  // check collision avoidance
+  collision_detection::CollisionResult res;
+  ls->checkCollision(collision_request_simple_, res, *kstate);
+  return res.collision == false;
 }
 
 double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 {
   double cost = 0.0;
 
-  robot_state::RobotState *kstate = tss_.getStateStorage();
-  convertObjectToRobotState(kstate, state);
+  robot_state::RobotState *kstate = tss_->getStateStorage();
+  convertObjectToRobotState(*kstate, state);
 
+  pMonitor_->requestPlanningSceneState();
+  planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
   // Calculates cost from a summation of distance to obstacles times the size of the obstacle
   collision_detection::CollisionResult res;
-  planning_context_->getPlanningScene()->checkCollision(collision_request_with_cost_, res, *kstate);
-
+  ls->checkCollision(collision_request_with_cost_, res, *kstate);
   for (std::set<collision_detection::CostSource>::const_iterator it = res.cost_sources.begin() ; it != res.cost_sources.end() ; ++it)
     cost += it->cost * it->getVolume();
 
@@ -100,60 +127,57 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
+  robot_state::RobotState *kstate = tss_->getStateStorage();
+  convertObjectToRobotState(*kstate, state);
 
+  pMonitor_->requestPlanningSceneState();
+  planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
+
+  collision_detection::CollisionResult res;
+  ls->checkCollision(collision_request_with_distance_, res, *kstate);
+  return res.collision ? 0.0 : (res.distance < 0.0 ? std::numeric_limits<double>::infinity() : res.distance);
 }
 
-bool HybridStateValidityChecker::isValidWithoutCache(const ompl::base::State *state, bool verbose) const
-{
 
-}
-
-bool HybridStateValidityChecker::isValidWithCache(const ompl::base::State* state, bool verbose) const
-{
-  const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
-
-  group_name_ = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
-
-  robot_state::RobotState* kstate = tss_.getStateStorage();
-
-
-}
-
-void HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotState* robot_state, const ompl::base::State* state)
+void HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotState &rstate, const ompl::base::State *state) const
 {
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
 
-  group_name_ = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
+  std::string group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-  if(!hasAttachedObject(group_name_, object_name_))  // check if "psm_one" holds the needle
+  if(!hasAttachedObject(group_name, object_name_))  // check if "psm_one" holds the needle
   {
-    group_name_ = (hs->armIndex().value == 1) ? "psm_two" : "psm_one";
+    group_name = (hs->armIndex().value == 1) ? "psm_two" : "psm_one";
 
-    if(!hasAttachedObject(group_name_, object_name_))  // check if "psm_two" holds the needle
+    if(!hasAttachedObject(group_name, object_name_))  // check if "psm_two" holds the needle
     {
       ROS_INFO("No arm is holding the object");
       return;
     }
 
-    group_name_ = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";  // reset group_name_ to correct value
+    group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";  // reset group_name_ to correct value
   }
 
-  cwru_davinci_grasp::GraspInfo grasp_info = possible_grasps_[hs->graspIndex().value];
-  geometry_msgs::PoseStamped grasp_pose = grasp_info.grasp.grasp_pose;  // this is the gripper tool tip link frame wrt /base_link
+  // this is the gripper tool tip link frame wrt /base_link
+  geometry_msgs::PoseStamped grasp_pose = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs->graspIndex().value].grasp.grasp_pose;
 
   Eigen::Affine3d tool_tip_pose;
 
   tf::poseMsgToEigen(grasp_pose.pose, tool_tip_pose);
 
-  const robot_state::JointModelGroup* joint_model_group = kmodel_->getJointModelGroup(group_name_);
+  pMonitor_->requestPlanningSceneState();
+  planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
+  rstate = ls->getCurrentState();
+
+  const robot_state::JointModelGroup* joint_model_group = rstate.getJointModelGroup(group_name);
 
   std::size_t attempts = 10;
   double timeout = 0.1;
-  bool found_ik = robot_state->setFromIK(joint_model_group, tool_tip_pose, attempts, timeout);
+  bool found_ik = rstate.setFromIK(joint_model_group, tool_tip_pose, attempts, timeout);
 
   if (found_ik)
   {
-    robot_state->update();
+    rstate.update();
   }
   else
   {
@@ -161,49 +185,11 @@ void HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotSta
   }
 }
 
-void HybridStateValidityChecker::initializePlannerPlugin()
+bool HybridStateValidityChecker::hasAttachedObject(const std::string& group_name, const std::string& object_name) const
 {
-  // We will now construct a loader to load a planner, by name.
-  // Note that we are using the ROS pluginlib library here.
-  boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> planner_plugin_loader;
 
-  std::string planner_plugin_name;
-
-  // We will get the name of planning plugin we want to load
-  // from the ROS parameter server, and then load the planner
-  // making sure to catch all exceptions.
-  if (!node_handle_.getParam("planning_plugin", planner_plugin_name))
-    ROS_FATAL_STREAM("Could not find planner plugin name");
-  try
-  {
-    planner_plugin_loader.reset(new pluginlib::ClassLoader<planning_interface::PlannerManager>(
-      "moveit_core", "planning_interface::PlannerManager"));
-  }
-  catch (pluginlib::PluginlibException& ex)
-  {
-    ROS_FATAL_STREAM("Exception while creating planning plugin loader " << ex.what());
-  }
-  try
-  {
-    planner_instance_.reset(planner_plugin_loader->createUnmanagedInstance(planner_plugin_name));
-    if (!planner_instance_->initialize(kmodel_, node_handle_.getNamespace()))
-      ROS_FATAL_STREAM("Could not initialize planner instance");
-    ROS_INFO_STREAM("Using planning interface '" << planner_instance_->getDescription() << "'");
-  }
-  catch (pluginlib::PluginlibException& ex)
-  {
-    const std::vector<std::string>& classes = planner_plugin_loader->getDeclaredClasses();
-    std::stringstream ss;
-    for (std::size_t i = 0; i < classes.size(); ++i)
-      ss << classes[i] << " ";
-    ROS_ERROR_STREAM("Exception while loading planner '" << planner_plugin_name << "': " << ex.what() << std::endl
-                                                         << "Available plugins: " << ss.str());
-  }
-}
-
-bool HybridStateValidityChecker::hasAttachedObject(const std::string& group_name, const std::string& object_name)
-{
-  std::map<std::string, moveit_msgs::AttachedCollisionObject> objs = planning_scene_interface_->getAttachedObjects();
+  moveit::planning_interface::PlanningSceneInterface ps_interface;
+  std::map<std::string, moveit_msgs::AttachedCollisionObject> objs = ps_interface.getAttachedObjects();
 
   std::map<std::string, moveit_msgs::AttachedCollisionObject>::iterator existing = objs.find(object_name);
   if(existing != objs.end())
@@ -227,3 +213,43 @@ bool HybridStateValidityChecker::hasAttachedObject(const std::string& group_name
   }
   return false;
 }
+
+//void HybridStateValidityChecker::initializePlannerPlugin()
+//{
+//  // We will now construct a loader to load a planner, by name.
+//  // Note that we are using the ROS pluginlib library here.
+//  boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> planner_plugin_loader;
+//
+//  std::string planner_plugin_name;
+//
+//  // We will get the name of planning plugin we want to load
+//  // from the ROS parameter server, and then load the planner
+//  // making sure to catch all exceptions.
+//  if (!node_handle_.getParam("planning_plugin", planner_plugin_name))
+//    ROS_FATAL_STREAM("Could not find planner plugin name");
+//  try
+//  {
+//    planner_plugin_loader.reset(new pluginlib::ClassLoader<planning_interface::PlannerManager>(
+//      "moveit_core", "planning_interface::PlannerManager"));
+//  }
+//  catch (pluginlib::PluginlibException& ex)
+//  {
+//    ROS_FATAL_STREAM("Exception while creating planning plugin loader " << ex.what());
+//  }
+//  try
+//  {
+//    planner_instance_.reset(planner_plugin_loader->createUnmanagedInstance(planner_plugin_name));
+//    if (!planner_instance_->initialize(kmodel_, node_handle_.getNamespace()))
+//      ROS_FATAL_STREAM("Could not initialize planner instance");
+//    ROS_INFO_STREAM("Using planning interface '" << planner_instance_->getDescription() << "'");
+//  }
+//  catch (pluginlib::PluginlibException& ex)
+//  {
+//    const std::vector<std::string>& classes = planner_plugin_loader->getDeclaredClasses();
+//    std::stringstream ss;
+//    for (std::size_t i = 0; i < classes.size(); ++i)
+//      ss << classes[i] << " ";
+//    ROS_ERROR_STREAM("Exception while loading planner '" << planner_plugin_name << "': " << ex.what() << std::endl
+//                                                         << "Available plugins: " << ss.str());
+//  }
+//}

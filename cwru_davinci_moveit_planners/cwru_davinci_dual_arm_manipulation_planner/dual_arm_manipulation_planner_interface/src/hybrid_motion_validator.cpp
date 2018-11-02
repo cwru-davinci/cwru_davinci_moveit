@@ -37,23 +37,28 @@
  */
 
 #include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <moveit/kinematic_constraints/utils.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
 
 HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_handle,
-                                 const ros::NodeHandle &node_priv,
-                                 const std::string &robot_name,
-                                 const std::string &object_name,
-                                 const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
-                                 const ompl::base::SpaceInformationPtr &si) :
-  ompl::base::MotionValidator(si), stateValidityChecker_(node_handle, node_priv, robot_name, object_name, possible_grasps, si)
+                                             const ros::NodeHandle &node_priv,
+                                             const std::string &robot_name,
+                                             const std::string &object_name,
+                                             const ompl::base::SpaceInformationPtr &si) :
+  ompl::base::MotionValidator(si), node_handle_(node_handle), robot_model_loader_(robot_name), robot_name_(robot_name),
+  stateValidityChecker_(node_handle, node_priv, robot_name, object_name, si)
 {
+  kmodel_.reset(
+    new robot_model::RobotModel(robot_model_loader_.getModel()->getURDF(), robot_model_loader_.getModel()->getSRDF()));
 
+  initializePlannerPlugin();
+
+  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
 }
 
-bool 	HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const
+bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const
 {
   if (!si_->isValid(s2))
   {
@@ -68,12 +73,12 @@ bool 	HybridMotionValidator::checkMotion (const ompl::base::State *s1, const omp
 
   // this is the gripper tool tip link frame wrt /base_link
   geometry_msgs::PoseStamped tool_tip_pose_temp = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs1->graspIndex().value].grasp.grasp_pose;
-  Eigen::Affine3d tool_tip_pose_from;
-  tf::poseMsgToEigen(tool_tip_pose_temp.pose, tool_tip_pose_from);
+//  Eigen::Affine3d tool_tip_pose_from;
+//  tf::poseMsgToEigen(tool_tip_pose_temp.pose, tool_tip_pose_from);
 
   tool_tip_pose_temp  = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs2->graspIndex().value].grasp.grasp_pose;
-  Eigen::Affine3d tool_tip_pose_to;
-  tf::poseMsgToEigen(tool_tip_pose_temp.pose, tool_tip_pose_to);
+//  Eigen::Affine3d tool_tip_pose_to;
+//  tf::poseMsgToEigen(tool_tip_pose_temp.pose, tool_tip_pose_to);
 
 //  si_->getStateSpace()->as<HybridObjectStateSpace>()->interpolate(s1, s2, t, cstate);
   std::string group_s1 = (hs1->graspIndex().value == 1) ?  "psm_one" : "psm_two";
@@ -89,33 +94,50 @@ bool 	HybridMotionValidator::checkMotion (const ompl::base::State *s1, const omp
     case StateDiff::ArmDiffGraspAndPoseSame:
       // Todo handoff operation check
       break;
-    case StateDiff::GraspDiffArmAndPoseSame:
-      // Todo handoff operation check
-      break;
+
     case StateDiff::PoseDiffArmAndGraspSame:
+    {
+      pMonitor_->requestPlanningSceneState();
+      planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
 
       planning_interface::MotionPlanRequest req;
       planning_interface::MotionPlanResponse res;
-      geometry_msgs::PoseStamped pose;
-      pose.header.frame_id = "panda_link0";
-      pose.pose.position.x = 0.3;
-      pose.pose.position.y = 0.0;
-      pose.pose.position.z = 0.75;
-      pose.pose.orientation.w = 1.0;
+      tool_tip_pose_temp.header.frame_id = joint_model_group_s1->getOnlyOneEndEffectorTip()->getName();
 
-      break;
+      moveit_msgs::Constraints pose_goal = kinematic_constraints::constructGoalConstraints(
+                                             joint_model_group_s1->getOnlyOneEndEffectorTip()->getName(),
+                                             tool_tip_pose_temp);
+      req.goal_constraints.push_back(pose_goal);
+//      pose.pose = tool_tip_pose_temp.pose;
+
+//      // A tolerance of 0.01 m is specified in position and 0.01 radians in orientation
+//      std::vector<double> tolerance_pose(3, 0.01);
+//      std::vector<double> tolerance_angle(3, 0.01);
+
+      planning_interface::PlanningContextPtr context =
+        planner_instance_->getPlanningContext(ls, req, res.error_code_);
+      context->solve(res);
+      if (res.error_code_.val != res.error_code_.SUCCESS)
+      {
+        ROS_ERROR("Could not compute plan successfully");
+        return false;
+      }
+    }
     case StateDiff::ArmAndGraspDiffPoseSame:
       // Todo handoff operation check
-      break;
-    case StateDiff::ArmAndPoseDiffGraspSame:
-      // Todo handoff operation check
-      break;
-    case StateDiff::GraspAndPoseDiffArmSame:
-      // Todo handoff operation check
-      break;
-    case StateDiff::AllDiff:
-      // Todo handoff operation check
-      break;
+      return false;
+//    case StateDiff::GraspDiffArmAndPoseSame:
+//      // Todo handoff operation check
+//      break;
+//    case StateDiff::ArmAndPoseDiffGraspSame:
+//      // Todo handoff operation check
+//      break;
+//    case StateDiff::GraspAndPoseDiffArmSame:
+//      // Todo handoff operation check
+//      break;
+//    case StateDiff::AllDiff:
+//      // Todo handoff operation check
+//      break;
   }
 
 
@@ -132,58 +154,98 @@ bool 	HybridMotionValidator::checkMotion (const ompl::base::State *s1, const omp
   return result;
 }
 
-bool ompl::base::DiscreteMotionValidator::checkMotion(const State *s1, const State *s2) const
+void HybridMotionValidator::initializePlannerPlugin()
 {
-  /* assume motion starts in a valid configuration so s1 is valid */
-  if (!si_->isValid(s2))
+  // We will now construct a loader to load a planner, by name.
+  // Note that we are using the ROS pluginlib library here.
+  boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> planner_plugin_loader;
+
+  std::string planner_plugin_name;
+
+  // We will get the name of planning plugin we want to load
+  // from the ROS parameter server, and then load the planner
+  // making sure to catch all exceptions.
+  if (!node_handle_.getParam("planning_plugin", planner_plugin_name))
+    ROS_FATAL_STREAM("Could not find planner plugin name");
+  try
   {
-    invalid_++;
-    return false;
+    planner_plugin_loader.reset(new pluginlib::ClassLoader<planning_interface::PlannerManager>(
+      "moveit_core", "planning_interface::PlannerManager"));
   }
-
-  bool result = true;
-  int nd = stateSpace_->validSegmentCount(s1, s2);
-
-  /* initialize the queue of test positions */
-  std::queue<std::pair<int, int>> pos;
-  if (nd >= 2)
+  catch (pluginlib::PluginlibException& ex)
   {
-    pos.push(std::make_pair(1, nd - 1));
-
-    /* temporary storage for the checked state */
-    State *test = si_->allocState();
-
-    /* repeatedly subdivide the path segment in the middle (and check the middle) */
-    while (!pos.empty())
-    {
-      std::pair<int, int> x = pos.front();
-
-      int mid = (x.first + x.second) / 2;
-      stateSpace_->interpolate(s1, s2, (double)mid / (double)nd, test);
-
-      if (!si_->isValid(test))
-      {
-        result = false;
-        break;
-      }
-
-      pos.pop();
-
-      if (x.first < mid)
-        pos.push(std::make_pair(x.first, mid - 1));
-      if (x.second > mid)
-        pos.push(std::make_pair(mid + 1, x.second));
-    }
-
-    si_->freeState(test);
+    ROS_FATAL_STREAM("Exception while creating planning plugin loader " << ex.what());
   }
-
-  if (result)
-    valid_++;
-  else
-    invalid_++;
-
-  return result;
+  try
+  {
+    planner_instance_.reset(planner_plugin_loader->createUnmanagedInstance(planner_plugin_name));
+    if (!planner_instance_->initialize(kmodel_, node_handle_.getNamespace()))
+      ROS_FATAL_STREAM("Could not initialize planner instance");
+    ROS_INFO_STREAM("Using planning interface '" << planner_instance_->getDescription() << "'");
+  }
+  catch (pluginlib::PluginlibException& ex)
+  {
+    const std::vector<std::string>& classes = planner_plugin_loader->getDeclaredClasses();
+    std::stringstream ss;
+    for (std::size_t i = 0; i < classes.size(); ++i)
+      ss << classes[i] << " ";
+    ROS_ERROR_STREAM("Exception while loading planner '" << planner_plugin_name << "': " << ex.what() << std::endl
+                                                         << "Available plugins: " << ss.str());
+  }
 }
+
+//bool ompl::base::DiscreteMotionValidator::checkMotion(const State *s1, const State *s2) const
+//{
+//  /* assume motion starts in a valid configuration so s1 is valid */
+//  if (!si_->isValid(s2))
+//  {
+//    invalid_++;
+//    return false;
+//  }
+//
+//  bool result = true;
+//  int nd = stateSpace_->validSegmentCount(s1, s2);
+//
+//  /* initialize the queue of test positions */
+//  std::queue<std::pair<int, int>> pos;
+//  if (nd >= 2)
+//  {
+//    pos.push(std::make_pair(1, nd - 1));
+//
+//    /* temporary storage for the checked state */
+//    State *test = si_->allocState();
+//
+//    /* repeatedly subdivide the path segment in the middle (and check the middle) */
+//    while (!pos.empty())
+//    {
+//      std::pair<int, int> x = pos.front();
+//
+//      int mid = (x.first + x.second) / 2;
+//      stateSpace_->interpolate(s1, s2, (double)mid / (double)nd, test);
+//
+//      if (!si_->isValid(test))
+//      {
+//        result = false;
+//        break;
+//      }
+//
+//      pos.pop();
+//
+//      if (x.first < mid)
+//        pos.push(std::make_pair(x.first, mid - 1));
+//      if (x.second > mid)
+//        pos.push(std::make_pair(mid + 1, x.second));
+//    }
+//
+//    si_->freeState(test);
+//  }
+//
+//  if (result)
+//    valid_++;
+//  else
+//    invalid_++;
+//
+//  return result;
+//}
 
 }  // namespace
