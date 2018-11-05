@@ -283,6 +283,8 @@ public:
 //  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
 //
 //  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
+  void se3ToEign3d(const StateType *state, Eigen::Affine3d& affine3d) const;
+
   StateDiff checkStateDiff(const StateType *state1, const StateType *state2) const;
 
   std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;

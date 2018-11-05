@@ -159,11 +159,11 @@ void HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotSta
   }
 
   // this is the gripper tool tip link frame wrt /base_link
-  geometry_msgs::PoseStamped grasp_pose = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs->graspIndex().value].grasp.grasp_pose;
+  Eigen::Affine3d object_pose;  // object pose w/rt base frame
+  si_->getStateSpace()->as<HybridObjectStateSpace>()->se3ToEign3d(hs, object_pose);
 
-  Eigen::Affine3d tool_tip_pose;
-
-  tf::poseMsgToEigen(grasp_pose.pose, tool_tip_pose);
+  Eigen::Affine3d grasp_pose = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs->graspIndex().value].grasp_pose;
+  Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
   pMonitor_->requestPlanningSceneState();
   planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);

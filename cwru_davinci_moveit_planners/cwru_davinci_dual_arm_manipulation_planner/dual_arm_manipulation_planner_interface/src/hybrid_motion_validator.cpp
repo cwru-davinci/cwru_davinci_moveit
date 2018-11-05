@@ -71,15 +71,6 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
   const auto *hs1 = static_cast<const HybridObjectStateSpace::StateType *>(s1);
   const auto *hs2 = static_cast<const HybridObjectStateSpace::StateType *>(s2);
 
-  // this is the gripper tool tip link frame wrt /base_link
-  geometry_msgs::PoseStamped tool_tip_pose_temp = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs1->graspIndex().value].grasp.grasp_pose;
-//  Eigen::Affine3d tool_tip_pose_from;
-//  tf::poseMsgToEigen(tool_tip_pose_temp.pose, tool_tip_pose_from);
-
-  tool_tip_pose_temp  = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs2->graspIndex().value].grasp.grasp_pose;
-//  Eigen::Affine3d tool_tip_pose_to;
-//  tf::poseMsgToEigen(tool_tip_pose_temp.pose, tool_tip_pose_to);
-
 //  si_->getStateSpace()->as<HybridObjectStateSpace>()->interpolate(s1, s2, t, cstate);
   std::string group_s1 = (hs1->graspIndex().value == 1) ?  "psm_one" : "psm_two";
   std::string group_s2 = (hs2->graspIndex().value == 1) ?  "psm_one" : "psm_two";
@@ -100,19 +91,24 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
       pMonitor_->requestPlanningSceneState();
       planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
 
+      // convert from object_pose to robot's tool tip pose
+      Eigen::Affine3d object_pose_s2;  // object pose w/rt base frame
+      si_->getStateSpace()->as<HybridObjectStateSpace>()->se3ToEign3d(hs2, object_pose_s2);
+      Eigen::Affine3d grasp_pose_s2 = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs2->graspIndex().value].grasp_pose;
+      geometry_msgs::PoseStamped tool_tip_pose_s2;  // tool tip pose w/rt base frame
+      tool_tip_pose_s2.header.frame_id = ls->getPlanningFrame();
+      tf::poseEigenToMsg(object_pose_s2 * grasp_pose_s2.inverse(), tool_tip_pose_s2.pose);
+
+      // create a motion plan request
       planning_interface::MotionPlanRequest req;
       planning_interface::MotionPlanResponse res;
-      tool_tip_pose_temp.header.frame_id = joint_model_group_s1->getOnlyOneEndEffectorTip()->getName();
+
+      req.group_name = group_s2;
 
       moveit_msgs::Constraints pose_goal = kinematic_constraints::constructGoalConstraints(
-                                             joint_model_group_s1->getOnlyOneEndEffectorTip()->getName(),
-                                             tool_tip_pose_temp);
+        joint_model_group_s2->getOnlyOneEndEffectorTip()->getName(),
+        tool_tip_pose_s2);
       req.goal_constraints.push_back(pose_goal);
-//      pose.pose = tool_tip_pose_temp.pose;
-
-//      // A tolerance of 0.01 m is specified in position and 0.01 radians in orientation
-//      std::vector<double> tolerance_pose(3, 0.01);
-//      std::vector<double> tolerance_angle(3, 0.01);
 
       planning_interface::PlanningContextPtr context =
         planner_instance_->getPlanningContext(ls, req, res.error_code_);

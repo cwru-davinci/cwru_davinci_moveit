@@ -359,6 +359,16 @@ void HybridObjectStateSpace::interpolate(const ompl::base::State *from,
   }
 }
 
+
+void HybridObjectStateSpace::se3ToEign3d(const StateType *state, Eigen::Affine3d& affine3d) const
+{
+  affine3d.translation() << state->se3State().getX(), state->se3State().getY(), state->se3State().getZ();
+  affine3d.rotate(Eigen::Quaterniond(state->se3State().rotation().w,
+                                     state->se3State().rotation().x,
+                                     state->se3State().rotation().y,
+                                     state->se3State().rotation().z));
+}
+
 StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const StateType *state2) const
 {
   bool same_pose = ompl::base::CompoundStateSpace::equalStates(state1->components[0], state2->components[0]);
