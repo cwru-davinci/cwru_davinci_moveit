@@ -60,12 +60,18 @@ class HybridMotionValidator : public ompl::base::MotionValidator
 {
 public:
   HybridMotionValidator(const ros::NodeHandle &node_handle,
-                  const ros::NodeHandle &node_priv,
-                  const std::string &robot_name,
-                  const std::string &object_name,
-                  const ompl::base::SpaceInformationPtr &si);
+                        const ros::NodeHandle &node_priv,
+                        const std::string &robot_name,
+                        const std::string &object_name,
+                        const ompl::base::SpaceInformationPtr &si);
 
   virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const = 0;
+
+  bool planHandoff(const std::string &support_arm_from,
+                   const std::string &support_ar_to,
+                   const ompl::base::SE3StateSpace::StateType &object_pose,
+                   const int &grasp_index) const;
+
 
 private:
   void initializePlannerPlugin();
@@ -79,6 +85,8 @@ private:
   planning_interface::PlannerManagerPtr planner_instance_;
 
   planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
+
+  DavinciSimpleNeedleGrasper needleGrasper_;
 
   ros::NodeHandle node_handle_;
 

@@ -83,8 +83,10 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
     case StateDiff::AllSame:
       break;
     case StateDiff::ArmDiffGraspAndPoseSame:
-      // Todo handoff operation check
-      break;
+    {
+      if(!planHandoff(group_s1, group_s2, object_pose, grasp_index))
+        return false;
+    }
 
     case StateDiff::PoseDiffArmAndGraspSame:
     {
@@ -190,6 +192,30 @@ void HybridMotionValidator::initializePlannerPlugin()
   }
 }
 
+bool HybridMotionValidator::planHandoff(const std::string &support_arm_from,
+                                        const std::string &support_ar_to,
+                                        const ompl::base::SE3StateSpace::StateType &object_pose,
+                                        const int &grasp_index) const
+{
+  geometry_msgs::PoseStamped needle_pose;
+  needle_pose.pose.position.x = object_pose.getX();
+  needle_pose.pose.position.y = object_pose.getY();
+  needle_pose.pose.position.z = object_pose.getZ();
+
+  needle_pose.pose.orientation.x = object_pose.rotation().x;
+  needle_pose.pose.orientation.y = object_pose.rotation().y;
+  needle_pose.pose.orientation.z = object_pose.rotation().z;
+  needle_pose.pose.orientation.w = object_pose.rotation().w;
+
+  graspGeneratorHelper(const geometry_msgs::PoseStamped &needle_pose,
+  const DavinciNeeldeGraspData &needleGraspData,
+  std::vector<GraspInfo> &grasp_pose);
+
+
+
+
+
+}
 //bool ompl::base::DiscreteMotionValidator::checkMotion(const State *s1, const State *s2) const
 //{
 //  /* assume motion starts in a valid configuration so s1 is valid */
