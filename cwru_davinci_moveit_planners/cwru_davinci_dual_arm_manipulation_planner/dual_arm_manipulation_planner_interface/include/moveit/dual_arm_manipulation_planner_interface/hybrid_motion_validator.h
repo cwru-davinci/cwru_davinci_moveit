@@ -39,9 +39,6 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
 
-//#include <moveit/ompl_interface/detail/threadsafe_state_storage.h>
-//#include <moveit/ompl_interface/ompl_planning_context.h>
-
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
@@ -51,7 +48,8 @@
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/MotionValidator.h>
 #include <ompl/base/SpaceInformation.h>
-#include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
+
+#include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -68,7 +66,7 @@ public:
   virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const = 0;
 
   bool planHandoff(const std::string &support_arm_from,
-                   const std::string &support_ar_to,
+                   const std::string &support_arm_to,
                    const ompl::base::SE3StateSpace::StateType &object_pose,
                    const int &grasp_index) const;
 
@@ -86,11 +84,17 @@ private:
 
   planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
 
-  DavinciSimpleNeedleGrasper needleGrasper_;
+//  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr needleGrasperPtr_;
+//
+//  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr needleReleasePtr_;
 
   ros::NodeHandle node_handle_;
 
+  ros::NodeHandle node_priv_;
+
   std::string robot_name_;
+
+  std::string object_name_;
 };
 }
 

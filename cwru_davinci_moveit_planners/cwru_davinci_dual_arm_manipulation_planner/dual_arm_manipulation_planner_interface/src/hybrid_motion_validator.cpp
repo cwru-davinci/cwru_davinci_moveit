@@ -47,7 +47,12 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_handle,
                                              const std::string &robot_name,
                                              const std::string &object_name,
                                              const ompl::base::SpaceInformationPtr &si) :
-  ompl::base::MotionValidator(si), node_handle_(node_handle), robot_model_loader_(robot_name), robot_name_(robot_name),
+  ompl::base::MotionValidator(si),
+  node_handle_(node_handle),
+  node_priv_(node_priv),
+  robot_model_loader_(robot_name),
+  robot_name_(robot_name),
+  object_name_(object_name),
   stateValidityChecker_(node_handle, node_priv, robot_name, object_name, si)
 {
   kmodel_.reset(
@@ -82,12 +87,8 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
   {
     case StateDiff::AllSame:
       break;
-    case StateDiff::ArmDiffGraspAndPoseSame:
-    {
-      if(!planHandoff(group_s1, group_s2, object_pose, grasp_index))
-        return false;
-    }
-
+//    case StateDiff::ArmDiffGraspAndPoseSame:
+//      break;
     case StateDiff::PoseDiffArmAndGraspSame:
     {
       pMonitor_->requestPlanningSceneState();
@@ -122,8 +123,10 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
       }
     }
     case StateDiff::ArmAndGraspDiffPoseSame:
-      // Todo handoff operation check
-      return false;
+    {
+      if(!planHandoff(group_s1, group_s2, hs1->se3State(), hs1->graspIndex().value))
+        return false;
+    }
 //    case StateDiff::GraspDiffArmAndPoseSame:
 //      // Todo handoff operation check
 //      break;
@@ -193,10 +196,15 @@ void HybridMotionValidator::initializePlannerPlugin()
 }
 
 bool HybridMotionValidator::planHandoff(const std::string &support_arm_from,
-                                        const std::string &support_ar_to,
+                                        const std::string &support_arm_to,
                                         const ompl::base::SE3StateSpace::StateType &object_pose,
                                         const int &grasp_index) const
 {
+  bool able_to_grasp = false;
+  bool able_to_release = false;
+  pMonitor_->requestPlanningSceneState();
+  planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
+
   geometry_msgs::PoseStamped needle_pose;
   needle_pose.pose.position.x = object_pose.getX();
   needle_pose.pose.position.y = object_pose.getY();
@@ -207,14 +215,22 @@ bool HybridMotionValidator::planHandoff(const std::string &support_arm_from,
   needle_pose.pose.orientation.z = object_pose.rotation().z;
   needle_pose.pose.orientation.w = object_pose.rotation().w;
 
-  graspGeneratorHelper(const geometry_msgs::PoseStamped &needle_pose,
-  const DavinciNeeldeGraspData &needleGraspData,
-  std::vector<GraspInfo> &grasp_pose);
+  needle_pose.header.frame_id = ls->getPlanningFrame();
+  needle_pose.header.stamp = ros::Time::now();
 
+  cwru_davinci_grasp::DavinciSimpleNeedleGrasper needleGrasper(node_handle_, node_priv_, support_arm_from, object_name_);
+  cwru_davinci_grasp::DavinciSimpleNeedleGrasper needleRelease(node_handle_, node_priv_, support_arm_to, object_name_);
 
+  moveit_msgs::Grasp defined_grasp_msgs;
 
+  able_to_grasp = needleGrasper.planNeedleGrasp(needle_pose, object_name_, si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[grasp_index]);
 
+  needleRelease.planNeedleRelease(needle_pose.pose, object_name_);
 
+  if(able_to_grasp && able_to_release)
+    return true;
+  else
+    return false;
 }
 //bool ompl::base::DiscreteMotionValidator::checkMotion(const State *s1, const State *s2) const
 //{
