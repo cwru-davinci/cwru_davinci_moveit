@@ -234,6 +234,8 @@ public:
   virtual ~HybridObjectStateSpace()
   {}
 
+  void setSE3Bounds(const ompl::base::RealVectorBounds &bounds);
+
   void setArmIndexBounds(int lowerBound, int upperBound);
 
   void setGraspIndexBounds(int lowerBound, int upperBound);

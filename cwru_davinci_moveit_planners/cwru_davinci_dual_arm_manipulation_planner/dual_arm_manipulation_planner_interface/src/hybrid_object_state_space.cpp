@@ -66,6 +66,11 @@ HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
   lock();
 }
 
+void HybridObjectStateSpace::setSE3Bounds(const ompl::base::RealVectorBounds &bounds)
+{
+  components_[0]->as<SE3StateSpace>()->setBounds(bounds);
+}
+
 void HybridObjectStateSpace::setArmIndexBounds(int lowerBound, int upperBound)
 {
   components_[1]->as<DiscreteStateSpace>()->setBounds(lowerBound, upperBound);

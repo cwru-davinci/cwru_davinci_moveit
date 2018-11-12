@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2008, Willow Garage, Inc.
+ *  Copyright (c) 2018, Case Western Reserve University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -1403,7 +1403,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "test_davinci_moveit_kinematics_plugin");
+   ros::init(argc, argv, "test_davinci_moveit_kinematics_plugin");
   ros::AsyncSpinner spinner(1);
   ros::Duration(3.0).sleep();
   spinner.start();

@@ -19,6 +19,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(ompl REQUIRED)
+if (CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+endif()
 add_definitions(${baselib_binding_DEFINITIONS} ${convenience_ros_functions_DEFINITIONS} -std=c++11)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
