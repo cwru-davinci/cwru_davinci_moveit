@@ -35,14 +35,15 @@
 /* Author: Su Lu */
 
 
+#include <ros/ros.h>
+//#include <gtest/gtest.h>
+
 #include "ompl/base/ScopedState.h"
 #include "ompl/base/SpaceInformation.h"
 
 //#include <boost/math/constants/constants.hpp>
+
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <ros/ros.h>
-#include <gtest/gtest.h>
-//#include <pluginlib/class_loader.h>
 
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 #include "Hybrid_State_Space_Test.h"
@@ -66,12 +67,57 @@ using namespace dual_arm_manipulation_planner_interface;
 using namespace hybrid_state_space_test;
 using namespace ompl::base;
 
-TEST(HybridStateSpace, hybridStateSpaceTest)
+//TEST(HybridStateSpace, hybridStateSpaceTest)
+//{
+////  ros::init(argc, argv, "davinci_simple_needle_grasp_main_node");
+//  ros::NodeHandle node_handle;
+//  ros::NodeHandle node_handle_priv("~");
+//
+//  cwru_davinci_grasp::DavinciSimpleNeedleGrasper simpleGrasp(node_handle,
+//                                                             node_handle_priv,
+//                                                             "needle_r", "psm_one");
+//
+//  std::vector<cwru_davinci_grasp::GraspInfo> grasp_pose = simpleGrasp.getAllPossibleNeedleGrasps();
+//  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_pose.size() ,grasp_pose));
+//
+//  RealVectorBounds se3_xyz_bounds(3);
+//  se3_xyz_bounds.setLow(0, -1.0);
+//  se3_xyz_bounds.setHigh(0, 1.0);
+//  se3_xyz_bounds.setLow(1, -1.0);
+//  se3_xyz_bounds.setHigh(1, 1.0);
+//  se3_xyz_bounds.setLow(2, -1.0);
+//  se3_xyz_bounds.setHigh(2, 1.0);
+//
+//  hystsp->setSE3Bounds(se3_xyz_bounds);
+////  base::DiscreteStateSpace &dm = *d;
+//  hystsp->setup();
+////  hystsp->sanityChecks();
+//  HybridStateSpaceTest hystspt(hystsp, 1000, 1e-15);
+//
+//  ScopedState<HybridObjectStateSpace> s1(hystsp);
+//  ScopedState<HybridObjectStateSpace> s2(hystsp);
+//  ScopedState<HybridObjectStateSpace> cstate(hystsp);
+//
+//  s1.random();
+//  s1->armIndex().value = 1;
+//  s2->armIndex().value = 1;
+//
+//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
+//  GTEST_ASSERT_EQ(cstate->armIndex().value, 2);
+//};
+
+int main(int argc, char **argv)
 {
-//  ros::init(argc, argv, "davinci_simple_needle_grasp_main_node");
+  ros::init(argc, argv, "test_hybrid_state_space");
+  ros::AsyncSpinner spinner(1);
+  ros::Duration(3.0).sleep();
+  spinner.start();
+//  testing::InitGoogleTest(&argc, argv);
+//  return RUN_ALL_TESTS();
+
+
   ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
-
   cwru_davinci_grasp::DavinciSimpleNeedleGrasper simpleGrasp(node_handle,
                                                              node_handle_priv,
                                                              "needle_r", "psm_one");
@@ -102,15 +148,6 @@ TEST(HybridStateSpace, hybridStateSpaceTest)
   s2->armIndex().value = 1;
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-  GTEST_ASSERT_EQ(cstate->armIndex().value, 2);
-};
 
-int main(int argc, char **argv)
-{
-  ros::init(argc, argv, "test_hybrid_state_space");
-  ros::AsyncSpinner spinner(1);
-  ros::Duration(3.0).sleep();
-  spinner.start();
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  return 0;
 }

@@ -31,6 +31,9 @@ target_link_libraries(${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} $
 #set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
 
 #add_executable(main src/main.cpp)
+add_executable(test_hybrid_state_space test/test_hybrid_state_space.cpp)
+target_link_libraries(test_hybrid_state_space ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
 #add_executable(moveit_ompl_planner src/ompl_planner.cpp)
 #target_link_libraries(moveit_ompl_planner ${MOVEIT_LIB_NAME})
 #set_target_properties(moveit_ompl_planner PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
@@ -48,11 +51,12 @@ target_link_libraries(${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} $
 #  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #install(DIRECTORY include/ DESTINATION include)
 #
-if(CATKIN_ENABLE_TESTING)
-#  find_package(moveit_resources REQUIRED)
-#  include_directories(${moveit_resources_INCLUDE_DIRS})
-
-  add_rostest_gtest(test_hybrid_state_space test/test_hybrid_state_space.test test/test_hybrid_state_space.cpp)
-  target_link_libraries(test_hybrid_state_space ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
-#  set_target_properties(test_state_space PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
-endif()
+#if(CATKIN_ENABLE_TESTING)
+#  find_package(rostest REQUIRED)
+##  find_package(moveit_resources REQUIRED)
+##  include_directories(${moveit_resources_INCLUDE_DIRS})
+#
+#  add_rostest_gtest(test_hybrid_state_space test/test_hybrid_state_space.test test/test_hybrid_state_space.cpp)
+#  target_link_libraries(test_hybrid_state_space  ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+##  set_target_properties(test_state_space PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
+#endif()

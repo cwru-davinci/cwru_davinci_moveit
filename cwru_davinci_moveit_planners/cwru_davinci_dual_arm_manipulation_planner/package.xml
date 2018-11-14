@@ -52,21 +52,28 @@
   <build_depend>eigen_conversions</build_depend>
   <build_depend>moveit_core</build_depend>
   <build_depend>moveit_ros_planning</build_depend>
+  <build_depend>moveit_ros_planning_interface</build_depend>
   <build_depend>cwru_davinci_grasp</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>tf</build_depend>
+
+  <test_depend>rostest</test_depend>
+
   <build_export_depend>eigen_conversions</build_export_depend>
   <build_export_depend>moveit_core</build_export_depend>
   <build_export_depend>moveit_ros_planning</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>tf</build_export_depend>
+
   <exec_depend>eigen_conversions</exec_depend>
   <exec_depend>moveit_core</exec_depend>
   <exec_depend>moveit_ros_planning</exec_depend>
+  <exec_depend>moveit_ros_planning_interface</exec_depend>
   <exec_depend>cwru_davinci_grasp</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>tf</exec_depend>
 
+  <exec_depend>rostest</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

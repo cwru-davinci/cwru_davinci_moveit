@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   moveit_core
   moveit_ros_planning
+  moveit_ros_planning_interface
   cwru_davinci_grasp
   roscpp
   tf
@@ -114,7 +115,7 @@ catkin_package(
   ${OMPL_INCLUDE_DIRS}
   LIBRARIES dual_arm_manipulation_planner_interface
   ${OMPL_LIBRARIES}
-  CATKIN_DEPENDS eigen_conversions moveit_core moveit_ros_planning roscpp cwru_davinci_grasp
+  CATKIN_DEPENDS eigen_conversions moveit_core moveit_ros_planning moveit_ros_planning_interface roscpp cwru_davinci_grasp
 #  DEPENDS system_lib
 )
 
