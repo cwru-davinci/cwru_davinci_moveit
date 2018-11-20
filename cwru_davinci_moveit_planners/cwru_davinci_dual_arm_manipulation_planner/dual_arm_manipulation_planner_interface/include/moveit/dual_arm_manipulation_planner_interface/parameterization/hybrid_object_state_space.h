@@ -59,113 +59,115 @@ public:
   class StateType : public ompl::base::CompoundStateSpace::StateType
   {
   public:
-    enum
+//    enum
+//    {
+//      VALIDITY_KNOWN = 1,
+//      GOAL_DISTANCE_KNOWN = 2,
+//      VALIDITY_TRUE = 4,
+//      IS_START_STATE = 8,
+//      IS_GOAL_STATE = 16,
+//      JOINTS_COMPUTED = 256,
+//      POSE_COMPUTED = 512
+//    };
+//
+//    StateType() : CompoundStateSpace::StateType(), values(NULL), flags(0)
+//    {
+//      flags |= JOINTS_COMPUTED;
+//    }
+//
+//    void markValid(double d)
+//    {
+//      distance = d;
+//      flags |= GOAL_DISTANCE_KNOWN;
+//      markValid();
+//    }
+//
+//    void markValid()
+//    {
+//      flags |= (VALIDITY_KNOWN | VALIDITY_TRUE);
+//    }
+//
+//    void markInvalid(double d)
+//    {
+//      distance = d;
+//      flags |= GOAL_DISTANCE_KNOWN;
+//      markInvalid();
+//    }
+//
+//    void markInvalid()
+//    {
+//      flags &= ~VALIDITY_TRUE;
+//      flags |= VALIDITY_KNOWN;
+//    }
+//
+//    void clearKnownInformation()
+//    {
+//      flags = 0;
+//    }
+//
+//    bool isMarkedValid() const
+//    {
+//      return flags & VALIDITY_TRUE;
+//    }
+//
+//    bool isGoalDistanceKnown() const
+//    {
+//      return flags & GOAL_DISTANCE_KNOWN;
+//    }
+//
+//    bool isStartState() const
+//    {
+//      return flags & IS_START_STATE;
+//    }
+//
+//    bool isGoalState() const
+//    {
+//      return flags & IS_GOAL_STATE;
+//    }
+//
+//    bool isInputState() const
+//    {
+//      return flags & (IS_START_STATE | IS_GOAL_STATE);
+//    }
+//
+//    void markStartState()
+//    {
+//      flags |= IS_START_STATE;
+//    }
+//
+//    void markGoalState()
+//    {
+//      flags |= IS_GOAL_STATE;
+//    }
+//
+//    bool jointsComputed() const
+//    {
+//      return flags & JOINTS_COMPUTED;
+//    }
+//
+//    bool poseComputed() const
+//    {
+//      return flags & POSE_COMPUTED;
+//    }
+//
+//    void setJointsComputed(bool value)
+//    {
+//      if (value)
+//        flags |= JOINTS_COMPUTED;
+//      else
+//        flags &= ~JOINTS_COMPUTED;
+//    }
+//
+//    void setPoseComputed(bool value)
+//    {
+//      if (value)
+//        flags |= POSE_COMPUTED;
+//      else
+//        flags &= ~POSE_COMPUTED;
+//    }
+    StateType() : ompl::base::CompoundStateSpace::StateType()
     {
-      VALIDITY_KNOWN = 1,
-      GOAL_DISTANCE_KNOWN = 2,
-      VALIDITY_TRUE = 4,
-      IS_START_STATE = 8,
-      IS_GOAL_STATE = 16,
-      JOINTS_COMPUTED = 256,
-      POSE_COMPUTED = 512
-    };
-
-    StateType() : CompoundStateSpace::StateType(), values(NULL), flags(0)
-    {
-      flags |= JOINTS_COMPUTED;
     }
-
-    void markValid(double d)
-    {
-      distance = d;
-      flags |= GOAL_DISTANCE_KNOWN;
-      markValid();
-    }
-
-    void markValid()
-    {
-      flags |= (VALIDITY_KNOWN | VALIDITY_TRUE);
-    }
-
-    void markInvalid(double d)
-    {
-      distance = d;
-      flags |= GOAL_DISTANCE_KNOWN;
-      markInvalid();
-    }
-
-    void markInvalid()
-    {
-      flags &= ~VALIDITY_TRUE;
-      flags |= VALIDITY_KNOWN;
-    }
-
-    void clearKnownInformation()
-    {
-      flags = 0;
-    }
-
-    bool isMarkedValid() const
-    {
-      return flags & VALIDITY_TRUE;
-    }
-
-    bool isGoalDistanceKnown() const
-    {
-      return flags & GOAL_DISTANCE_KNOWN;
-    }
-
-    bool isStartState() const
-    {
-      return flags & IS_START_STATE;
-    }
-
-    bool isGoalState() const
-    {
-      return flags & IS_GOAL_STATE;
-    }
-
-    bool isInputState() const
-    {
-      return flags & (IS_START_STATE | IS_GOAL_STATE);
-    }
-
-    void markStartState()
-    {
-      flags |= IS_START_STATE;
-    }
-
-    void markGoalState()
-    {
-      flags |= IS_GOAL_STATE;
-    }
-
-    bool jointsComputed() const
-    {
-      return flags & JOINTS_COMPUTED;
-    }
-
-    bool poseComputed() const
-    {
-      return flags & POSE_COMPUTED;
-    }
-
-    void setJointsComputed(bool value)
-    {
-      if (value)
-        flags |= JOINTS_COMPUTED;
-      else
-        flags &= ~JOINTS_COMPUTED;
-    }
-
-    void setPoseComputed(bool value)
-    {
-      if (value)
-        flags |= POSE_COMPUTED;
-      else
-        flags &= ~POSE_COMPUTED;
-    }
-
     /**
      * @brief Get the SE(3) components of the state and allow changing it as well
      * @return
@@ -219,8 +221,8 @@ public:
 
     double *values;
 //    int tag;
-    int flags;
-    double distance;
+//    int flags;
+//    double distance;
 
   };
 
@@ -252,11 +254,12 @@ public:
 
   virtual bool equalStates(const ompl::base::State *state1, const ompl::base::State *state2) const override;
 
+  virtual void printState(const ompl::base::State *state, std::ostream &out) const override;
+
   virtual void interpolate(const ompl::base::State *from,
                            const ompl::base::State *to,
                            const double t,
                            ompl::base::State *state) const override;
-
 //  virtual double getMaximumExtent() const;
 
   virtual ompl::base::StateSamplerPtr allocDefaultStateSampler() const override;

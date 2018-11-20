@@ -47,7 +47,7 @@ HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
                                                int graspIndexLowerBound,
                                                int graspIndexUpperBound,
                                                const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps)
-  : ompl::base::CompoundStateSpace(), possible_grasps_(possible_grasps)
+  : CompoundStateSpace(), possible_grasps_(possible_grasps)
 {
   setName("HybridObject" + getName());
   type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
@@ -66,7 +66,7 @@ HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
   lock();
 }
 
-void HybridObjectStateSpace::setSE3Bounds(const ompl::base::RealVectorBounds &bounds)
+void HybridObjectStateSpace::setSE3Bounds(const RealVectorBounds &bounds)
 {
   components_[0]->as<SE3StateSpace>()->setBounds(bounds);
 }
@@ -152,6 +152,11 @@ bool HybridObjectStateSpace::equalStates(const State *state1, const State *state
   ompl::base::CompoundStateSpace::equalStates(state1, state2);
 }
 
+void HybridObjectStateSpace::printState(const State *state, std::ostream &out) const
+{
+  ompl::base::CompoundStateSpace::printState(state, out);
+}
+
 StateSamplerPtr HybridObjectStateSpace::allocDefaultStateSampler() const
 {
   return ompl::base::CompoundStateSpace::allocDefaultStateSampler();
@@ -176,7 +181,7 @@ unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, cons
   const int s1_part_id = possible_grasps_[s1_grasp_index].part_id;
   const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
 
-  unsigned int se3_count = ompl::base::CompoundStateSpace::validSegmentCount(hs1->components[0], hs2->components[0]);
+  unsigned int se3_count = components_[0]->validSegmentCount(hs1->components[0], hs2->components[0]);
   unsigned int handoff_count = 0;
 
   if (s1_arm_index == s2_arm_index && s1_grasp_index == s2_grasp_index)
@@ -304,10 +309,10 @@ unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, cons
 //  return true;
 //}
 
-void HybridObjectStateSpace::interpolate(const ompl::base::State *from,
-                                         const ompl::base::State *to,
+void HybridObjectStateSpace::interpolate(const State *from,
+                                         const State *to,
                                          const double t,
-                                         ompl::base::State *state) const
+                                        State *state) const
 {
   auto *cstate = static_cast<StateType *>(state);
 
@@ -330,35 +335,35 @@ void HybridObjectStateSpace::interpolate(const ompl::base::State *from,
   switch (checkStateDiff(hys_from, hys_to))
   {
     case StateDiff::AllSame:
-      ompl::base::CompoundStateSpace::copyState(cstate, hys_to);
+      copyState(cstate, hys_to);
       break;
     case StateDiff::ArmDiffGraspAndPoseSame:
-      ompl::base::CompoundStateSpace::copyState(cstate->components[0], hys_from->components[0]);
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::GraspDiffArmAndPoseSame:
-      ompl::base::CompoundStateSpace::copyState(cstate->components[0], hys_from->components[0]);
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::PoseDiffArmAndGraspSame:
-      ompl::base::CompoundStateSpace::interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-      components_[1]->copyState(hys_from->components[1], cstate->components[1]);
-      components_[2]->copyState(hys_from->components[2], cstate->components[2]);
+      components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+      components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+      components_[2]->copyState(cstate->components[2], hys_from->components[2]);
       break;
     case StateDiff::ArmAndGraspDiffPoseSame:
-      ompl::base::CompoundStateSpace::copyState(cstate->components[0], hys_from->components[0]);
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::ArmAndPoseDiffGraspSame:
-      ompl::base::CompoundStateSpace::copyState(cstate->components[0], hys_from->components[0]);
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::GraspAndPoseDiffArmSame:
-      ompl::base::CompoundStateSpace::copyState(cstate->components[0], hys_from->components[0]);
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::AllDiff:
-      ompl::base::CompoundStateSpace::copyState(cstate->components[0], hys_from->components[0]);
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       break;
   }
@@ -376,7 +381,7 @@ void HybridObjectStateSpace::se3ToEign3d(const StateType *state, Eigen::Affine3d
 
 StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const StateType *state2) const
 {
-  bool same_pose = ompl::base::CompoundStateSpace::equalStates(state1->components[0], state2->components[0]);
+  bool same_pose = components_[0]->equalStates(state1->components[0], state2->components[0]);
   bool same_arm = components_[1]->equalStates(state1->components[1], state2->components[1]);
   bool same_grasp = components_[2]->equalStates(state1->components[2], state2->components[2]);
 
@@ -481,7 +486,7 @@ int HybridObjectStateSpace::chooseSupportArm(const int from_arm_index, const int
   {
     return 2;
   }
-  else if (((from_arm_index == to_arm_index) == 2))
+  else if ((from_arm_index == to_arm_index) == 2)
   {
     return 1;
   }
