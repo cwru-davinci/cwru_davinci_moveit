@@ -65,14 +65,42 @@ public:
 
   virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const = 0;
 
-  bool planHandoff(const std::string &support_arm_from,
-                   const std::string &support_arm_to,
-                   const ompl::base::SE3StateSpace::StateType &object_pose,
-                   const int &grasp_index) const;
+  bool planHandoff(const robot_state::RobotState &start_state,
+                   const robot_state::RobotState &goal_state,
+                   const std::string &ss_active_group,
+                   const std::string &gs_active_group) const;
 
+  bool planNeedleGrasping(const robot_state::RobotState &start_state,
+                          const robot_state::RobotState &goal_state,
+                          const std::string &gs_active_group) const;
+
+  bool planNeedleReleasing(const robot_state::RobotState &start_state,
+                           const robot_state::RobotState &goal_state,
+                           const std::string &ss_active_group) const;
 
 private:
   void initializePlannerPlugin();
+
+  bool planSafeStateToPreGraspState(const robot_state::RobotState &start_state,
+                                    const robot_state::RobotState &pre_grasp_state,
+                                    const std::string &planning_group) const;
+
+  bool planPreGraspStateToGraspedState(robot_state::RobotState &pre_grasp_state,
+                                       const robot_state::RobotState &handoff_state,
+                                       const std::string &planning_group) const;
+
+  bool planGraspStateToUngraspedState(const robot_state::RobotState &handoff_state,
+                                      robot_state::RobotState &ungrasped_state,
+                                      const std::string &planning_group) const;
+
+  bool planUngraspedStateToSafeState(const robot_state::RobotState &ungrasped_state,
+                                     const robot_state::RobotState &goal_state,
+                                     const std::string &planning_group) const;
+
+
+  bool planPathFromTwoStates(const robot_state::RobotState &start_state,
+                             const robot_state::RobotState &goal_state,
+                             const std::string &planning_group) const;
 
   HybridStateValidityChecker stateValidityChecker_;
 
@@ -81,6 +109,8 @@ private:
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
   planning_interface::PlannerManagerPtr planner_instance_;
+
+  planning_scene::PlanningScenePtr planning_scene_;
 
   planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
 

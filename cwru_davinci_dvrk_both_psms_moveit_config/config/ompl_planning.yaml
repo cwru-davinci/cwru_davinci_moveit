@@ -195,7 +195,7 @@ psm_one_gripper:
     - LazyPRMstarkConfigDefault
     - SPARSkConfigDefault
     - SPARStwokConfigDefault
-  projection_evaluator: joints(PSM1/jaw,PSM1/jaw_mimic_1)
+  projection_evaluator: joints(PSM1_jaw,PSM1_jaw_mimic_1)
   longest_valid_segment_fraction: 0.005
 psm_two_gripper:
   planner_configs:
@@ -222,5 +222,5 @@ psm_two_gripper:
     - LazyPRMstarkConfigDefault
     - SPARSkConfigDefault
     - SPARStwokConfigDefault
-  projection_evaluator: joints(PSM2/jaw,PSM2/jaw_mimic_1)
+  projection_evaluator: joints(PSM2_jaw,PSM2_jaw_mimic_1)
   longest_valid_segment_fraction: 0.005

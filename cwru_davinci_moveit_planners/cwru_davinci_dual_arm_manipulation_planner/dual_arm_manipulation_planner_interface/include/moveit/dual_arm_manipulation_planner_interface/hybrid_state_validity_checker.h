@@ -50,8 +50,8 @@
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/SpaceInformation.h>
 
-#include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
-//#include <cwru_davinci_moveit_object_handling/davinci_object_message_generator.h>
+//#include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
+#include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
 
 namespace dual_arm_manipulation_planner_interface
@@ -73,10 +73,15 @@ public:
 
   virtual double clearance(const ompl::base::State* state) const override;
 
-protected:
-//  void initializePlannerPlugin();
-
   void convertObjectToRobotState(robot_state::RobotState &rstate, const ompl::base::State *state) const;
+
+  std::unique_ptr<moveit::core::AttachedBody> createAttachedBody(const robot_state::JointModelGroup *joint_model_group,
+                                                                 const std::string &object_name,
+                                                                 const Eigen::Affine3d &attach_tran) const;
+
+protected:
+
+//  void initializePlannerPlugin();
 
   /**
    * @brief Has certain arm group /@param group_name hold object /param object_name
@@ -92,7 +97,7 @@ protected:
 
 //  moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
 
-//  planning_scene::PlanningScenePtr planning_scene_;
+  planning_scene::PlanningScenePtr planning_scene_;
 
 //  planning_interface::PlanningContextPtr planning_context_;
 

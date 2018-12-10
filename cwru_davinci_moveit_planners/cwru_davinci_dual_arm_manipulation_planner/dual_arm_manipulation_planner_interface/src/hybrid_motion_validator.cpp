@@ -38,6 +38,7 @@
 
 #include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
 #include <moveit/kinematic_constraints/utils.h>
+#include <moveit/robot_state/conversions.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -60,12 +61,14 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_handle,
 
   initializePlannerPlugin();
 
-  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
+  planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
+
+//  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
 }
 
 bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const
 {
-  if (!si_->isValid(s2))
+  if (!si_->isValid(s2) && !si_->isValid(s1))
   {
     invalid_++;
     return false;
@@ -73,72 +76,40 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
 
   bool result = true;
 
+
+////  si_->getStateSpace()->as<HybridObjectStateSpace>()->interpolate(s1, s2, t, cstate);
+//
+//
+//  std::string rest_group_s1 = (active_group_s1 == "psm_one") ? "psm_two" : "psm_one";
+//  std::string rest_group_s2 = (active_group_s2 == "psm_one") ? "psm_two" : "psm_one";
+//
+//  const robot_state::JointModelGroup* joint_model_group_s1 = kmodel_->getJointModelGroup(group_s1);
+//  const robot_state::JointModelGroup* joint_model_group_s2 = kmodel_->getJointModelGroup(group_s2);
+
   const auto *hs1 = static_cast<const HybridObjectStateSpace::StateType *>(s1);
   const auto *hs2 = static_cast<const HybridObjectStateSpace::StateType *>(s2);
 
-//  si_->getStateSpace()->as<HybridObjectStateSpace>()->interpolate(s1, s2, t, cstate);
-  std::string group_s1 = (hs1->graspIndex().value == 1) ?  "psm_one" : "psm_two";
-  std::string group_s2 = (hs2->graspIndex().value == 1) ?  "psm_one" : "psm_two";
+  std::string active_group_s1 = (hs1->graspIndex().value == 1) ?  "psm_one" : "psm_two";  // active group is the arm supporting the needle
+  std::string active_group_s2 = (hs2->graspIndex().value == 1) ?  "psm_one" : "psm_two";
 
-  const robot_state::JointModelGroup* joint_model_group_s1 = kmodel_->getJointModelGroup(group_s1);
-  const robot_state::JointModelGroup* joint_model_group_s2 = kmodel_->getJointModelGroup(group_s2);
-
+  robot_state::RobotState *start_state;
+  robot_state::RobotState *goal_state;
+  stateValidityChecker_.convertObjectToRobotState(*start_state, s1);
+  stateValidityChecker_.convertObjectToRobotState(*goal_state, s2);
   switch(si_->getStateSpace()->as<HybridObjectStateSpace>()->checkStateDiff(hs1, hs2))
   {
     case StateDiff::AllSame:
-      break;
-//    case StateDiff::ArmDiffGraspAndPoseSame:
-//      break;
+      return true;
     case StateDiff::PoseDiffArmAndGraspSame:
     {
-      pMonitor_->requestPlanningSceneState();
-      planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
 
-      // convert from object_pose to robot's tool tip pose
-      Eigen::Affine3d object_pose_s2;  // object pose w/rt base frame
-      si_->getStateSpace()->as<HybridObjectStateSpace>()->se3ToEign3d(hs2, object_pose_s2);
-      Eigen::Affine3d grasp_pose_s2 = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs2->graspIndex().value].grasp_pose;
-      geometry_msgs::PoseStamped tool_tip_pose_s2;  // tool tip pose w/rt base frame
-      tool_tip_pose_s2.header.frame_id = ls->getPlanningFrame();
-      tf::poseEigenToMsg(object_pose_s2 * grasp_pose_s2.inverse(), tool_tip_pose_s2.pose);
-
-      // create a motion plan request
-      planning_interface::MotionPlanRequest req;
-      planning_interface::MotionPlanResponse res;
-
-      req.group_name = group_s2;
-
-      moveit_msgs::Constraints pose_goal = kinematic_constraints::constructGoalConstraints(
-        joint_model_group_s2->getOnlyOneEndEffectorTip()->getName(),
-        tool_tip_pose_s2);
-      req.goal_constraints.push_back(pose_goal);
-
-      planning_interface::PlanningContextPtr context =
-        planner_instance_->getPlanningContext(ls, req, res.error_code_);
-      context->solve(res);
-      if (res.error_code_.val != res.error_code_.SUCCESS)
-      {
-        ROS_ERROR("Could not compute plan successfully");
-        return false;
-      }
+      return planPathFromTwoStates(*start_state, *goal_state, active_group_s1);
     }
     case StateDiff::ArmAndGraspDiffPoseSame:
     {
-      if(!planHandoff(group_s1, group_s2, hs1->se3State(), hs1->graspIndex().value))
+      if(!planHandoff(*start_state, *goal_state, active_group_s1, active_group_s2))
         return false;
     }
-//    case StateDiff::GraspDiffArmAndPoseSame:
-//      // Todo handoff operation check
-//      break;
-//    case StateDiff::ArmAndPoseDiffGraspSame:
-//      // Todo handoff operation check
-//      break;
-//    case StateDiff::GraspAndPoseDiffArmSame:
-//      // Todo handoff operation check
-//      break;
-//    case StateDiff::AllDiff:
-//      // Todo handoff operation check
-//      break;
   }
 
 
@@ -195,43 +166,241 @@ void HybridMotionValidator::initializePlannerPlugin()
   }
 }
 
-bool HybridMotionValidator::planHandoff(const std::string &support_arm_from,
-                                        const std::string &support_arm_to,
-                                        const ompl::base::SE3StateSpace::StateType &object_pose,
-                                        const int &grasp_index) const
+bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_state,
+                                        const robot_state::RobotState &goal_state,
+                                        const std::string &ss_active_group,
+                                        const std::string &gs_active_group) const
 {
   bool able_to_grasp = false;
   bool able_to_release = false;
-  pMonitor_->requestPlanningSceneState();
-  planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
 
-  geometry_msgs::PoseStamped needle_pose;
-  needle_pose.pose.position.x = object_pose.getX();
-  needle_pose.pose.position.y = object_pose.getY();
-  needle_pose.pose.position.z = object_pose.getZ();
+  robot_state::RobotStatePtr handoff_state;  // an intermediate state when needle is supporting by two grippers
+  handoff_state.reset(new robot_state::RobotState(start_state));
 
-  needle_pose.pose.orientation.x = object_pose.rotation().x;
-  needle_pose.pose.orientation.y = object_pose.rotation().y;
-  needle_pose.pose.orientation.z = object_pose.rotation().z;
-  needle_pose.pose.orientation.w = object_pose.rotation().w;
+  std::vector<double> gs_jt_position;
+  goal_state.copyJointGroupPositions(gs_active_group, gs_jt_position);
+  handoff_state->setJointGroupPositions(gs_active_group, gs_jt_position);
 
-  needle_pose.header.frame_id = ls->getPlanningFrame();
-  needle_pose.header.stamp = ros::Time::now();
+  if(!goal_state.hasAttachedBody(object_name_))
+  {
+    return false;
+  }
 
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasper needleGrasper(node_handle_, node_priv_, support_arm_from, object_name_);
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasper needleRelease(node_handle_, node_priv_, support_arm_to, object_name_);
+  std::unique_ptr<moveit::core::AttachedBody> needle = new(goal_state.getAttachedBody(object_name_);
+  handoff_state->attachBody(needle.get());
 
-  moveit_msgs::Grasp defined_grasp_msgs;
-
-  able_to_grasp = needleGrasper.planNeedleGrasp(needle_pose, object_name_, si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[grasp_index]);
-
-  needleRelease.planNeedleRelease(needle_pose.pose, object_name_);
+  able_to_grasp = planNeedleGrasping(start_state, *handoff_state.get(), gs_active_group);
+//
+  able_to_release = planNeedleReleasing(*handoff_state.get(), goal_state, ss_active_group);
 
   if(able_to_grasp && able_to_release)
     return true;
   else
     return false;
 }
+
+bool HybridMotionValidator::planNeedleGrasping(const robot_state::RobotState &start_state,
+                                               const robot_state::RobotState &goal_state,
+                                               const std::string &gs_active_group) const
+{
+  // planning in a back order fashion
+  robot_state::RobotState *pre_grasp_state;
+  if (!planPreGraspStateToGraspedState(*pre_grasp_state, goal_state, gs_active_group))
+    return false;
+
+  if (!planSafeStateToPreGraspState(start_state, *pre_grasp_state, gs_active_group))
+    return false;
+  return true;
+
+}
+
+bool HybridMotionValidator::planNeedleReleasing(const robot_state::RobotState &start_state,
+                                                const robot_state::RobotState &goal_state,
+                                                const std::string &ss_active_group) const
+{
+  robot_state::RobotState* ungrasped_state;
+  if(!planGraspStateToUngraspedState(start_state, *ungrasped_state, ss_active_group))
+    return false;
+  if(!planUngraspedStateToSafeState(*ungrasped_state, goal_state, ss_active_group))
+    return false;
+  return true;
+}
+
+bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotState &pre_grasp_state,
+                                                            const robot_state::RobotState &handoff_state,
+                                                            const std::string &planning_group) const
+{
+  // make a pre_grasp_state
+  const robot_state::JointModelGroup *arm_joint_group = pre_grasp_state.getJointModelGroup(planning_group);
+  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+
+  const Eigen::Affine3d grasped_tool_tip_pose = handoff_state.getGlobalLinkTransform(tip_link);
+  Eigen::Affine3d pregrasp_tool_tip_pose = grasped_tool_tip_pose;
+  pregrasp_tool_tip_pose.translation().z() -= 0.005;
+
+  std::size_t attempts = 10;
+  double timeout = 0.1;
+  bool found_ik = pre_grasp_state.setFromIK(arm_joint_group, pregrasp_tool_tip_pose, attempts, timeout);
+
+  if (!found_ik)
+    return false;
+
+  std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
+  std::vector<double> eef_joint_position;
+  pre_grasp_state.copyJointGroupPositions(eef_group_name, eef_joint_position);
+
+  for (int i = 0; i < eef_joint_position.size(); i++)
+  {
+    eef_joint_position[i] = 1.0;
+  }
+  pre_grasp_state.setJointGroupPositions(eef_group_name, eef_joint_position);
+  pre_grasp_state.update();
+
+  std::vector<robot_state::RobotStatePtr> traj;
+
+  double translation_step_max = 0.001, rotation_step_max = 0.0;
+  moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
+
+  double jt_revolute = 0.001, jt_prismatic = 0.01;
+  moveit::core::JumpThreshold jump_threshold(jt_revolute, jt_prismatic);
+  bool found_cartesian_path = pre_grasp_state.computeCartesianPath(arm_joint_group, traj, tip_link,
+                                                                   grasped_tool_tip_pose, true, max_step,
+                                                                   jump_threshold);
+  if (!found_cartesian_path)
+    return false;
+
+  // check each state in order.
+  if (!planPathFromTwoStates(pre_grasp_state, *traj[0].get(), planning_group)) // check first segment
+    return false;
+  for (int i = 0; i < traj.size(); i++)
+  {
+    if (!planPathFromTwoStates(*traj[i].get(), *traj[i + 1].get(), planning_group))  // check intermediate states
+      return false;
+  }
+  if (!planPathFromTwoStates(*traj.back().get(), handoff_state, planning_group + "gripper"))  // // check last two states
+    return false;
+
+  return true;
+}
+
+
+bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::RobotState &start_state,
+                                                         const robot_state::RobotState &pre_grasp_state,
+                                                         const std::string &planning_group) const
+{
+  return planPathFromTwoStates(start_state, pre_grasp_state, planning_group);
+}
+
+bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::RobotState &handoff_state,
+                                                           robot_state::RobotState &ungrasped_state,
+                                                           const std::string &planning_group) const
+{
+  // make a ungrasped_state
+  const robot_state::JointModelGroup *arm_joint_group = handoff_state.getJointModelGroup(planning_group);
+  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+
+  const Eigen::Affine3d grasped_tool_tip_pose = handoff_state.getGlobalLinkTransform(tip_link);
+  Eigen::Affine3d ungrasped_tool_tip_pose = grasped_tool_tip_pose;
+  ungrasped_tool_tip_pose.translation().z() += 0.005;
+
+  std::size_t attempts = 10;
+  double timeout = 0.1;
+  bool found_ik = ungrasped_state.setFromIK(ungrasped_state.getJointModelGroup(planning_group),
+                                            ungrasped_tool_tip_pose,
+                                            attempts, timeout);
+
+  if (!found_ik)
+    return false;
+
+  std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
+  std::vector<double> eef_joint_position;
+  ungrasped_state.copyJointGroupPositions(eef_group_name, eef_joint_position);
+
+  for (int i = 0; i < eef_joint_position.size(); i++)
+  {
+    eef_joint_position[i] = 0.0;
+  }
+  ungrasped_state.setJointGroupPositions(eef_group_name, eef_joint_position);
+  ungrasped_state.update();
+
+  std::vector<robot_state::RobotStatePtr> traj;
+
+  double translation_step_max = 0.001, rotation_step_max = 0.0;
+  moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
+
+  double jt_revolute = 0.001, jt_prismatic = 0.01;
+  moveit::core::JumpThreshold jump_threshold(jt_revolute, jt_prismatic);
+  bool found_cartesian_path = ungrasped_state.computeCartesianPath(arm_joint_group, traj, tip_link,
+                                                                   ungrasped_tool_tip_pose, true, max_step,
+                                                                   jump_threshold);
+  if (!found_cartesian_path)
+    return false;
+
+  // check each state in order.
+  if (!planPathFromTwoStates(handoff_state, *traj[0].get(), planning_group)) // check first segment
+    return false;
+  for (int i = 0; i < traj.size(); i++)
+  {
+    if (!planPathFromTwoStates(*traj[i].get(), *traj[i + 1].get(), planning_group))  // check intermediate states
+      return false;
+  }
+  if (!planPathFromTwoStates(*traj.back().get(), ungrasped_state, planning_group + "gripper"))  // // check last two states
+    return false;
+
+  return true;
+}
+
+bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::RobotState &ungrasped_state,
+                                                          const robot_state::RobotState &goal_state,
+                                                          const std::string &planning_group) const
+{
+  return planPathFromTwoStates(ungrasped_state, goal_state, planning_group);
+}
+
+bool HybridMotionValidator::planPathFromTwoStates(const robot_state::RobotState &start_state,
+                                                  const robot_state::RobotState &goal_state,
+                                                  const std::string &planning_group) const
+{
+
+  planning_scene_->setCurrentState(start_state);
+
+  const robot_state::JointModelGroup *joint_model_group = goal_state.getJointModelGroup(planning_group);
+  moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, joint_model_group);
+
+  // create a motion plan request
+  planning_interface::MotionPlanRequest req;
+  planning_interface::MotionPlanResponse res;
+
+  moveit_msgs::RobotState start_state_msg;
+  moveit::core::robotStateToRobotStateMsg(start_state, start_state_msg);
+
+  req.start_state = start_state_msg;
+  req.group_name = planning_group;
+  req.goal_constraints.clear();
+  req.goal_constraints.push_back(joint_goal);
+
+  // But, let's impose a path constraint on the motion.
+  // Here, we are asking for the end-effector to stay level
+
+//  geometry_msgs::QuaternionStamped quaternion;
+//  quaternion.header.frame_id = planning_scene_->getPlanningFrame();
+//  quaternion.quaternion.w = 1.0;
+//  req.path_constraints = kinematic_constraints::constructGoalConstraints(
+//    joint_model_group->getOnlyOneEndEffectorTip()->getName(), quaternion);
+
+  planning_interface::PlanningContextPtr context = planner_instance_->getPlanningContext(planning_scene_,
+                                                                                         req,
+                                                                                         res.error_code_);
+  if(context->solve(res))
+  {
+    moveit_msgs::MotionPlanResponse response;
+    res.getMessage(response);
+    return true;
+  }
+  else
+    return false;
+}
+
 //bool ompl::base::DiscreteMotionValidator::checkMotion(const State *s1, const State *s2) const
 //{
 //  /* assume motion starts in a valid configuration so s1 is valid */

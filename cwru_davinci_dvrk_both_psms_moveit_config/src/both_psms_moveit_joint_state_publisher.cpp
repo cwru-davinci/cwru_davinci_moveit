@@ -144,7 +144,7 @@ void BothPSMsMoveitJointStatePublisher::psmOneJointStateCallback(const sensor_ms
 
   for (int i = 0; i < dvrk_PSM1_joint_state.name.size(); ++i)
   {
-    std::string jnt_name = "PSM1/" + dvrk_PSM1_joint_state.name[i];
+    std::string jnt_name = dvrk_PSM1_joint_state.name[i];
     psm_one_jst_.name.push_back(jnt_name);
   }
 
@@ -174,7 +174,7 @@ void BothPSMsMoveitJointStatePublisher::psmTwoJointStateCallback(const sensor_ms
 
   for (int i = 0; i < dvrk_PSM2_joint_state.name.size(); ++i)
   {
-    std::string jnt_name = "PSM2/" + dvrk_PSM2_joint_state.name[i];
+    std::string jnt_name = dvrk_PSM2_joint_state.name[i];
     psm_two_jst_.name.push_back(jnt_name);
   }
 
