@@ -79,6 +79,11 @@ public:
                                                                  const std::string &object_name,
                                                                  const Eigen::Affine3d &attach_tran) const;
 
+  std::unique_ptr<moveit::core::AttachedBody> createAttachedBody(const std::string &joint_group_name,
+                                                                 const robot_state::RobotState &rstate,
+                                                                 const std::string &object_name,
+                                                                 const Eigen::Affine3d &attach_tran) const;
+
 protected:
 
 //  void initializePlannerPlugin();
@@ -89,7 +94,7 @@ protected:
    * @param object_name
    * @return
    */
-  bool hasAttachedObject(const std::string& group_name, const std::string& object_name) const;
+  bool hasAttachedObject(const std::string& group_name, const std::string& object_name) const;}
 
   ros::NodeHandle node_handle_;
 

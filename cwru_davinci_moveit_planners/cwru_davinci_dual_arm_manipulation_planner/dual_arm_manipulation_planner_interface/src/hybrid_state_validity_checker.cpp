@@ -232,6 +232,16 @@ HybridStateValidityChecker::createAttachedBody(const robot_state::JointModelGrou
     new moveit::core::AttachedBody(tip_link, object_name, shapes, attach_trans, touch_links, grasp_jt));
 }
 
+std::unique_ptr<moveit::core::AttachedBody>
+HybridStateValidityChecker::createAttachedBody(const std::string & joint_group_name,
+                                               const robot_state::RobotState& rstate,
+                                               const std::string &object_name,
+                                               const Eigen::Affine3d &attach_tran) const
+{
+  const robot_state::JointModelGroup *joint_model_group = rstate.getJointModelGroup(joint_group_name);
+  return createAttachedBody(joint_model_group, object_name, attach_tran);
+}
+
 
 //bool HybridStateValidityChecker::hasAttachedObject(const std::string& group_name, const std::string& object_name) const
 //{

@@ -92,8 +92,12 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
   std::string active_group_s1 = (hs1->graspIndex().value == 1) ?  "psm_one" : "psm_two";  // active group is the arm supporting the needle
   std::string active_group_s2 = (hs2->graspIndex().value == 1) ?  "psm_one" : "psm_two";
 
-  robot_state::RobotState *start_state;
-  robot_state::RobotState *goal_state;
+  robot_state::RobotStatePtr start_state;
+  start_state.reset(new robot_state::RobotState(planning_scene_->getCurrentState()));
+
+  robot_state::RobotStatePtr goal_state;
+  goal_state.reset(new robot_state::RobotState(planning_scene_->getCurrentState()));
+
   stateValidityChecker_.convertObjectToRobotState(*start_state, s1);
   stateValidityChecker_.convertObjectToRobotState(*goal_state, s2);
   switch(si_->getStateSpace()->as<HybridObjectStateSpace>()->checkStateDiff(hs1, hs2))
@@ -186,12 +190,13 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
     return false;
   }
 
-  std::unique_ptr<moveit::core::AttachedBody> needle = new(goal_state.getAttachedBody(object_name_);
-  handoff_state->attachBody(needle.get());
+  std::unique_ptr<moveit::core::AttachedBody> needle = stateValidityChecker_.createAttachedBody(gs_active_group, *handoff_state, object_name_,);
 
-  able_to_grasp = planNeedleGrasping(start_state, *handoff_state.get(), gs_active_group);
+  handoff_state->attachBody((stateValidityChecker_.createAttachedBody(gs_active_group).get());
+
+  able_to_grasp = planNeedleGrasping(start_state, *handoff_state, gs_active_group);
 //
-  able_to_release = planNeedleReleasing(*handoff_state.get(), goal_state, ss_active_group);
+  able_to_release = planNeedleReleasing(*handoff_state, goal_state, ss_active_group);
 
   if(able_to_grasp && able_to_release)
     return true;
@@ -204,7 +209,9 @@ bool HybridMotionValidator::planNeedleGrasping(const robot_state::RobotState &st
                                                const std::string &gs_active_group) const
 {
   // planning in a back order fashion
-  robot_state::RobotState *pre_grasp_state;
+  robot_state::RobotStatePtr pre_grasp_state;
+  pre_grasp_state.reset(new robot_state::RobotState(start_state));
+  pre_grasp_state->clearAttachedBody(object_name_);
   if (!planPreGraspStateToGraspedState(*pre_grasp_state, goal_state, gs_active_group))
     return false;
 
@@ -218,7 +225,10 @@ bool HybridMotionValidator::planNeedleReleasing(const robot_state::RobotState &s
                                                 const robot_state::RobotState &goal_state,
                                                 const std::string &ss_active_group) const
 {
-  robot_state::RobotState* ungrasped_state;
+  robot_state::RobotStatePtr ungrasped_state;
+  ungrasped_state.reset(new robot_state::RobotState(start_state));
+  ungrasped_state->clearAttachedBody(object_name_);
+
   if(!planGraspStateToUngraspedState(start_state, *ungrasped_state, ss_active_group))
     return false;
   if(!planUngraspedStateToSafeState(*ungrasped_state, goal_state, ss_active_group))
@@ -231,7 +241,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
                                                             const std::string &planning_group) const
 {
   // make a pre_grasp_state
-  const robot_state::JointModelGroup *arm_joint_group = pre_grasp_state.getJointModelGroup(planning_group);
+  const robot_state::JointModelGroup *arm_joint_group = handoff_state.getJointModelGroup(planning_group);
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
 
   const Eigen::Affine3d grasped_tool_tip_pose = handoff_state.getGlobalLinkTransform(tip_link);
@@ -270,14 +280,14 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
     return false;
 
   // check each state in order.
-  if (!planPathFromTwoStates(pre_grasp_state, *traj[0].get(), planning_group)) // check first segment
+  if (!planPathFromTwoStates(pre_grasp_state, *traj[0], planning_group)) // check first segment
     return false;
   for (int i = 0; i < traj.size(); i++)
   {
-    if (!planPathFromTwoStates(*traj[i].get(), *traj[i + 1].get(), planning_group))  // check intermediate states
+    if (!planPathFromTwoStates(*traj[i], *traj[i + 1], planning_group))  // check intermediate states
       return false;
   }
-  if (!planPathFromTwoStates(*traj.back().get(), handoff_state, planning_group + "gripper"))  // // check last two states
+  if (!planPathFromTwoStates(*traj.back(), handoff_state, planning_group + "gripper"))  // // check last two states
     return false;
 
   return true;
@@ -305,9 +315,7 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
 
   std::size_t attempts = 10;
   double timeout = 0.1;
-  bool found_ik = ungrasped_state.setFromIK(ungrasped_state.getJointModelGroup(planning_group),
-                                            ungrasped_tool_tip_pose,
-                                            attempts, timeout);
+  bool found_ik = ungrasped_state.setFromIK(arm_joint_group, ungrasped_tool_tip_pose, attempts, timeout);
 
   if (!found_ik)
     return false;
@@ -337,14 +345,14 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
     return false;
 
   // check each state in order.
-  if (!planPathFromTwoStates(handoff_state, *traj[0].get(), planning_group)) // check first segment
+  if (!planPathFromTwoStates(handoff_state, *traj[0], planning_group)) // check first segment
     return false;
   for (int i = 0; i < traj.size(); i++)
   {
-    if (!planPathFromTwoStates(*traj[i].get(), *traj[i + 1].get(), planning_group))  // check intermediate states
+    if (!planPathFromTwoStates(*traj[i], *traj[i + 1], planning_group))  // check intermediate states
       return false;
   }
-  if (!planPathFromTwoStates(*traj.back().get(), ungrasped_state, planning_group + "gripper"))  // // check last two states
+  if (!planPathFromTwoStates(*traj.back(), ungrasped_state, planning_group + "gripper"))  // // check last two states
     return false;
 
   return true;
