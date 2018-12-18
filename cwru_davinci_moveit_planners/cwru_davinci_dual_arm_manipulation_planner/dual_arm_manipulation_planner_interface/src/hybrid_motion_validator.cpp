@@ -56,14 +56,69 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_handle,
   object_name_(object_name),
   stateValidityChecker_(node_handle, node_priv, robot_name, object_name, si)
 {
-  kmodel_.reset(
-    new robot_model::RobotModel(robot_model_loader_.getModel()->getURDF(), robot_model_loader_.getModel()->getSRDF()));
+  kmodel_ = robot_model_loader_.getModel();
 
   initializePlannerPlugin();
 
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
 //  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
+}
+
+bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2,
+                                        std::pair<ompl::base::State *, double> &lastValid) const
+{
+  if (!si_->isValid(s2) && !si_->isValid(s1))
+  {
+    invalid_++;
+    return false;
+  }
+
+  bool result = true;
+
+  const auto *hs1 = static_cast<const HybridObjectStateSpace::StateType *>(s1);
+  const auto *hs2 = static_cast<const HybridObjectStateSpace::StateType *>(s2);
+
+  std::string active_group_s1 = (hs1->graspIndex().value == 1) ?  "psm_one" : "psm_two";  // active group is the arm supporting the needle
+  std::string active_group_s2 = (hs2->graspIndex().value == 1) ?  "psm_one" : "psm_two";
+
+  robot_state::RobotStatePtr start_state;
+  start_state.reset(new robot_state::RobotState(planning_scene_->getCurrentState()));
+
+  robot_state::RobotStatePtr goal_state;
+  goal_state.reset(new robot_state::RobotState(planning_scene_->getCurrentState()));
+
+  if(!stateValidityChecker_.convertObjectToRobotState(*start_state, s1))
+    return false;
+  if(!stateValidityChecker_.convertObjectToRobotState(*goal_state, s2))
+    return false;
+
+  switch(hyStateSpace_->checkStateDiff(hs1, hs2))
+  {
+    case StateDiff::AllSame:
+      return true;
+    case StateDiff::PoseDiffArmAndGraspSame:
+    {
+
+      return planPathFromTwoStates(*start_state, *goal_state, active_group_s1);
+    }
+    case StateDiff::ArmAndGraspDiffPoseSame:
+    {
+      if(!planHandoff(*start_state, *goal_state, active_group_s1, active_group_s2))
+        return false;
+    }
+  }
+
+  if (result)
+  {
+    valid_++;
+  }
+  else
+  {
+    invalid_++;
+  }
+
+  return result;
 }
 
 bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const
@@ -98,9 +153,12 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
   robot_state::RobotStatePtr goal_state;
   goal_state.reset(new robot_state::RobotState(planning_scene_->getCurrentState()));
 
-  stateValidityChecker_.convertObjectToRobotState(*start_state, s1);
-  stateValidityChecker_.convertObjectToRobotState(*goal_state, s2);
-  switch(si_->getStateSpace()->as<HybridObjectStateSpace>()->checkStateDiff(hs1, hs2))
+  if(!stateValidityChecker_.convertObjectToRobotState(*start_state, s1))
+    return false;
+  if(!stateValidityChecker_.convertObjectToRobotState(*goal_state, s2))
+    return false;
+
+  switch(hyStateSpace_->checkStateDiff(hs1, hs2))
   {
     case StateDiff::AllSame:
       return true;
@@ -115,8 +173,6 @@ bool HybridMotionValidator::checkMotion (const ompl::base::State *s1, const ompl
         return false;
     }
   }
-
-
 
   if (result)
   {
@@ -141,7 +197,7 @@ void HybridMotionValidator::initializePlannerPlugin()
   // We will get the name of planning plugin we want to load
   // from the ROS parameter server, and then load the planner
   // making sure to catch all exceptions.
-  if (!node_handle_.getParam("planning_plugin", planner_plugin_name))
+  if (!node_priv_.getParam("planning_plugin", planner_plugin_name))
     ROS_FATAL_STREAM("Could not find planner plugin name");
   try
   {
@@ -155,7 +211,7 @@ void HybridMotionValidator::initializePlannerPlugin()
   try
   {
     planner_instance_.reset(planner_plugin_loader->createUnmanagedInstance(planner_plugin_name));
-    if (!planner_instance_->initialize(kmodel_, node_handle_.getNamespace()))
+    if (!planner_instance_->initialize(kmodel_, node_priv_.getNamespace()))
       ROS_FATAL_STREAM("Could not initialize planner instance");
     ROS_INFO_STREAM("Using planning interface '" << planner_instance_->getDescription() << "'");
   }
@@ -190,12 +246,12 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
     return false;
   }
 
-  std::unique_ptr<moveit::core::AttachedBody> needle = stateValidityChecker_.createAttachedBody(gs_active_group, *handoff_state, object_name_,);
-
-  handoff_state->attachBody((stateValidityChecker_.createAttachedBody(gs_active_group).get());
+  const moveit::core::AttachedBody* needle_body = goal_state.getAttachedBody(object_name_);
+  handoff_state->attachBody(needle_body->getName(), needle_body->getShapes(),
+                            needle_body->getFixedTransforms(), needle_body->getTouchLinks(),
+                            needle_body->getAttachedLinkName(), needle_body->getDetachPosture());
 
   able_to_grasp = planNeedleGrasping(start_state, *handoff_state, gs_active_group);
-//
   able_to_release = planNeedleReleasing(*handoff_state, goal_state, ss_active_group);
 
   if(able_to_grasp && able_to_release)
@@ -407,6 +463,13 @@ bool HybridMotionValidator::planPathFromTwoStates(const robot_state::RobotState 
   }
   else
     return false;
+}
+
+void HybridMotionValidator::defaultSettings()
+{
+  hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();
+  if (hyStateSpace_ == nullptr)
+    throw ompl::Exception("No state space for motion validator");
 }
 
 //bool ompl::base::DiscreteMotionValidator::checkMotion(const State *s1, const State *s2) const

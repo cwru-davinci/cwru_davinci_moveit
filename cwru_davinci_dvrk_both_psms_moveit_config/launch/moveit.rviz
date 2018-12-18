@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /MotionPlanning1
       Splitter Ratio: 0.742560029
-    Tree Height: 75
+    Tree Height: 193
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -68,16 +68,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          PSM1_fingertip1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          PSM1_fingertip2:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
           PSM1_outer_insertion_link:
             Alpha: 1
             Show Axes: false
@@ -156,16 +146,6 @@ Visualization Manager:
             Show Trail: false
             Value: true
           PSM1_tool_wrist_shaft_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          PSM2_fingertip1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          PSM2_fingertip2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -321,16 +301,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          PSM1_fingertip1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          PSM1_fingertip2:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
           PSM1_outer_insertion_link:
             Alpha: 1
             Show Axes: false
@@ -409,16 +379,6 @@ Visualization Manager:
             Show Trail: false
             Value: true
           PSM1_tool_wrist_shaft_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          PSM2_fingertip1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          PSM2_fingertip2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -550,30 +510,30 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.32048965
+      Distance: 2.69986963
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.438597679
-        Y: -0.263773263
+        X: -0.359517097
+        Y: -0.308259606
         Z: 3.42727276e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.364796817
+      Pitch: 0.354796827
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 0.621764302
+      Yaw: 0.871764123
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 678
+  Height: 1025
   Help:
     collapsed: false
   Hide Left Dock: false
@@ -582,9 +542,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000002ad00000260fc0200000007fb000000100044006900730070006c0061007900730100000028000000d7000000d700fffffffb0000000800480065006c00700000000342000000bb0000007300fffffffb0000000a0056006900650077007300000003b0000000b0000000ad00fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004a00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000105000001830000018300ffffff0000048c0000026000000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000002ad000003bbfc0200000007fb000000100044006900730070006c00610079007301000000280000014d000000d700fffffffb0000000800480065006c00700000000342000000bb0000007300fffffffb0000000a0056006900650077007300000003b0000000b0000000ad00fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004a00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000017b000002680000018300ffffff0000048c000003bb00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
   Width: 1855
-  X: 65
-  Y: 24
+  X: 75
+  Y: 34

@@ -116,7 +116,11 @@ int main(int argc, char **argv)
   // .. _RobotModelLoader: http://docs.ros.org/indigo/api/moveit_ros_planning/html/classrobot__model__loader_1_1RobotModelLoader.html
 
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-  robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
+  robot_model::RobotModelPtr kinematic_model;
+
+  const boost::shared_ptr<srdf::Model> &srdf = robot_model_loader.getSRDF();
+  const boost::shared_ptr<urdf::ModelInterface> &urdf_model = robot_model_loader.getURDF();
+  kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
 
   ROS_INFO("Model Frame: %s", kinematic_model->getModelFrame().c_str());
 
@@ -204,14 +208,14 @@ int main(int argc, char **argv)
     kinematic_state->setToRandomPositions(joint_model_group);
 
     const Eigen::Affine3d &end_effector_state = kinematic_state->getGlobalLinkTransform(
-      "PSM1tool_wrist_sca_shaft_link");
+      "PSM1_tool_wrist_sca_shaft_link");
 
     /* Print end-effector pose. Remember that this is in the model frame */
     ROS_INFO_STREAM("Translation: \n" << end_effector_state.translation());
     ROS_INFO_STREAM("Rotation: \n" << end_effector_state.rotation());
 
 //    ROS_INFO_STREAM("\n" << planning_scene.getFrameTransform("/psm_one_tool_wrist_sca_shaft_link").matrix());
-    ROS_INFO_STREAM("\n" << kinematic_state->getFrameTransform("/PSM1tool_wrist_sca_shaft_link").matrix());
+    ROS_INFO_STREAM("\n" << kinematic_state->getFrameTransform("/PSM1_tool_wrist_sca_shaft_link").matrix());
     kinematic_state->copyJointGroupPositions(joint_model_group, joint_values_fk);
     // Inverse Kinematics
     // ^^^^^^^^^^^^^^^^^^

@@ -63,7 +63,12 @@ public:
                         const std::string &object_name,
                         const ompl::base::SpaceInformationPtr &si);
 
-  virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const = 0;
+  ~HybridMotionValidator() override = default;
+
+  virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const;
+
+  virtual bool checkMotion(const ompl::base::State *s1, const ompl::base::State *s2,
+                           std::pair<ompl::base::State *, double> &lastValid) const;
 
   bool planHandoff(const robot_state::RobotState &start_state,
                    const robot_state::RobotState &goal_state,
@@ -101,6 +106,10 @@ private:
   bool planPathFromTwoStates(const robot_state::RobotState &start_state,
                              const robot_state::RobotState &goal_state,
                              const std::string &planning_group) const;
+
+  void defaultSettings();
+
+  HybridObjectStateSpace *hyStateSpace_;
 
   HybridStateValidityChecker stateValidityChecker_;
 

@@ -266,6 +266,8 @@ public:
 
   virtual ompl::base::StateSamplerPtr allocStateSampler() const override;
 
+//  omp::base::ValidStateSamplerPtr HybridObjectStateSpace::allocMyValidStateSampler(const ompl::base::SpaceInformation *si);
+
   /**
    * @brief Count how many segments of the "longest valid length" fit on the motion from state1 to state2.
    * @param state1

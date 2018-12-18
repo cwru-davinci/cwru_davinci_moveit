@@ -38,6 +38,7 @@
  */
 
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <ompl/base/ValidStateSampler.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 using namespace ompl::base;
@@ -166,6 +167,11 @@ StateSamplerPtr HybridObjectStateSpace::allocStateSampler() const
 {
   return ompl::base::CompoundStateSpace::allocDefaultStateSampler();
 }
+
+//ValidStateSamplerPtr HybridObjectStateSpace::allocMyValidStateSampler(const SpaceInformation *si)
+//{
+//  return std::make_shared<HybridValidStateSampler>(si);
+//}
 
 unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, const State *state2) const
 {

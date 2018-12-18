@@ -5,7 +5,7 @@ add_library(${MOVEIT_LIB_NAME}
   src/hybrid_state_validity_checker.cpp
   src/threadsafe_state_storage.cpp
   src/hybrid_motion_validator.cpp
-  #  src/ompl_interface.cpp
+  src/hybrid_valid_state_sampler.cpp
   #  src/planning_context_manager.cpp
   #  src/constraints_library.cpp
   #  src/model_based_planning_context.cpp
@@ -33,6 +33,9 @@ target_link_libraries(${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} $
 #add_executable(main src/main.cpp)
 add_executable(test_hybrid_state_space test/test_hybrid_state_space.cpp)
 target_link_libraries(test_hybrid_state_space ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+add_executable(test_hybrid_motion_validator test/test_hybrid_motion_validator.cpp)
+target_link_libraries(test_hybrid_motion_validator ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 #add_executable(moveit_ompl_planner src/ompl_planner.cpp)
 #target_link_libraries(moveit_ompl_planner ${MOVEIT_LIB_NAME})

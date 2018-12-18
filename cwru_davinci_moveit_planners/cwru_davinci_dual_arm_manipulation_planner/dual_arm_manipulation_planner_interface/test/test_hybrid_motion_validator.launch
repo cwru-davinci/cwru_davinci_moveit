@@ -1,0 +1,19 @@
+<launch>
+    <node name="davinci_needle_pose_publisher" pkg="cwru_davinci_grasp" type="davinci_needle_pose_publisher" respawn="false" output="screen"/>
+
+    # specify which arm is going to perform needle grasp
+    <arg name = "which_arm" default = "psm_one"/>
+
+    # specify the name of the needle
+    <arg name = "needle_name" default = "needle_r"/>
+
+    # specify to pick or place needle
+    <arg name = "movement" default = "pick"/>
+
+    <node name="test_hybrid_motion_validator" pkg="cwru_davinci_dual_arm_manipulation_planner" type="test_hybrid_motion_validator" args="$(arg which_arm) $(arg needle_name) $(arg movement)" respawn="false" output="screen">
+        <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
+        <rosparam command="load" file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/config/kinematics.yaml"/>
+        <param name="/planning_plugin" value="ompl_interface/OMPLPlanner"/>
+        <rosparam command="load" file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/config/ompl_planning.yaml"/>
+    </node>
+</launch>

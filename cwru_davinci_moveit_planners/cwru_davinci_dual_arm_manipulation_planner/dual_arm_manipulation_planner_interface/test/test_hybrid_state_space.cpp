@@ -36,32 +36,14 @@
 
 
 #include <ros/ros.h>
-//#include <gtest/gtest.h>
-
 #include "ompl/base/ScopedState.h"
 #include "ompl/base/SpaceInformation.h"
-
-//#include <boost/math/constants/constants.hpp>
 
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 #include "Hybrid_State_Space_Test.h"
-// MoveIt!
-//#include <moveit/robot_model_loader/robot_model_loader.h>
-//#include <moveit/robot_model/robot_model.h>
-//#include <moveit/robot_state/robot_state.h>
-//#include <moveit/rdf_loader/rdf_loader.h>
 
-//#include <moveit/move_group_interface/move_group_interface.h>
-//#include <moveit/planning_scene_interface/planning_scene_interface.h>
-//#include <urdf_interface/model.h>
-//#include <urdf/model.h>
-//#include <srdfdom/model.h>
-
-#include <fstream>
-#include <iostream>
-#include <cstdlib> // for exit()
 
 using namespace dual_arm_manipulation_planner_interface;
 using namespace hybrid_state_space_test;
