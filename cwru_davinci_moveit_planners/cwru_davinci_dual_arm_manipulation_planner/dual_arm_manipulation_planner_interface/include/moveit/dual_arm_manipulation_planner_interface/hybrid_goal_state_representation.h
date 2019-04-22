@@ -33,40 +33,28 @@
  *********************************************************************/
 
 /* Author: Su Lu <sxl924@case.edu>
- * Description: This is the derived valid state sampler inherited from ompl::base::StateValidityChecker
+ * Description: This class is used to define what a goal state should be if planner can find it
  */
 
-#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H
-#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H
+#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_GOAL_STATE_REPRESENTATION_H
+#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_GOAL_STATE_REPRESENTATION_H
 
+#include <ompl/base/Goal.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
-#include <ompl/base/ValidStateSampler.h>
-#include <ompl/base/StateSampler.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
-class HybridValidStateSampler : public ompl::base::ValidStateSampler
+class HybridGoalState : public ompl::base::Goal
 {
 public:
-  HybridValidStateSampler(const std::string &robot_name,
-                          const ompl::base::SpaceInformation* si);
+  HybridGoalState(const ompl::base::SpaceInformationPtr &si);
 
-  bool sample(ompl::base::State *state) override;
-
-  bool sampleNear(ompl::base::State *state, const ompl::base::State *near, double distance) override
-  {
-    throw ompl::Exception("HybridValidStateSampler::sampleNear", "not implemented");
-    return false;
-  }
-
+  virtual bool isSatisfied(const ompl::base::State *st) const;
 private:
-  robot_model::RobotModelPtr kmodel_;
+  void defaultSettings();
 
-  robot_model_loader::RobotModelLoader robot_model_loader_;
-
-  std::string robot_name_;
+  HybridObjectStateSpace *hyStateSpace_;
 };
 }
 
-#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H
+#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_GOAL_STATE_REPRESENTATION_H

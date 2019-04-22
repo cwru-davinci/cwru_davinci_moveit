@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cwru_davinci_dual_arm_manipulation_planner)
 
+set(ROS_BUILD_TYPE Debug)
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++17)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -15,10 +16,11 @@ find_package(catkin REQUIRED COMPONENTS
   cwru_davinci_grasp
   roscpp
   tf
+  moveit_tutorials
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system serialization)
 find_package(ompl REQUIRED)
 if (CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)

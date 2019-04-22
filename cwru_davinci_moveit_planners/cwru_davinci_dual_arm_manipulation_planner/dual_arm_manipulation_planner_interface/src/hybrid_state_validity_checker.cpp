@@ -35,31 +35,22 @@
 /* Author: Su Lu <sxl924@case.edu>
  * Description: The class to do state validity check
  */
-
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
-#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-
-#include <moveit/move_group_interface/move_group_interface.h>
-
-//#include <moveit/ompl_interface/ompl_planning_context.h>
-#include <moveit/profiler/profiler.h>
-#include <ros/ros.h>
 #include <geometric_shapes/shape_operations.h>
-
-#include <cwru_davinci_grasp/davinci_needle_grasp_data.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 //using namespace davinci_moveit_object_handling;
 
 HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &node_handle,
-                                                       const ros::NodeHandle &node_priv,
                                                        const std::string &robot_name,
                                                        const std::string &object_name,
                                                        const ompl::base::SpaceInformationPtr &si)
   : node_handle_(node_handle), robot_model_loader_(robot_name), robot_name_(robot_name),object_name_(object_name),
     ompl::base::StateValidityChecker(si)
 {
+  defaultSettings();
+
+//  initializeIKPlugin();
 
   kmodel_ = robot_model_loader_.getModel();
 
@@ -74,39 +65,77 @@ HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &no
   collision_request_with_distance_.distance = true;
 
   collision_request_with_cost_.cost = true;
+
+  collision_request_simple_.contacts = true;
+  collision_request_simple_.max_contacts = 1000;
+
+  hyStateSpace_->validity_checking_duration_ = std::chrono::duration<double>::zero();
+
+  loadNeedleModel();
 }
+
+// std::chrono::duration<double> HybridStateValidityChecker::validity_checking_duration_ = std::chrono::duration<double>::zero();
 
 bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 {
-// check bounds
+  auto start = std::chrono::high_resolution_clock::now();
+
+  bool is_valid = false;
+  // check bounds
   if (!si_->satisfiesBounds(state))
+    printf("Invalid State: Out of bound.");
+  else
   {
-    return false;
+    // convert ompl state to moveit robot state
+    robot_state::RobotState *kstate = tss_->getStateStorage();
+    const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
+
+    if(!convertObjectToRobotState(*kstate, hs))
+      printf("Invalid State: No IK solution.");
+    else
+    {
+      const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
+      std::unique_ptr<moveit::core::AttachedBody> needle_model = createAttachedBody(selected_group_name, object_name_,
+                                                                                    hs->graspIndex().value);
+//      if(!needle_model)
+//      {
+//        return false;
+//      }
+      kstate->attachBody(needle_model.get());
+      kstate->update();
+
+      // TODO check feasibility
+      planning_scene_->setCurrentState(*kstate);
+//      if (!planning_scene_->isStateFeasible(*kstate))
+//        printf("Invalid State: State is not feasible.");
+//      else
+//      {
+        // check collision avoidance
+        collision_detection::CollisionResult res;
+        planning_scene_->checkCollisionUnpadded(collision_request_simple_, res, *kstate);
+//  if(res.collision)
+//  {
+//    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+//    collision_detection::CollisionResult::ContactMap contactMap = res.contacts;
+//    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
+//    {
+//      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+//    }
+//  }
+//
+//        kstate->printStatePositions(std::cout);
+        needle_model.release();
+        kstate->clearAttachedBodies();
+
+        is_valid = !res.collision;
+//      }
+    }
   }
 
-  // convert ompl state to moveit robot state
-  robot_state::RobotState *kstate = tss_->getStateStorage();
-  if(!convertObjectToRobotState(*kstate, state))
-  {
-    printf("Failed to convert from ompl::base::state to robot_state::RobotState");
-    return false;
-  }
-//  pMonitor_->requestPlanningSceneState();
-//  planning_scene_monitor::LockedPlanningSceneRW ls(pMonitor_);
-//  ls->setCurrentState(*kstate);
-//  // check path constraints
-//  const kinematic_constraints::KinematicConstraintSetPtr &kset = planning_context_->getPathConstraints();
-//  if (kset && !kset->decide(*kstate, verbose).satisfied)
-//    return false;
-  planning_scene_->setCurrentState(*kstate);
-  // check feasibility
-  if (!planning_scene_->isStateFeasible(*kstate))
-    return false;
-
-  // check collision avoidance
-  collision_detection::CollisionResult res;
-  planning_scene_->checkCollision(collision_request_simple_, res, *kstate);
-  return res.collision == false;
+  auto finish = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = finish - start;
+  hyStateSpace_->validity_checking_duration_ += elapsed;
+  return is_valid;
 }
 
 double HybridStateValidityChecker::cost(const ompl::base::State* state) const
@@ -114,9 +143,10 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
   double cost = 0.0;
 
   robot_state::RobotState *kstate = tss_->getStateStorage();
-  if(!convertObjectToRobotState(*kstate, state))
+  const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
+  if(!convertObjectToRobotState(*kstate, hs))
   {
-    printf("Failed to convert from ompl::base::state to robot_state::RobotState");
+    printf("Invalid State: No IK solution.");
     return false;
   }
 
@@ -138,9 +168,10 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
   robot_state::RobotState *kstate = tss_->getStateStorage();
-  if(!convertObjectToRobotState(*kstate, state))
+  const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
+  if(!convertObjectToRobotState(*kstate, hs))
   {
-    printf("Failed to convert from ompl::base::state to robot_state::RobotState");
+    printf("Invalid State: No IK solution.");
     return false;
   }
 //  pMonitor_->requestPlanningSceneState();
@@ -153,137 +184,156 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 }
 
 
-bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotState &rstate, const ompl::base::State *state) const
+bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotState &rstate,
+                                                           const HybridObjectStateSpace::StateType *hybrid_state) const
 {
-  const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
-  const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
+  const std::string selected_group_name = (hybrid_state->armIndex().value == 1) ? "psm_one" : "psm_two";
   const std::string rest_group_name = (selected_group_name == "psm_one") ? "psm_two" : "psm_one";
-//  if(!hasAttachedObject(group_name, object_name_))  // check if "psm_one" holds the needle
-//  {
-//    group_name = (hs->armIndex().value == 1) ? "psm_two" : "psm_one";
-//
-//    if(!hasAttachedObject(group_name, object_name_))  // check if "psm_two" holds the needle
-//    {
-//      ROS_INFO("No arm is holding the object");
-//      return;
-//    }
-//
-//    group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";  // reset group_name_ to correct value
-//  }
-
-
-//  pMonitor_->requestPlanningSceneState();
-//  planning_scene_monitor::LockedPlanningSceneRO ls(pMonitor_);
-//  rstate = ls->getCurrentState();
 
   // convert object pose to robot tip pose
   // this is the gripper tool tip link frame wrt /base_link
   Eigen::Affine3d object_pose;  // object pose w/rt base frame
-  si_->getStateSpace()->as<HybridObjectStateSpace>()->se3ToEign3d(hs, object_pose);
+//  si_->getStateSpace()->as<HybridObjectStateSpace>()->printState(hs, std::cout);
+  hyStateSpace_->se3ToEigen3d(hybrid_state, object_pose);
 
-  Eigen::Affine3d grasp_pose = si_->getStateSpace()->as<HybridObjectStateSpace>()->possible_grasps_[hs->graspIndex().value].grasp_pose;
+  Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hybrid_state->graspIndex().value].grasp_pose;
   Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
-  const robot_state::JointModelGroup* selected_joint_model_group = rstate.getJointModelGroup(selected_group_name);
-  std::size_t attempts = 10;
+  const robot_state::JointModelGroup *selected_joint_model_group = rstate.getJointModelGroup(selected_group_name);
+  std::size_t attempts = 5;
   double timeout = 0.1;
   bool found_ik = rstate.setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
-  if (found_ik)
+//  bool found_ik = setFromIK(rstate, selected_joint_model_group, selected_group_name,
+//                            selected_joint_model_group->getOnlyOneEndEffectorTip()->getName(), tool_tip_pose);
+  if(found_ik)
   {
-    const robot_state::JointModelGroup* rest_joint_model_group = rstate.getJointModelGroup(rest_group_name);
-    rstate.setToDefaultValues(rest_joint_model_group, rest_group_name+"_home");
+    const robot_state::JointModelGroup *rest_joint_model_group = rstate.getJointModelGroup(rest_group_name);
+    rstate.setToDefaultValues(rest_joint_model_group, rest_group_name + "_home");
 
     std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
-    const robot_state::JointModelGroup* rest_joint_model_group_eef = rstate.getJointModelGroup(rest_group_eef_name);
-    rstate.setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name+"_home");
-
-    std::unique_ptr<moveit::core::AttachedBody> needle_model = createAttachedBody(selected_joint_model_group,
-                                                                                  object_name_, grasp_pose);
-    if(!needle_model)
-    {
-      return false;
-    }
-    rstate.attachBody(createAttachedBody(selected_joint_model_group, object_name_, grasp_pose).get());
-    rstate.clearAttachedBody(object_name_);
-    rstate.update();
+    const robot_state::JointModelGroup *rest_joint_model_group_eef = rstate.getJointModelGroup(rest_group_eef_name);
+    rstate.setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
+    rstate.copyJointGroupPositions(selected_joint_model_group, hybrid_state->jointVariables().values);
+//    rstate.update();
   }
-  else
-  {
-    printf("Did not find IK solution");
-  }
+  return found_ik;
 }
 
 std::unique_ptr<moveit::core::AttachedBody>
-HybridStateValidityChecker::createAttachedBody(const robot_state::JointModelGroup *joint_model_group,
+HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
                                                const std::string &object_name,
-                                               const Eigen::Affine3d &attach_tran) const
+                                               const int grasp_pose_id) const
 {
-  const moveit::core::LinkModel *tip_link = joint_model_group->getOnlyOneEndEffectorTip();
-  Eigen::Vector3d scale_vec(0.025, 0.025, 0.025);
-  shapes::Mesh *needle_mesh =
-    shapes::createMeshFromResource("package://cwru_davinci_geometry_models/"
-                                     "props/needle_r/mesh/needle_r4.dae",
-                                   scale_vec);
+  const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(active_group);
+  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
 
-  printf("needle mesh loaded");
-  shapes::ShapeMsg mesh_msg;
-
-  if (!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
-  {
-    printf("Unable to generate needle collision model");
-    return std::unique_ptr<moveit::core::AttachedBody>(nullptr);
-  }
-  const shapes::Shape* needle_shape = shapes::constructShapeFromMsg(mesh_msg);
-//  shapes::ShapeConstPtr needle_shape_ptr = std::make_shared<const shapes::Shape>(*needle_shape);
-  shapes::ShapeConstPtr needle_shape_ptr(needle_shape);
-  std::vector<shapes::ShapeConstPtr> shapes = {needle_shape_ptr};
-  EigenSTL::vector_Affine3d attach_trans = {attach_tran};
+  EigenSTL::vector_Affine3d attach_trans = {hyStateSpace_->possible_grasps_[grasp_pose_id].grasp_pose};
 
   const robot_state::JointModelGroup *eef_group = kmodel_->getJointModelGroup(
-    joint_model_group->getAttachedEndEffectorNames()[0]);
+    arm_joint_group->getAttachedEndEffectorNames()[0]);
 
   std::vector<std::string> touch_links_list = eef_group->getLinkModelNames();
   std::set<std::string> touch_links(touch_links_list.begin(), touch_links_list.end());
 
-  trajectory_msgs::JointTrajectory grasp_jt;
-  grasp_jt.header.stamp = ros::Time::now();
-  grasp_jt.header.frame_id = kmodel_->getModelFrame().c_str();
-  grasp_jt.joint_names = eef_group->getVariableNames();
-  grasp_jt.points.resize(3);
-  grasp_jt.points[0].positions.push_back(-1.0);
-  grasp_jt.points[1].positions.push_back(-1.0);
-  grasp_jt.points[2].positions.push_back(-1.0);
+  trajectory_msgs::JointTrajectory dettach_posture;
+//  dettach_posture.header.stamp = ros::Time::now();
+//  dettach_posture.header.frame_id = kmodel_->getModelFrame().c_str();
+//  dettach_posture.joint_names = eef_group->getVariableNames();
+//  dettach_posture.points.resize(3);
+//  dettach_posture.points[0].positions.push_back(0.5);
+//  dettach_posture.points[1].positions.push_back(0.5);
+//  dettach_posture.points[2].positions.push_back(0.5);
 
-  return std::unique_ptr<moveit::core::AttachedBody>(
-    new moveit::core::AttachedBody(tip_link, object_name, shapes, attach_trans, touch_links, grasp_jt));
+  return std::make_unique<moveit::core::AttachedBody>(tip_link, object_name, needleShapes_, attach_trans, touch_links,
+                                                      dettach_posture);
+//  return std::unique_ptr<moveit::core::AttachedBody>(
+//    new moveit::core::AttachedBody());
 }
 
-//bool HybridStateValidityChecker::hasAttachedObject(const std::string& group_name, const std::string& object_name) const
-//{
-//
-//  moveit::planning_interface::PlanningSceneInterface ps_interface;
-//  std::map<std::string, moveit_msgs::AttachedCollisionObject> objs = ps_interface.getAttachedObjects();
-//
-//  std::map<std::string, moveit_msgs::AttachedCollisionObject>::iterator existing = objs.find(object_name);
-//  if(existing != objs.end())
-//  {
-//    moveit_msgs::AttachedCollisionObject attached_obj = existing->second;
-//
-//    std::string link_name = attached_obj.link_name;
-//
-//    moveit::planning_interface::MoveGroupInterface move_group(group_name);
-//    std::string end_effector = move_group.getEndEffector();
-//    moveit::planning_interface::MoveGroupInterface eff_group(end_effector);
-//    std::vector<std::string> eff_links = eff_group.getLinkNames();
-//    std::vector<std::string>::iterator it;
-//
-//    it = std::find(eff_links.begin(), eff_links.end(), link_name);
-//    if(it != eff_links.end())
-//    {
-//      return true;
-//    }
-//    return false;
-//  }
-//  return false;
-//}
+void HybridStateValidityChecker::defaultSettings()
+{
+  hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();
+  if (hyStateSpace_ == nullptr)
+    throw ompl::Exception("No state space for motion validator");
+}
+
+void HybridStateValidityChecker::loadNeedleModel()
+{
+  Eigen::Vector3d scale_vec(0.025, 0.025, 0.025);
+  shapes::Mesh *needle_mesh;
+  shapes::ShapeMsg mesh_msg;
+  try
+  {
+    needle_mesh = shapes::createMeshFromResource("package://cwru_davinci_geometry_models/"
+                                                   "props/needle_r/mesh/needle_r4.dae",
+                                                 scale_vec);
+    if(!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
+      throw "Needle model is not loaded";
+    const shapes::Shape* needle_shape = shapes::constructShapeFromMsg(mesh_msg);
+    shapes::ShapeConstPtr needle_shape_ptr(needle_shape);
+    needleShapes_ = {needle_shape_ptr};
+  }
+  catch(const char* exception)
+  {
+    std::cerr << "Error: " << exception << '\n';
+  }
+}
+
+void HybridStateValidityChecker::initializeIKPlugin()
+{
+  psm_one_kinematics_solver_ = NULL;
+  psm_two_kinematics_solver_ = NULL;
+  kinematics_loader_.reset(
+    new pluginlib::ClassLoader<kinematics::KinematicsBase>("moveit_core", "kinematics::KinematicsBase"));
+  std::string plugin_name = "davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin";
+
+  psm_one_kinematics_solver_ = kinematics_loader_->createInstance(plugin_name);
+  psm_two_kinematics_solver_ = kinematics_loader_->createInstance(plugin_name);
+
+  double search_discretization = 0.025;
+  psm_one_kinematics_solver_->initialize(robot_name_, "psm_one", "PSM1_psm_base_link", "PSM1_tool_tip_link", search_discretization);
+  psm_two_kinematics_solver_->initialize(robot_name_, "psm_two", "PSM2_psm_base_link", "PSM2_tool_tip_link", search_discretization);
+}
+
+bool HybridStateValidityChecker::setFromIK(robot_state::RobotState &rstate,
+                                      const robot_state::JointModelGroup *arm_joint_group,
+                                      const std::string &planning_group,
+                                      const std::string &tip_frame,
+                                      const Eigen::Affine3d &tip_pose_wrt_world) const
+{
+  bool found_ik = false;
+  std::string base_frame = (planning_group == "psm_one") ? "PSM1_psm_base_link" : "PSM2_psm_base_link";
+
+  boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
+  if(planning_group == "psm_one")
+  {
+    kinematics_solver_ = psm_one_kinematics_solver_;
+    if (kinematics_solver_->getGroupName() != planning_group)
+      return found_ik;
+  }
+  else
+  {
+    kinematics_solver_ = psm_two_kinematics_solver_;
+    if (kinematics_solver_->getGroupName() != planning_group)
+      return found_ik;
+  }
+
+  std::vector<double> seed(kinematics_solver_->getJointNames().size(), 0.0);
+  std::vector<double> solution(kinematics_solver_->getJointNames().size(), 0.0);
+  double timeout = 0.2;
+  Eigen::Affine3d affine_base_wrt_world = rstate.getFrameTransform(base_frame);
+  Eigen::Affine3d affine_tip_pose_wrt_base = affine_base_wrt_world.inverse() * tip_pose_wrt_world;
+  geometry_msgs::Pose tip_pose_wrt_base;
+  tf::poseEigenToMsg(affine_tip_pose_wrt_base, tip_pose_wrt_base);
+  moveit_msgs::MoveItErrorCodes error_code;
+
+  found_ik = kinematics_solver_->searchPositionIK(tip_pose_wrt_base, seed, timeout, solution, error_code);
+
+  if (found_ik)
+  {
+    rstate.setJointGroupPositions(arm_joint_group, solution);
+    rstate.update();
+  }
+  return found_ik;
+}

@@ -37,24 +37,43 @@
  */
 
 #include <moveit/dual_arm_manipulation_planner_interface//hybrid_valid_state_sampler.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
-#include <ompl/base/ValidStateSampler.h>
-#include <ompl/base/StateSampler.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 
-HybridValidStateSampler::HybridValidStateSampler(const ompl::base::SpaceInformation *si)
-  : ompl::base::ValidStateSampler(si)
+HybridValidStateSampler::HybridValidStateSampler(const std::string &robot_name,
+                                                 const ompl::base::SpaceInformation* si)
+  : robot_model_loader_(robot_name), ompl::base::ValidStateSampler(si)
 {
   name_ = "hybrid valid state sampler";
+  kmodel_ = robot_model_loader_.getModel();
 }
 
 bool HybridValidStateSampler::sample(ompl::base::State *state)
 {
-  ompl::base::CompoundStateSampler compoundStateSampler(si_->getStateSpace()->as<HybridObjectStateSpace>());
-  auto *hs = static_cast<HybridObjectStateSpace::StateType *>(state);
-  compoundStateSampler.sampleUniform(hs);
-  assert(si_->isValid(state));
-  return true;
+  HybridObjectStateSpace *hyStateSpace_ = si_->getStateSpace()->as<HybridObjectStateSpace>();
+  ompl::base::DiscreteStateSampler arm_index_sampler(hyStateSpace_->getSubspace(1).get());
+  ompl::base::DiscreteStateSampler grasp_index_sampler(hyStateSpace_->getSubspace(2).get());
+
+  auto *hss = static_cast<HybridObjectStateSpace::StateType *>(state);
+
+  arm_index_sampler.sampleUniform(&hss->armIndex());
+  grasp_index_sampler.sampleUniform(&hss->graspIndex());
+
+  robot_state::RobotStatePtr robot_sample_state;
+  robot_sample_state.reset(new robot_state::RobotState(kmodel_));
+
+  std::string planning_group = (hss->armIndex().value == 1) ? "psm_one" : "psm_two";
+  const robot_state::JointModelGroup* selected_joint_model_group = robot_sample_state->getJointModelGroup(planning_group);
+  robot_sample_state->setToRandomPositions(selected_joint_model_group);
+  std::vector<double> joint_variables;
+  robot_sample_state->copyJointGroupPositions(selected_joint_model_group, joint_variables);
+  hyStateSpace_->setjointVariables(joint_variables, hss);
+
+  const Eigen::Affine3d tool_tip_pose = robot_sample_state->getGlobalLinkTransform(
+    selected_joint_model_group->getOnlyOneEndEffectorTip());
+  const Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hss->graspIndex().value].grasp_pose;
+  const Eigen::Affine3d object_pose = tool_tip_pose * grasp_pose;
+  hyStateSpace_->eigen3dToSE3(hss, object_pose);
+
+  return si_->isValid(hss);
 }

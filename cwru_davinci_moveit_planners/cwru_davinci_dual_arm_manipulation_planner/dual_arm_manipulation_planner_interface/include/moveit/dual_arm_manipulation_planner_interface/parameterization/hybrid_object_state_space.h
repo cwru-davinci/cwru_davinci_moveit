@@ -43,131 +43,118 @@
 #include <ompl/base/StateSpace.h>
 #include <ompl/base/spaces/DiscreteStateSpace.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
+#include <ompl/base/spaces/RealVectorStateSpace.h>
 
 #include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
 
-#include <moveit/profiler/profiler.h>
-
 namespace dual_arm_manipulation_planner_interface
 {
-enum class StateDiff {AllSame, ArmDiffGraspAndPoseSame, GraspDiffArmAndPoseSame, PoseDiffArmAndGraspSame, ArmAndGraspDiffPoseSame, ArmAndPoseDiffGraspSame, GraspAndPoseDiffArmSame, AllDiff};
+enum class StateDiff
+{
+  AllSame,
+  ArmDiffGraspAndPoseSame,
+  GraspDiffArmAndPoseSame,
+  PoseDiffArmAndGraspSame,
+  ArmAndGraspDiffPoseSame,
+  ArmAndPoseDiffGraspSame,
+  GraspAndPoseDiffArmSame,
+  AllDiff
+};
+
+OMPL_CLASS_FORWARD(HybridObjectStateSpace);
+
+class HybridStateSampler : public ompl::base::StateSampler
+{
+public:
+  HybridStateSampler(const HybridObjectStateSpace *space);
+
+  void sampleUniform(ompl::base::State *state) override;
+
+  void sampleUniformNear(ompl::base::State *state, const ompl::base::State *near, double distance) override;
+
+  void sampleGaussian(ompl::base::State *state, const ompl::base::State *mean, double stdDev) override;
+private:
+  const HybridObjectStateSpace *hyStateSpace_;
+
+  robot_model::RobotModelPtr kmodel_;
+
+  robot_model_loader::RobotModelLoader robot_model_loader_;
+
+//  std::string robot_name_;
+};
 
 class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
 {
 public:
 
+  void printExecutionDuration();
+
+  static std::chrono::duration<double> low_level_planning_duration_;
+
+  static std::chrono::duration<double> check_motion_duration_;
+
+  static std::chrono::duration<double> validity_checking_duration_;
+
+  static std::chrono::duration<double> interpolation_duration_;
+
+  static std::chrono::duration<double> hand_off_duration_;
+
+  static std::chrono::duration<double> ik_solving_duration_;
+
+  static std::chrono::duration<double> sampling_duration_;
+
+  static std::chrono::duration<double> choose_grasp_duration_;
+
+  static std::chrono::duration<double> compute_ik_duration_;
+
+  static std::chrono::duration<double> collision_checking_duration_;
+
+  static int call_interpolation_num;
+
+  static int low_level_motion_planner_num;
+
+  static int hand_off_planning_num;
+
+  static int hand_off_failed_num;
+
   class StateType : public ompl::base::CompoundStateSpace::StateType
   {
   public:
-//    enum
+    enum
+    {
+      IS_TRANSFER = 8,
+      IS_TRANSIT = 16,
+    };
+
+    StateType() : ompl::base::CompoundStateSpace::StateType(), flags(0)
+    {
+    }
+
+//    bool isTransfer() const
 //    {
-//      VALIDITY_KNOWN = 1,
-//      GOAL_DISTANCE_KNOWN = 2,
-//      VALIDITY_TRUE = 4,
-//      IS_START_STATE = 8,
-//      IS_GOAL_STATE = 16,
-//      JOINTS_COMPUTED = 256,
-//      POSE_COMPUTED = 512
-//    };
-//
-//    StateType() : CompoundStateSpace::StateType(), values(NULL), flags(0)
-//    {
-//      flags |= JOINTS_COMPUTED;
+//      return flags & IS_TRANSFER;
 //    }
 //
-//    void markValid(double d)
+//    bool isTransit() const
 //    {
-//      distance = d;
-//      flags |= GOAL_DISTANCE_KNOWN;
-//      markValid();
+//      return flags & IS_TRANSIT;
 //    }
 //
-//    void markValid()
+//    void markTransfer() const
 //    {
-//      flags |= (VALIDITY_KNOWN | VALIDITY_TRUE);
+//      flags |= IS_TRANSFER;
 //    }
 //
-//    void markInvalid(double d)
+//    void markTransit() const
 //    {
-//      distance = d;
-//      flags |= GOAL_DISTANCE_KNOWN;
-//      markInvalid();
+//      flags |= IS_TRANSIT;
 //    }
 //
-//    void markInvalid()
-//    {
-//      flags &= ~VALIDITY_TRUE;
-//      flags |= VALIDITY_KNOWN;
-//    }
-//
-//    void clearKnownInformation()
+//    void clearKnownInformation() const
 //    {
 //      flags = 0;
 //    }
-//
-//    bool isMarkedValid() const
-//    {
-//      return flags & VALIDITY_TRUE;
-//    }
-//
-//    bool isGoalDistanceKnown() const
-//    {
-//      return flags & GOAL_DISTANCE_KNOWN;
-//    }
-//
-//    bool isStartState() const
-//    {
-//      return flags & IS_START_STATE;
-//    }
-//
-//    bool isGoalState() const
-//    {
-//      return flags & IS_GOAL_STATE;
-//    }
-//
-//    bool isInputState() const
-//    {
-//      return flags & (IS_START_STATE | IS_GOAL_STATE);
-//    }
-//
-//    void markStartState()
-//    {
-//      flags |= IS_START_STATE;
-//    }
-//
-//    void markGoalState()
-//    {
-//      flags |= IS_GOAL_STATE;
-//    }
-//
-//    bool jointsComputed() const
-//    {
-//      return flags & JOINTS_COMPUTED;
-//    }
-//
-//    bool poseComputed() const
-//    {
-//      return flags & POSE_COMPUTED;
-//    }
-//
-//    void setJointsComputed(bool value)
-//    {
-//      if (value)
-//        flags |= JOINTS_COMPUTED;
-//      else
-//        flags &= ~JOINTS_COMPUTED;
-//    }
-//
-//    void setPoseComputed(bool value)
-//    {
-//      if (value)
-//        flags |= POSE_COMPUTED;
-//      else
-//        flags &= ~POSE_COMPUTED;
-//    }
-    StateType() : ompl::base::CompoundStateSpace::StateType()
-    {
-    }
+
     /**
      * @brief Get the SE(3) components of the state and allow changing it as well
      * @return
@@ -219,19 +206,35 @@ public:
       return *as<ompl::base::DiscreteStateSpace::StateType>(2);
     }
 
-    double *values;
-//    int tag;
-//    int flags;
+    const ompl::base::RealVectorStateSpace::StateType &jointVariables() const
+    {
+      return *as<ompl::base::RealVectorStateSpace::StateType>(3);
+    }
+
+    ompl::base::RealVectorStateSpace::StateType &jointVariables()
+    {
+      return *as<ompl::base::RealVectorStateSpace::StateType>(3);
+    }
+
+    void clearJointValues() const
+    {
+      auto *rstate = as<ompl::base::RealVectorStateSpace::StateType>(3);
+      delete[] rstate->values;
+      delete rstate;
+    }
+
+//    double *values;
+    int tag;
+    int flags;
 //    double distance;
-
   };
-
 
   HybridObjectStateSpace(int armIndexLowerBound,
                          int armIndexUpperBound,
                          int graspIndexLowerBound,
                          int graspIndexUpperBound,
-                         const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps);
+                         const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
+                         const std::string &robot_name = "robot_description");
 
   virtual ~HybridObjectStateSpace()
   {}
@@ -242,9 +245,15 @@ public:
 
   void setGraspIndexBounds(int lowerBound, int upperBound);
 
+  bool setjointVariables(const std::vector<double> &joint_variables, StateType *hybrid_state) const;
+
+  int getJointSpaceDimension() const;
+
   virtual bool isHybrid() const;
 
   virtual double distance(const ompl::base::State *state1, const ompl::base::State *state2) const override;
+
+  virtual void serialize(void *serialization, const ompl::base::State *state) const override;
 
   virtual ompl::base::State *allocState() const override;
 
@@ -260,13 +269,13 @@ public:
                            const ompl::base::State *to,
                            const double t,
                            ompl::base::State *state) const override;
+
+  virtual void copyToReals(std::vector<double> &reals, const ompl::base::State *source) const override;
 //  virtual double getMaximumExtent() const;
 
   virtual ompl::base::StateSamplerPtr allocDefaultStateSampler() const override;
 
   virtual ompl::base::StateSamplerPtr allocStateSampler() const override;
-
-//  omp::base::ValidStateSamplerPtr HybridObjectStateSpace::allocMyValidStateSampler(const ompl::base::SpaceInformation *si);
 
   /**
    * @brief Count how many segments of the "longest valid length" fit on the motion from state1 to state2.
@@ -274,9 +283,7 @@ public:
    * @param state2
    * @return
    */
-  virtual unsigned int 	validSegmentCount (const ompl::base::State *state1, const ompl::base::State *state2) const;
-
-//                        std::vector<ompl::base::State *> *geodesic) const;
+  virtual unsigned int validSegmentCount(const ompl::base::State *state1, const ompl::base::State *state2) const;
 
 //  bool computeStateK(ompl::base::State *state) const;
 
@@ -290,7 +297,9 @@ public:
 //  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
 //
 //  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
-  void se3ToEign3d(const StateType *state, Eigen::Affine3d& affine3d) const;
+  void se3ToEigen3d(const StateType *state, Eigen::Affine3d &affine3d) const;
+
+  void eigen3dToSE3(StateType *state, const Eigen::Affine3d &affine3d) const;
 
   StateDiff checkStateDiff(const StateType *state1, const StateType *state2) const;
 
@@ -321,12 +330,14 @@ private:
 
   void chooseGrasp(const StateType *from,
                    const StateType *to,
-                   StateType* cstate) const;
+                   StateType *cstate) const;
 
   int handOffsNum(const int from_arm_index,
                   const int to_arm_index,
                   const int from_part_id,
                   const int to_part_id) const;
+
+  bool computeStateIK(StateType *hystate) const;
 
   /**
    * @brief Return the first grasp_id which its part_id different than @param from_part_id and @param @to_part_id
@@ -336,6 +347,24 @@ private:
    */
   int chooseGraspPart(int from_part_id, int to_part_id) const;
 
+  robot_model::RobotModelPtr kmodel_;
+
+  robot_model_loader::RobotModelLoader robot_model_loader_;
+
+  std::string robot_name_;
+
+  void initializeIKPlugin();
+
+  bool setFromIK(robot_state::RobotState &rstate,
+                 const robot_state::JointModelGroup *arm_joint_group,
+                 const std::string &planning_group,
+                 const std::string &tip_frame,
+                 const Eigen::Affine3d &tip_pose_wrt_world) const;
+
+  boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
+  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;
+  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase> >
+    kinematics_loader_;
 //  struct PoseComponent
 //  {
 //    PoseComponent(const robot_model::JointModelGroup *subgroup,

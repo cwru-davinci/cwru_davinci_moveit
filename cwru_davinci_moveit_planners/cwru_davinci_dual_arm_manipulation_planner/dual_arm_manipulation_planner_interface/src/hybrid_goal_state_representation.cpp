@@ -33,40 +33,30 @@
  *********************************************************************/
 
 /* Author: Su Lu <sxl924@case.edu>
- * Description: This is the derived valid state sampler inherited from ompl::base::StateValidityChecker
+ * Description: This class is used to define what a goal state should be if planner can find it
  */
 
-#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H
-#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H
-
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
-#include <ompl/base/ValidStateSampler.h>
-#include <ompl/base/StateSampler.h>
+#include <moveit/dual_arm_manipulation_planner_interface/hybrid_goal_state_representation.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
-class HybridValidStateSampler : public ompl::base::ValidStateSampler
-{
-public:
-  HybridValidStateSampler(const std::string &robot_name,
-                          const ompl::base::SpaceInformation* si);
-
-  bool sample(ompl::base::State *state) override;
-
-  bool sampleNear(ompl::base::State *state, const ompl::base::State *near, double distance) override
+  HybridGoalState::HybridGoalState(const ompl::base::SpaceInformationPtr &si)
+    : ompl::base::Goal(si)
   {
-    throw ompl::Exception("HybridValidStateSampler::sampleNear", "not implemented");
+    defaultSettings();
+  }
+
+  bool HybridGoalState::isSatisfied(const ompl::base::State *st) const
+  {
+    if(type_ == ompl::base::GoalType::GOAL_STATE)
+      hyStateSpace_->equalStates(st, as<ompl::base::State>());
     return false;
   }
 
-private:
-  robot_model::RobotModelPtr kmodel_;
-
-  robot_model_loader::RobotModelLoader robot_model_loader_;
-
-  std::string robot_name_;
-};
+  void HybridGoalState::defaultSettings()
+  {
+    hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();
+    if (hyStateSpace_ == nullptr)
+      throw ompl::Exception("No state space for motion validator");
+  }
 }
-
-#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H

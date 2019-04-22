@@ -41,15 +41,13 @@
 
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-
 #include <moveit/planning_interface/planning_interface.h>
-#include <moveit_msgs/Grasp.h>
 
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/MotionValidator.h>
 #include <ompl/base/SpaceInformation.h>
 
-#include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
+//#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_plugin.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -68,7 +66,10 @@ public:
   virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const;
 
   virtual bool checkMotion(const ompl::base::State *s1, const ompl::base::State *s2,
-                           std::pair<ompl::base::State *, double> &lastValid) const;
+                           std::pair<ompl::base::State *, double> &lastValid) const
+  {
+    return false;
+  }
 
   bool planHandoff(const robot_state::RobotState &start_state,
                    const robot_state::RobotState &goal_state,
@@ -76,10 +77,10 @@ public:
                    const std::string &gs_active_group) const;
 
   bool planNeedleGrasping(const robot_state::RobotState &start_state,
-                          const robot_state::RobotState &goal_state,
+                          const robot_state::RobotState &handoff_state,
                           const std::string &gs_active_group) const;
 
-  bool planNeedleReleasing(const robot_state::RobotState &start_state,
+  bool planNeedleReleasing(const robot_state::RobotState &handoff_state,
                            const robot_state::RobotState &goal_state,
                            const std::string &ss_active_group) const;
 
@@ -102,12 +103,23 @@ private:
                                      const robot_state::RobotState &goal_state,
                                      const std::string &planning_group) const;
 
+  bool noCollision(const robot_state::RobotState& rstate) const;
 
   bool planPathFromTwoStates(const robot_state::RobotState &start_state,
                              const robot_state::RobotState &goal_state,
                              const std::string &planning_group) const;
 
   void defaultSettings();
+
+  void initializeIKPlugin();
+
+  bool setFromIK(robot_state::RobotState &rstate,
+                 const robot_state::JointModelGroup *arm_joint_group,
+                 const std::string &planning_group,
+                 const std::string &tip_frame,
+                 const Eigen::Affine3d& tip_pose_wrt_world) const;
+
+//  void publishRobotState(const robot_state::RobotState& rstate) const;
 
   HybridObjectStateSpace *hyStateSpace_;
 
@@ -121,11 +133,7 @@ private:
 
   planning_scene::PlanningScenePtr planning_scene_;
 
-  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
-
-//  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr needleGrasperPtr_;
-//
-//  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr needleReleasePtr_;
+//  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
 
   ros::NodeHandle node_handle_;
 
@@ -134,6 +142,12 @@ private:
   std::string robot_name_;
 
   std::string object_name_;
+
+  boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
+  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase> >
+    kinematics_loader_;
+
+  ros::Publisher robot_state_publisher_;
 };
 }
 

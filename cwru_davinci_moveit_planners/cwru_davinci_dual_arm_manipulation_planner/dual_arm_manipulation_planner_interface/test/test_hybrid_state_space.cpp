@@ -107,7 +107,7 @@ int main(int argc, char **argv)
   ros::NodeHandle node_handle_priv("~");
   cwru_davinci_grasp::DavinciSimpleNeedleGrasper simpleGrasp(node_handle,
                                                              node_handle_priv,
-                                                             "needle_r", "psm_one");
+                                                             "psm_one", "needle_r");
 
   std::vector<cwru_davinci_grasp::GraspInfo> grasp_pose = simpleGrasp.getAllPossibleNeedleGrasps();
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_pose.size() ,grasp_pose));
@@ -137,6 +137,8 @@ int main(int argc, char **argv)
   s1.random();
   s2 = s1;
 
+  double distance = hystsp->distance(s1.get(), s2.get());
+
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 
   hystsp->printState(s1.get(), std::cout);
@@ -157,6 +159,7 @@ int main(int argc, char **argv)
 
   s1->armIndex().value = 1;
   s2->armIndex().value = 2;
+  distance = hystsp->distance(s1.get(), s2.get());
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 
@@ -179,6 +182,7 @@ int main(int argc, char **argv)
 
   s1->graspIndex().value = 8743;  // a random number
   s2->graspIndex().value = 4532;  // a random number
+  distance = hystsp->distance(s1.get(), s2.get());
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 
@@ -201,6 +205,7 @@ int main(int argc, char **argv)
 
   s2->armIndex().value = s1->armIndex().value;
   s2->graspIndex().value = s1->graspIndex().value;
+  distance = hystsp->distance(s1.get(), s2.get());
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 
@@ -226,7 +231,7 @@ int main(int argc, char **argv)
 
   s1->armIndex().value = 1;
   s2->armIndex().value = 2;
-
+  distance = hystsp->distance(s1.get(), s2.get());
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 
@@ -252,6 +257,7 @@ int main(int argc, char **argv)
   s2->armIndex().value = 2;
 
   s2->graspIndex().value = s1->graspIndex().value;
+  distance = hystsp->distance(s1.get(), s2.get());
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 
@@ -274,6 +280,7 @@ int main(int argc, char **argv)
   s2.random();
 
   s2->armIndex().value = s1->armIndex().value;
+  distance = hystsp->distance(s1.get(), s2.get());
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 
@@ -293,6 +300,7 @@ int main(int argc, char **argv)
   std::cout << "case StateDiff::AllDiff" << std::endl;
   s1.random();
   s2.random();
+  distance = hystsp->distance(s1.get(), s2.get());
 
   hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
 

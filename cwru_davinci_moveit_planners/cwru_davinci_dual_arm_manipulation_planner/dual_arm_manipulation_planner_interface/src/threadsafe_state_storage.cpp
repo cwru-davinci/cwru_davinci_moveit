@@ -48,7 +48,9 @@ dual_arm_manipulation_planner_interface::TSStateStorage::TSStateStorage(const ro
 dual_arm_manipulation_planner_interface::TSStateStorage::~TSStateStorage()
 {
   for (std::map<boost::thread::id, robot_state::RobotState*>::iterator it = thread_states_.begin() ; it != thread_states_.end() ; ++it)
+  {
     delete it->second;
+  }
 }
 
 robot_state::RobotState* dual_arm_manipulation_planner_interface::TSStateStorage::getStateStorage() const

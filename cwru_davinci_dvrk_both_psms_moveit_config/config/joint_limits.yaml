@@ -38,8 +38,8 @@ joint_limits:
     max_acceleration: 0
   PSM1_outer_roll:
     has_position_limits: true
-    min_position: -2.25
-    max_position: 2.25
+    min_position: -3.0485
+    max_position: 3.0485
     has_velocity_limits: true
     max_velocity: 0.1
     has_acceleration_limits: false
@@ -62,8 +62,8 @@ joint_limits:
     max_acceleration: 0
   PSM1_outer_yaw:
     has_position_limits: true
-    min_position: -1.0
-    max_position: 1.0
+    min_position: -1.5707
+    max_position: 1.5707
     has_velocity_limits: true
     max_velocity: 0.1
     has_acceleration_limits: false
@@ -104,8 +104,8 @@ joint_limits:
     max_acceleration: 0
   PSM2_outer_roll:
     has_position_limits: true
-    min_position: -2.25
-    max_position: 2.25    
+    min_position: -3.0485
+    max_position: 3.0485  
     has_velocity_limits: true
     max_velocity: 0.1
     has_acceleration_limits: false
@@ -128,8 +128,8 @@ joint_limits:
     max_acceleration: 0
   PSM2_outer_yaw:
     has_position_limits: true
-    min_position: -1.0
-    max_position: 1.0
+    min_position: -1.5707
+    max_position: 1.5707
     has_velocity_limits: true
     max_velocity: 0.1
     has_acceleration_limits: false

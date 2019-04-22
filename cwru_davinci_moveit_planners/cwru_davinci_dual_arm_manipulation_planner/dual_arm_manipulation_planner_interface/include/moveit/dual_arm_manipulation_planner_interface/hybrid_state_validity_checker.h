@@ -40,27 +40,26 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
 
 #include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
-//#include <moveit/ompl_interface/ompl_planning_context.h>
+#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
-
+//#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/collision_detection/collision_common.h>
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/SpaceInformation.h>
 
-//#include <cwru_davinci_grasp/davinci_simple_grasp_generator.h>
-#include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
-
+#include <chrono>  // for high_resolution_clock
 
 namespace dual_arm_manipulation_planner_interface
 {
+
+//static std::chrono::duration<double> validity_checking_duration_;
+
 class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
   HybridStateValidityChecker(const ros::NodeHandle &node_handle,
-                             const ros::NodeHandle &node_priv,
                              const std::string &robot_name,
                              const std::string &object_name,
                              const ompl::base::SpaceInformationPtr &si);
@@ -73,15 +72,15 @@ public:
 
   virtual double clearance(const ompl::base::State* state) const override;
 
-  bool convertObjectToRobotState(robot_state::RobotState &rstate, const ompl::base::State *state) const;
+  bool convertObjectToRobotState(robot_state::RobotState &rstate, const HybridObjectStateSpace::StateType *hybrid_state) const;
 
-  std::unique_ptr<moveit::core::AttachedBody> createAttachedBody(const robot_state::JointModelGroup *joint_model_group,
+  std::unique_ptr<moveit::core::AttachedBody> createAttachedBody(const std::string &active_group,
                                                                  const std::string &object_name,
-                                                                 const Eigen::Affine3d &attach_tran) const;
+                                                                 const int grasp_pose_id) const;
+
 protected:
 
-//  void initializePlannerPlugin();
-
+  void defaultSettings();
   /**
    * @brief Has certain arm group /@param group_name hold object /param object_name
    * @param group_name
@@ -90,18 +89,23 @@ protected:
    */
   bool hasAttachedObject(const std::string& group_name, const std::string& object_name) const;
 
+  void loadNeedleModel();
+
+  void initializeIKPlugin();
+
+  bool setFromIK(robot_state::RobotState &rstate,
+                 const robot_state::JointModelGroup *arm_joint_group,
+                 const std::string &planning_group,
+                 const std::string &tip_frame,
+                 const Eigen::Affine3d &tip_pose_wrt_world) const;
+
   ros::NodeHandle node_handle_;
 
-//  planning_interface::PlannerManagerPtr planner_instance_;
-
-//  moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
+  HybridObjectStateSpace* hyStateSpace_;
 
   planning_scene::PlanningScenePtr planning_scene_;
 
-//  planning_interface::PlanningContextPtr planning_context_;
-
-
-  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
+//  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
@@ -112,10 +116,6 @@ protected:
 
   TSStateStoragePtr tss_;
 
-//  DavinciObjectMessageGenerator objectMessageGenerator_;
-
-//  std::string group_name_;
-
   collision_detection::CollisionRequest collision_request_simple_;
 
   collision_detection::CollisionRequest collision_request_with_cost_;
@@ -124,6 +124,12 @@ protected:
 
   std::string object_name_;
   std::string robot_name_;
+
+  std::vector<shapes::ShapeConstPtr> needleShapes_;
+
+  boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
+  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase> >
+    kinematics_loader_;
 };
 }
 

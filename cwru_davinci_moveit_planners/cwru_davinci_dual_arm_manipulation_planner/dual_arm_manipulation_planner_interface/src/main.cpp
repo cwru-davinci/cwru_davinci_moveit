@@ -36,53 +36,20 @@
  * Description:
  */
 
-
-//class HybridNode
-
-//{
-//public:
-//  HybridNode(const ompl::base::state& state, HybridNode* parent = nullptr)
-//  : parent_(parent), state_(state)
-//  {
-//    if (_parent)
-//    {
-//      _parent->_children.push_back(this);
-//    }
-//  }
-//
-//  const HybridNode* parent()
-//  {
-//    return parent_;
-//  }
-//
-//private:
-//  HybridNode parent_;
-//
-//  ompl::state::base* state_;
-//
-//  std::vector<HybridNode> children_;
-//};
-//
-//class HybridTree
-//{
-//public:
-//  HybridTree(const )
-//private:
-//
-//  HybridNode h_node_;
-//
-//
-//
-//};
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/base/ScopedState.h>
+#include <ompl/base/PlannerDataStorage.h>
+#include <ompl/geometric/PathGeometric.h>
 #include <ompl/geometric/SimpleSetup.h>
-
+#include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/rrt/LazyRRT.h>
 #include <ompl/config.h>
-#include <iostream>
-#include <geometry_msgs/PoseStamped.h>
+
+#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
+#include <moveit/dual_arm_manipulation_planner_interface/hybrid_valid_state_sampler.h>
+#include <moveit/dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution.h>
 
 //moveit
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -96,108 +63,219 @@ namespace ob = ompl::base;
 namespace og = ompl::geometric;
 using namespace dual_arm_manipulation_planner_interface;
 
-bool isStateValid(const ob::State *state)
+// return an sampler
+ob::ValidStateSamplerPtr allocHybridValidStateSampler(const ob::SpaceInformation *si)
 {
-  // cast the abstract state type to the type we expect
-  const auto *hybrid_state = state->as<HybridObjectStateSpace::StateType>();
 
-  // extract the first component of the state and cast it to what we expect
-  const auto *object_se3state = hybrid_state->as<ob::SE3StateSpace::StateType>(0);
-
-  const auto *object_pos = object_se3state->as<ob::RealVectorStateSpace::StateType>(0);
-  const auto *object_rot = object_se3state->as<ob::SO3StateSpace::StateType>(1);
-
-  // extract the second component of the state and cast it to what we expect
-  const auto *arm_index = hybrid_state->as<ob::DiscreteStateSpace::StateType>(1);
-
-  // extract the third component of the state and cast it to what we expect
-  const auto *grasp_index = hybrid_state->as<ob::DiscreteStateSpace::StateType>(2);
-
-
-
-  // return a value that is always true but uses the two variables we define, so we avoid compiler warnings
-//  return (const void*)rot != (const void*)pos;
+  // we can perform any additional setup / configuration of a sampler here,
+  // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
+  return std::make_shared<HybridValidStateSampler>("robot_description", si);
 }
 
-void plan(const geometry_msgs::PoseStamped &object_init_pose, const geometry_msgs::PoseStamped &object_goal_pose,
-          const int &initial_arm_index, const int &initial_grasp_id, const int &goal_arm_index,
-          const int &goal_grasp_id, std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps)
+void plan(const ros::NodeHandle &node_handle,
+          const ros::NodeHandle &node_handle_priv,
+          const std::vector<double> ss_needle_pose_translation,
+          const std::vector<double> ss_needle_pose_orientation,
+          const std::vector<double> gs_needle_pose_translation,
+          const std::vector<double> gs_needle_pose_orientation,
+          const std::vector<double> ss_joint_values,
+          const std::vector<double> gs_joint_values,
+          int ss_arm_index,
+          int gs_arm_index,
+          int ss_grasp_pose_index,
+          int gs_grasp_pose_index,
+          std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses)
 {
 
-  // construct the state space we are planning in
-  auto space(std::make_shared<HybridObjectStateSpace>(1, 2, 0, 100));
+//  for(int i = 0; i < grasp_poses.size(); i++)
+//  {
+//    if(grasp_poses[i].graspParamInfo.grasp_id == 121)
+//    {
+//      ss_grasp_pose_index = i;
+//      continue;
+//    }
+//    else if(grasp_poses[i].graspParamInfo.grasp_id == 121)
+//    {
+//      gs_grasp_pose_index = i;
+//      continue;
+//    }
+//    else
+//    {
+//      if (grasp_poses[ss_grasp_pose_index].graspParamInfo.grasp_id ==
+//          121 && grasp_poses[gs_grasp_pose_index].graspParamInfo.grasp_id == 121)
+//      {
+//        break;
+//      }
+//    }
+//  }
+//  gs_grasp_pose_index = ss_grasp_pose_index;
+
+  std::string object_name = "needle_r";
+  std::string robot_name = "robot_description";
+  // create an instance of state space
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size(), grasp_poses));
 
   // construct an instance of  space information from this state space
-  auto si(std::make_shared<ob::SpaceInformation>(space));
+  auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
-  // set state validity checking for this space
-  si->setStateValidityChecker(isStateValid);
+  ompl::base::RealVectorBounds se3_xyz_bounds(3);
+  se3_xyz_bounds.setLow(0, -0.5);
+  se3_xyz_bounds.setHigh(0, 0.5);
+  se3_xyz_bounds.setLow(1, -0.5);
+  se3_xyz_bounds.setHigh(1, 0.5);
+  se3_xyz_bounds.setLow(2, 0.3);
+  se3_xyz_bounds.setHigh(2, 0.5);
 
+  hystsp->setSE3Bounds(se3_xyz_bounds);
+
+
+  si->setStateValidityChecker(
+    std::make_shared<HybridStateValidityChecker>(node_handle, robot_name, object_name, si));
+// or this call:
+//  si->setStateValidityCheckingResolution(0.03); // 3%
+  si->setMotionValidator(
+    std::make_shared<HybridMotionValidator>(node_handle, node_handle_priv, robot_name, object_name, si));
+
+  si->setup();
 
   // create a random start state
-  ob::ScopedState<HybridObjectStateSpace> start(space);
+  ob::ScopedState<HybridObjectStateSpace> start(hystsp);
+  ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-  start->se3State().setXYZ(object_init_pose.pose.position.x,
-                           object_init_pose.pose.position.y,
-                           object_init_pose.pose.position.z);
+  start->se3State().setXYZ(ss_needle_pose_translation[0],
+                           ss_needle_pose_translation[1],
+                           ss_needle_pose_translation[2]);
+  start->se3State().rotation().setAxisAngle(ss_needle_pose_orientation[0],
+                                            ss_needle_pose_orientation[1],
+                                            ss_needle_pose_orientation[2],
+                                            ss_needle_pose_orientation[3]);
+  start->armIndex().value = ss_arm_index;  // set arm index
+//  for(int i = 0; i < grasp_poses.size(); i++)
+//  {
+    start->graspIndex().value = 0;
+    if(!si->isValid(start.get()))
+      ros::shutdown();
+    std::cout << "Initial state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
+//  }
+//  robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
+//  robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
+//
+//  moveit::core::RobotStatePtr daVinciRobotState(new robot_state::RobotState(robot_model));
+//  planning_scene::PlanningScenePtr planning_scene(new planning_scene::PlanningScene(robot_model));
+//
+//  static const std::string PSM_ONE_PLANNING_GROUP = "psm_one";
+//  static const std::string PSM_TWO_PLANNING_GROUP = "psm_two";
+//
+//  const robot_state::JointModelGroup* psm1_jt_group_parent = daVinciRobotState->getJointModelGroup(PSM_ONE_PLANNING_GROUP);
+//  daVinciRobotState->setToDefaultValues(psm1_jt_group_parent, "psm_one_home");
+//  const moveit::core::LinkModel* tip_link = psm1_jt_group_parent->getOnlyOneEndEffectorTip();
+//  Eigen::Affine3d tip_frame_wrt_world = daVinciRobotState->getGlobalLinkTransform(tip_link);
+//
+//  Eigen::Affine3d needle_wrt_world = tip_frame_wrt_world * grasp_poses[gs_grasp_pose_index].grasp_pose;
+//  Eigen::AngleAxisd angle_ax(needle_wrt_world.linear());
+//  Eigen::Vector3d axis = angle_ax.axis();
+//  axis.normalize();
+//
+//  goal->se3State().setXYZ(needle_wrt_world.translation()[0],
+//                          needle_wrt_world.translation()[1],
+//                          needle_wrt_world.translation()[2]);
+//  goal->se3State().rotation().setAxisAngle(axis(0),
+//                                           axis(1),
+//                                           axis(2),
+//                                           angle_ax.angle());
 
-  start->se3State().rotation().x = object_init_pose.pose.orientation.x;
-  start->se3State().rotation().y = object_init_pose.pose.orientation.y;
-  start->se3State().rotation().z = object_init_pose.pose.orientation.z;
-  start->se3State().rotation().w = object_init_pose.pose.orientation.w;
+  goal->se3State().setXYZ(gs_needle_pose_translation[0],
+                          gs_needle_pose_translation[1],
+                          gs_needle_pose_translation[2]);
+  goal->se3State().rotation().setAxisAngle(gs_needle_pose_orientation[0],
+                                           gs_needle_pose_orientation[1],
+                                           gs_needle_pose_orientation[2],
+                                           gs_needle_pose_orientation[3]);
+  goal->armIndex().value = gs_arm_index;  // set arm index
+  for(int i = 0; i < grasp_poses.size(); i++)
+  {
+    if(grasp_poses[i].part_id == 2)
+    {
+      goal->graspIndex().value = i;
+      if(si->isValid(goal.get()))
+        break;
+    }
+  }
 
-  start->armIndex().value = initial_arm_index;  // set arm index
-  start->graspIndex().value = initial_grasp_id;  // set grasp index
+  std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
+  bool valid_ss = si->isValid(start.get());
+  bool valid_gs = si->isValid(goal.get());
 
-  // create a random goal state
-  ob::ScopedState<HybridObjectStateSpace> goal(space);
-
-  goal->se3State().setXYZ(object_goal_pose.pose.position.x,
-                          object_goal_pose.pose.position.y,
-                          object_goal_pose.pose.position.z);
-
-  goal->se3State().rotation().x = object_goal_pose.pose.orientation.x;
-  goal->se3State().rotation().y = object_goal_pose.pose.orientation.y;
-  goal->se3State().rotation().z = object_goal_pose.pose.orientation.z;
-  goal->se3State().rotation().w = object_goal_pose.pose.orientation.w;
-
-  goal->armIndex().value = goal_arm_index;  // set arm index
-  goal->graspIndex().value = goal_grasp_id;  // set grasp index
-
+  hystsp->printState(start.get(), std::cout);
+  hystsp->printState(goal.get(), std::cout);
   // create a problem instance
   auto pdef(std::make_shared<ob::ProblemDefinition>(si));
 
   // set the start and goal states
   pdef->setStartAndGoalStates(start, goal);
 
+  si->setValidStateSamplerAllocator(allocHybridValidStateSampler);
   // create a planner for the defined space
   auto planner(std::make_shared<og::RRTConnect>(si));
-
   // set the problem we are trying to solve for the planner
   planner->setProblemDefinition(pdef);
-
+  planner->setRange(1.0);
   // perform setup steps for the planner
   planner->setup();
-
-
   // print the settings for this space
   si->printSettings(std::cout);
-
   // print the problem settings
   pdef->print(std::cout);
-
   // attempt to solve the problem within one second of planning time
-  ob::PlannerStatus solved = planner->ob::Planner::solve(1.0);
+  auto start_ts = std::chrono::high_resolution_clock::now();
 
+  ob::PlannerStatus solved = planner->ob::Planner::solve(50.0);
+
+  auto finish = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> planning_time = finish - start_ts;
+
+//  planner->getPlannerData(plannedData);
+  si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration();
   if (solved)
   {
-    // get the goal representation from the problem definition (not the same as the goal state)
-    // and inquire about the found path
-    ob::PathPtr path = pdef->getSolutionPath();
-    std::cout << "Found solution:" << std::endl;
+    if(pdef->hasExactSolution())
+    {
+      std::cout << "Has exact solution" << std::endl;
+    }
+    else
+    {
+      std::cout << "Do not have exact solution" << std::endl;
+    }
 
+
+    og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
     // print the path to screen
-    path->print(std::cout);
+    std::cout << "Found solution:\n" << std::endl;
+    std::cout << "Found solution with " << slnPath.getStateCount()
+                 << " states and length " << slnPath.length( ) << std::endl;
+    // print the path to screen
+    slnPath.printAsMatrix(std::cout);
+
+//    DavinciNeedleHandoffExecution handOffExecute(slnPath, hystsp->getJointSpaceDimension());
+
+    std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
+    ob::PlannerData plannedData(si);
+    planner->getPlannerData(plannedData);
+    plannedData.computeEdgeWeights();
+
+    std::cout << "Found " << plannedData.numVertices() << " vertices " << std::endl;
+    std::cout << "Found " << plannedData.numEdges ( ) << " edges " << std::endl;
+    std::cout << "Actual Planning Time is: " << planning_time.count() << "s\n";
+//
+//    for(int i = 0; i < plannedData.numVertices(); i++)
+//    {
+//      plannedData.getVertex(i).getState()->as<HybridObjectStateSpace::StateType>()->clearJointValues();
+//    }
+//
+//    plannedData.printGraphviz();
+//    plannedData.printGraphML();
+//    ob::PlannerDataStorage dataStorage;
+//    dataStorage.store(plannedData , "myPlannerData");
   }
   else
     std::cout << "No solution found" << std::endl;
@@ -206,97 +284,139 @@ void plan(const geometry_msgs::PoseStamped &object_init_pose, const geometry_msg
 
 int main(int argc, char** argv)
 {
-  if (argc < 2)
-  {
-    std::cerr << "Usage: " << argv[0] << "<which_arm> <needle_name> [place]"
-              << std::endl;
-    return 1;
-  }
-
-  std::string which_arm = argv[1];
-  std::string needle_name = argv[2];
-
-  bool is_place = false;
-  if (argc > 3)
-  {
-    std::string arg = argv[3];
-    if (arg == "place")
-    {
-      ROS_INFO("Place %s", needle_name.c_str());
-      is_place = true;
-    }
-  }
-  else
-  {
-    ROS_INFO("Pick %s", needle_name.c_str());
-  }
-
-  ros::init(argc, argv, "dual_arm_planning_main_node ");
-  ros::NodeHandle node_handle;
-  ros::NodeHandle node_handle_priv("~");
-
+  ros::init(argc, argv, "handoff_main");
   ros::AsyncSpinner spinner(1);
-  ros::Duration(5.0).sleep();
+  ros::Duration(3.0).sleep();
   spinner.start();
 
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasper needleGrasper(node_handle,
-                                                               node_handle_priv,
-                                                               needle_name,
-                                                               which_arm);
+  ros::NodeHandle node_handle;
+  ros::NodeHandle node_handle_priv("~");
+  std::string object_name = "needle_r";
+  std::string robot_name = "robot_description";
 
-  if (!is_place)
+  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr simpleGrasp =
+    boost::make_shared<cwru_davinci_grasp::DavinciSimpleNeedleGrasper>(
+      node_handle, node_handle_priv, "psm_one", object_name);
+
+  std::vector<double> ss_needle_pose_translation;
+  std::vector<double> ss_needle_pose_orientation;
+  std::vector<double> gs_needle_pose_translation;
+  std::vector<double> gs_needle_pose_orientation;
+  std::vector<double> ss_joint_values;
+  std::vector<double> gs_joint_values;
+  int ss_arm_index;
+  int ss_grasp_pose_index;
+  int gs_arm_index;
+  int gs_grasp_pose_index;
+
+  if (node_handle_priv.hasParam("ss_needle_pose_translation"))
   {
-    int pick_mode = 0;
+    XmlRpc::XmlRpcValue needle_pose_list;
+    node_handle_priv.getParam("ss_needle_pose_translation", needle_pose_list);
 
-    std::cout << "How do you want to pick needle 0 for defined pick, other number is for random pic: ";
-    std::cin >> pick_mode;
-    if (pick_mode == 0)
+    ROS_ASSERT(needle_pose_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+    for (int32_t i = 0; i < needle_pose_list.size(); ++i)
     {
-      // defined needle pick up
-      if(!needleGrasper.pickNeedle(needle_name, cwru_davinci_grasp::NeedlePickMode::DEFINED))
-      {
-        ROS_INFO("Main function: failed to perform DEFINED needle pick up, now try random needle pick up");
-        // try random needle pick up
-        if (!needleGrasper.pickNeedle(needle_name, cwru_davinci_grasp::NeedlePickMode::RANDOM))
-        {
-          ROS_INFO("Main function: failed to perform RANDOM needle pick up");
-          ros::shutdown();
-          return 0;
-        }
-        ROS_INFO("Main function: successfully performed RANDOM needle pick up");
-        ros::shutdown();
-        return 0;
-      }
-      ROS_INFO("Main function: successfully performed DEFINED needle pick up");
-    }
-    else
-    {
-      // random needle pick up
-      if (!needleGrasper.pickNeedle(needle_name, cwru_davinci_grasp::NeedlePickMode::RANDOM))
-      {
-        ROS_INFO("Main function: failed to perform RANDOM needle pick up");
-        ros::shutdown();
-        return 0;
-      }
-      ROS_INFO("Main function: successfully performed RANDOM needle pick up");
+      ROS_ASSERT(needle_pose_list[i].getType() ==
+                 XmlRpc::XmlRpcValue::TypeDouble);
+      ss_needle_pose_translation.push_back(static_cast<double>(needle_pose_list[i]));
     }
   }
 
-  geometry_msgs::PoseStamped needle_init_pose = needleGrasper.getNeedlePose();
-  geometry_msgs::Pose needle_pose_goal;
-
-  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps = needleGrasper.getAllPossibleNeedleGrasps();
-
-  int initial_arm_index;
-  if(which_arm == "psm_one")
+  if (node_handle_priv.hasParam("ss_needle_pose_orientation"))
   {
-    initial_arm_index = 1;
+    XmlRpc::XmlRpcValue needle_ori_list;
+    node_handle_priv.getParam("ss_needle_pose_orientation", needle_ori_list);
+
+    ROS_ASSERT(needle_ori_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+    for (int32_t i = 0; i < needle_ori_list.size(); ++i)
+    {
+      ROS_ASSERT(needle_ori_list[i].getType() ==
+                 XmlRpc::XmlRpcValue::TypeDouble);
+      ss_needle_pose_orientation.push_back(static_cast<double>(needle_ori_list[i]));
+    }
   }
-  initial_arm_index = 2;
 
-  int goal_arm_index = 1;
+  if (node_handle_priv.hasParam("gs_needle_pose_translation"))
+  {
+    XmlRpc::XmlRpcValue needle_pose_list;
+    node_handle_priv.getParam("gs_needle_pose_translation", needle_pose_list);
 
-//  plan(needle_init_pose, needle_pose_goal, initial_arm_index, initial_grasp_id, goal_arm_index, goal_grasp_id);
+    ROS_ASSERT(needle_pose_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+    for (int32_t i = 0; i < needle_pose_list.size(); ++i)
+    {
+      ROS_ASSERT(needle_pose_list[i].getType() ==
+                 XmlRpc::XmlRpcValue::TypeDouble);
+      gs_needle_pose_translation.push_back(static_cast<double>(needle_pose_list[i]));
+    }
+  }
+
+  if (node_handle_priv.hasParam("gs_needle_pose_orientation"))
+  {
+    XmlRpc::XmlRpcValue needle_ori_list;
+    node_handle_priv.getParam("gs_needle_pose_orientation", needle_ori_list);
+
+    ROS_ASSERT(needle_ori_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+    for (int32_t i = 0; i < needle_ori_list.size(); ++i)
+    {
+      ROS_ASSERT(needle_ori_list[i].getType() ==
+                 XmlRpc::XmlRpcValue::TypeDouble);
+      gs_needle_pose_orientation.push_back(static_cast<double>(needle_ori_list[i]));
+    }
+  }
+
+  if (node_handle_priv.hasParam("ss_joint_values"))
+  {
+    XmlRpc::XmlRpcValue joint_value_list;
+    node_handle_priv.getParam("ss_joint_values", joint_value_list);
+
+    ROS_ASSERT(joint_value_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+    for (int32_t i = 0; i < joint_value_list.size(); ++i)
+    {
+      ROS_ASSERT(joint_value_list[i].getType() ==
+                 XmlRpc::XmlRpcValue::TypeDouble);
+      ss_joint_values.push_back(static_cast<double>(joint_value_list[i]));
+    }
+  }
+
+  if (node_handle_priv.hasParam("gs_joint_values"))
+  {
+    XmlRpc::XmlRpcValue joint_value_list;
+    node_handle_priv.getParam("gs_joint_values", joint_value_list);
+
+    ROS_ASSERT(joint_value_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+    for (int32_t i = 0; i < joint_value_list.size(); ++i)
+    {
+      ROS_ASSERT(joint_value_list[i].getType() ==
+                 XmlRpc::XmlRpcValue::TypeDouble);
+      gs_joint_values.push_back(static_cast<double>(joint_value_list[i]));
+    }
+  }
+
+  node_handle_priv.getParam("ss_arm_index", ss_arm_index);
+  node_handle_priv.getParam("ss_grasp_pose_index", ss_grasp_pose_index);
+  node_handle_priv.getParam("gs_arm_index", gs_arm_index);
+  node_handle_priv.getParam("gs_grasp_pose_index", gs_grasp_pose_index);
+
+  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(true);
+
+  plan(node_handle, node_handle_priv,
+       ss_needle_pose_translation,
+       ss_needle_pose_orientation,
+       gs_needle_pose_translation,
+       gs_needle_pose_orientation,
+       ss_joint_values,
+       gs_joint_values,
+       ss_arm_index,
+       gs_arm_index,
+       ss_grasp_pose_index,
+       gs_grasp_pose_index, grasp_poses);
 
   return 0;
 }
