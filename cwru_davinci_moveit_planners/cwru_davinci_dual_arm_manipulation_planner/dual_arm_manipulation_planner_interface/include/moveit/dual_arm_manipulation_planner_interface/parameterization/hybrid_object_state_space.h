@@ -88,6 +88,7 @@ class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
 public:
 
   void printExecutionDuration();
+  void resetTimer();
 
   static std::chrono::duration<double> low_level_planning_duration_;
 
@@ -108,6 +109,10 @@ public:
   static std::chrono::duration<double> compute_ik_duration_;
 
   static std::chrono::duration<double> collision_checking_duration_;
+
+  static int sampling_num;
+
+  static int validty_check_num;
 
   static int call_interpolation_num;
 
@@ -331,6 +336,8 @@ private:
   void chooseGrasp(const StateType *from,
                    const StateType *to,
                    StateType *cstate) const;
+
+  void chooseValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
 
   int handOffsNum(const int from_arm_index,
                   const int to_arm_index,

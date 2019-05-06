@@ -54,6 +54,8 @@ HybridStateSampler::HybridStateSampler(const HybridObjectStateSpace *space) :
 void HybridStateSampler::sampleUniform(State *state)
 {
   auto start = std::chrono::high_resolution_clock::now();
+  hyStateSpace_->sampling_num += 1;
+
   ompl::base::DiscreteStateSampler arm_index_sampler(hyStateSpace_->getSubspace(1).get());
   ompl::base::DiscreteStateSampler grasp_index_sampler(hyStateSpace_->getSubspace(2).get());
 
@@ -127,50 +129,63 @@ HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
 }
 
 std::chrono::duration<double> HybridObjectStateSpace::low_level_planning_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::check_motion_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::validity_checking_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::interpolation_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::hand_off_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::ik_solving_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::sampling_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::choose_grasp_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::compute_ik_duration_ = std::chrono::duration<double>::zero();
-
 std::chrono::duration<double> HybridObjectStateSpace::collision_checking_duration_ = std::chrono::duration<double>::zero();
 
+int HybridObjectStateSpace::sampling_num = 0;
+int HybridObjectStateSpace::validty_check_num = 0;
 int HybridObjectStateSpace::call_interpolation_num = 0;
-
 int HybridObjectStateSpace::low_level_motion_planner_num = 0;
-
 int HybridObjectStateSpace::hand_off_planning_num = 0;
-
 int HybridObjectStateSpace::hand_off_failed_num = 0;
+
+void HybridObjectStateSpace::resetTimer()
+{
+  HybridObjectStateSpace::low_level_planning_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::check_motion_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::validity_checking_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::interpolation_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::hand_off_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::ik_solving_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::sampling_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::choose_grasp_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::compute_ik_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::collision_checking_duration_ = std::chrono::duration<double>::zero();
+
+  HybridObjectStateSpace::sampling_num = 0;
+  HybridObjectStateSpace::validty_check_num = 0;
+  HybridObjectStateSpace::call_interpolation_num = 0;
+  HybridObjectStateSpace::low_level_motion_planner_num = 0;
+  HybridObjectStateSpace::hand_off_planning_num = 0;
+  HybridObjectStateSpace::hand_off_failed_num = 0;
+}
 
 void HybridObjectStateSpace::printExecutionDuration()
 {
-  std::cout << "Sampling Elapsed time: " << sampling_duration_.count() << "s\n"
-            << "Validity Check Elapsed Time: " << validity_checking_duration_.count() << "s\n"
-            << "Interpolation Elapsed Time: " << interpolation_duration_.count() << "s\n"
-            << "Interplate function has been called: " << call_interpolation_num << "times\n"
-            << "Compute IK Elapsed Time in Interpolation function: " << compute_ik_duration_.count() << "s\n"
-            << "Check Motion Elapsed Time: " << check_motion_duration_.count() << "s\n"
-            << "Low Level Motion Planning Elapsed Time: " << low_level_planning_duration_.count() << "s\n"
+  std::cout << "Sampling Elapsed duration and times of called: " << sampling_duration_.count() << "s and " << sampling_num <<"\n"
+            << "Validity Check Elapsed duration and times of called: " << validity_checking_duration_.count() << "s and " << validty_check_num <<"\n"
+            << "Interpolation Elapsed duration: " << interpolation_duration_.count() << "s\n"
+            << "Interplate function has been called: " << call_interpolation_num << " times\n"
+            << "Compute IK Elapsed duration in Interpolation function: " << compute_ik_duration_.count() << "s\n"
+            << "Check Motion Elapsed duration: " << check_motion_duration_.count() << "s\n"
+            << "Low Level Motion Planning Elapsed duration: " << low_level_planning_duration_.count() << "s\n"
             << "Low Level Motion Planner has been called: " << low_level_motion_planner_num << " times\n"
-            << "Handoff Elapsed Time: " << hand_off_duration_.count() << "s\n"
+            << "Handoff Elapsed duration: " << hand_off_duration_.count() << "s\n"
             << "Handoff Planning has been called: " << hand_off_planning_num << " times\n"
             << "Handoff Planning Failed times: " << hand_off_failed_num << "\n"
             << "IK sovling Elapsed Time: " << ik_solving_duration_.count() << "s\n"
             << "Local Planner Collision Check Elapsed Time: " << collision_checking_duration_.count() << std::endl;
             //  << "Choose Grasp Function Elapsed Time: " << choose_grasp_duration_.count() << " s\n"
 
+  std::chrono::duration<double> total_time = sampling_duration_ + validity_checking_duration_ + interpolation_duration_ + check_motion_duration_;
+  std::cout << "Total Time is: " << total_time.count() << "s\n";
 }
 
 void HybridObjectStateSpace::setSE3Bounds(const RealVectorBounds &bounds)
@@ -398,16 +413,14 @@ void HybridObjectStateSpace::interpolate(const State *from,
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-      found_ik = computeStateIK(cstate);
       break;
     case StateDiff::GraspDiffArmAndPoseSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-      found_ik = computeStateIK(cstate);
       break;
     case StateDiff::PoseDiffArmAndGraspSame:
-      components_[0]->interpolate(hys_from->components[0], hys_to->components[0], 1.65*t, cstate->components[0]);
+      components_[0]->interpolate(hys_from->components[0], hys_to->components[0], 1.7*t, cstate->components[0]);
       components_[1]->copyState(cstate->components[1], hys_from->components[1]);
       components_[2]->copyState(cstate->components[2], hys_from->components[2]);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
@@ -416,35 +429,31 @@ void HybridObjectStateSpace::interpolate(const State *from,
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-      found_ik = computeStateIK(cstate);
       break;
     case StateDiff::ArmAndPoseDiffGraspSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-      found_ik = computeStateIK(cstate);
       break;
     case StateDiff::GraspAndPoseDiffArmSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-      found_ik = computeStateIK(cstate);
       break;
     case StateDiff::AllDiff:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       chooseGrasp(hys_from, hys_to, cstate);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-      found_ik = computeStateIK(cstate);
       break;
   }
 
-//  if(!found_ik)
-//  {
-//    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], 1.65*t, cstate->components[0]);
-//    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-//    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-//    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-//  }
+  if(!computeStateIK(cstate))
+  {
+    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
+    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
+  }
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
@@ -561,11 +570,13 @@ void HybridObjectStateSpace::chooseGrasp(const StateType *from,
       break;
     case 2:
       cstate->armIndex().value = chooseSupportArm(from_arm_index, to_arm_index);
-      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
+//      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
+      chooseValidGrasp(from_part_id, to_part_id, cstate);
       break;
     case 3:
       cstate->armIndex().value = to_arm_index;
-      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
+//      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
+      chooseValidGrasp(from_part_id, to_part_id, cstate);
       break;
   }
 
@@ -636,6 +647,19 @@ int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) co
   return cs_grasp_id;
 }
 
+void HybridObjectStateSpace::chooseValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const
+{
+  for(int i = 0; possible_grasps_.size(); i++)
+  {
+    int grasp_part = possible_grasps_[i].part_id;
+    if((grasp_part != from_part_id) && (grasp_part != to_part_id))
+    {
+      cstate->graspIndex().value = i;
+      if(computeStateIK(cstate))
+        break;
+    }
+  }
+}
 
 bool HybridObjectStateSpace::computeStateIK(StateType *hystate) const
 {

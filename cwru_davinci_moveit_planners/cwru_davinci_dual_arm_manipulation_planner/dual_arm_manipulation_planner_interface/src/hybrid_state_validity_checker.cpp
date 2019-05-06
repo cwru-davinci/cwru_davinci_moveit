@@ -71,6 +71,8 @@ HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &no
 
   hyStateSpace_->validity_checking_duration_ = std::chrono::duration<double>::zero();
 
+  hyStateSpace_->validty_check_num = 0;
+
   loadNeedleModel();
 }
 
@@ -79,6 +81,7 @@ HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &no
 bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 {
   auto start = std::chrono::high_resolution_clock::now();
+  hyStateSpace_->validty_check_num += 1;
 
   bool is_valid = false;
   // check bounds

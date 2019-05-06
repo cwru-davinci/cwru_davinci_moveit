@@ -88,7 +88,7 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_handle,
 
 //  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
 
-//  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
+  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
 }
 
 bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const
@@ -318,22 +318,22 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
                                                             const std::string &planning_group) const
 {
   // make a pre_grasp_state
+//  publishRobotState(handoff_state);
   const robot_state::JointModelGroup *arm_joint_group = pre_grasp_state.getJointModelGroup(planning_group);
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
 
   const Eigen::Affine3d grasped_tool_tip_pose = handoff_state.getGlobalLinkTransform(tip_link);
   Eigen::Affine3d pregrasp_tool_tip_pose = grasped_tool_tip_pose;
-  Eigen::Vector3d temp_translation = pregrasp_tool_tip_pose.translation();
-  Eigen::Vector3d approach_dir(0.0, 0.0, 1.0);  // grasp approach along the +z-axis of tip frame
+  Eigen::Vector3d unit_approach_dir(0.0, 0.0, 1.0);  // grasp approach along the +z-axis of tip frame
 
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   bool found_ik = false;
-  double distance = 0.005;
-  while (distance <= 0.008)
+  double distance = 0.008;
+  while (distance <= 0.013)
   {
-    approach_dir = grasped_tool_tip_pose.linear() * (distance * approach_dir);
-    pregrasp_tool_tip_pose.translation() = temp_translation - approach_dir;
+    Eigen::Vector3d approach_dir = grasped_tool_tip_pose.linear() * (distance * unit_approach_dir);
+    pregrasp_tool_tip_pose.translation() = grasped_tool_tip_pose.translation() - approach_dir;
     std::size_t attempts = 1;
     double timeout = 0.2;
     found_ik = pre_grasp_state.setFromIK(arm_joint_group, pregrasp_tool_tip_pose, attempts, timeout);
@@ -360,6 +360,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   }
   pre_grasp_state.setJointGroupPositions(eef_group_name, eef_joint_position);
   pre_grasp_state.update();
+//  publishRobotState(pre_grasp_state);
 
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
@@ -377,7 +378,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   if (!found_cartesian_path || traj.size() <=2)
     return false;
   pre_grasp_state.update();
-
+//  publishRobotState(pre_grasp_state);
   // check each state in order.
 //  for (int i = 0; i < traj.size() - 1; i++)
 //  {
@@ -428,10 +429,12 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
         ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
       }
       traj[i]->printStatePositions(std::cout);
+//      publishRobotState(*traj[i]);
+      return no_collision;
      }
-    return no_collision;
   }
   pre_grasp_state = *traj[0];
+//  publishRobotState(pre_grasp_state);
   return true;
 }
 
@@ -443,46 +446,63 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   robot_state::RobotState cp_start_state = start_state;
+//  publishRobotState(cp_start_state);
   const robot_state::JointModelGroup *arm_joint_group = pre_grasp_state.getJointModelGroup(planning_group);
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d pre_grasp_tool_tip_pose = pre_grasp_state.getGlobalLinkTransform(tip_link);
 
-  std::size_t attempts = 1;
-  double timeout = 0.2;
+//  std::size_t attempts = 1;
+//  double timeout = 0.2;
 
-  Eigen::Affine3d target_pose = pre_grasp_tool_tip_pose;
-  target_pose.translation() = cp_start_state.getGlobalLinkTransform(tip_link).translation();
+//  Eigen::Affine3d target_pose = pre_grasp_tool_tip_pose;
+//  Eigen::Affine3d temp = cp_start_state.getGlobalLinkTransform(tip_link);
+//  target_pose.translation() = temp.translation();
 
-  bool found_ik = cp_start_state.setFromIK(cp_start_state.getJointModelGroup(planning_group), target_pose, attempts, timeout);
-  if(!found_ik)
-  {
-    auto finish_ik = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish_ik - start_ik;
-    hyStateSpace_->ik_solving_duration_ += elapsed;
-    return found_ik;
-  }
+//  bool found_ik = cp_start_state.setFromIK(cp_start_state.getJointModelGroup(planning_group), target_pose, attempts, timeout);
+//  if(!found_ik)
+//  {
+//    auto finish_ik = std::chrono::high_resolution_clock::now();
+//    std::chrono::duration<double> elapsed = finish_ik - start_ik;
+//    hyStateSpace_->ik_solving_duration_ += elapsed;
+//    return found_ik;
+//  }
 
   std::vector<robot_state::RobotStatePtr> traj;
-  double translation_step_max = 0.001, rotation_step_max = 0.0;
+  double translation_step_max = 0.01, rotation_step_max = 0.0;
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
   double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
 
-  bool found_cartesian_path = cp_start_state.computeCartesianPath(arm_joint_group, traj, tip_link,
-                                                                  pre_grasp_tool_tip_pose, true, max_step,
-                                                                  jump_threshold);
+  bool found_cartesian_path = cp_start_state.computeCartesianPath(cp_start_state.getJointModelGroup(planning_group), traj, tip_link,
+                                                                  pre_grasp_tool_tip_pose, true, 0.001,
+                                                                  0.0);
+  cp_start_state.update();
+//  publishRobotState(cp_start_state);
+  const Eigen::Affine3d current_tip_pose = cp_start_state.getGlobalLinkTransform(tip_link);
+  bool is_same = current_tip_pose.isApprox(pre_grasp_tool_tip_pose, 0.0001);
+
+//  found_cartesian_path = cp_start_state.computeCartesianPath(cp_start_state.getJointModelGroup(planning_group), traj, tip_link,
+//                                                                  pre_grasp_tool_tip_pose, true, 0.001,
+//                                                                  0.0);
+//  cp_start_state.update();
+//  publishRobotState(cp_start_state);
+
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
-  if (!found_cartesian_path || traj.size() <=2)
+  if (!found_cartesian_path || traj.size() <=2 || !is_same)
     return false;
 
   for (int i = 0; i < traj.size(); ++i)
   {
     traj[i]->update();
     if (!noCollision(*traj[i]))
+    {
+//      publishRobotState(*traj[i]);
+      robot_state::RobotState cp_state = *traj[i];
       return false;
+    }
   }
   return found_cartesian_path;
 
@@ -499,8 +519,8 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
 
   const Eigen::Affine3d grasped_tool_tip_pose = handoff_state.getGlobalLinkTransform(tip_link);
   Eigen::Affine3d ungrasped_tool_tip_pose = grasped_tool_tip_pose;
-  Eigen::Vector3d retreat_dir(0.0, 0.0, -1.0);  // grasp approach along the +z-axis of tip frame
-  double distance = 0.008;
+  Eigen::Vector3d retreat_dir(0.0, 0.0, -1.0);  // ungrasp retreat along the -z-axis of tip frame
+  double distance = 0.01;
   retreat_dir = grasped_tool_tip_pose.linear() * (distance * retreat_dir);
   ungrasped_tool_tip_pose.translation() += retreat_dir;
 
@@ -529,6 +549,12 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   }
   ungrasped_state.setJointGroupPositions(eef_group_name, eef_joint_position);
   ungrasped_state.update();
+//  publishRobotState(ungrasped_state);
+  if (!noCollision(ungrasped_state))
+  {
+//    publishRobotState(ungrasped_state);
+    return false;
+  }
 
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
@@ -546,13 +572,16 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   if (!found_cartesian_path || traj.size() <=2)
     return false;
   ungrasped_state.update();
+  ungrasped_state.setToDefaultValues(ungrasped_state.getJointModelGroup(eef_group_name), eef_group_name + "_home");
+  ungrasped_state.update();
+//  publishRobotState(ungrasped_state);
 
-  const moveit::core::AttachedBody *hdof_needle_body = handoff_state.getAttachedBody(object_name_);
+//  const moveit::core::AttachedBody *hdof_needle_body = handoff_state.getAttachedBody(object_name_);
 
-  traj.front()->attachBody(hdof_needle_body->getName(), hdof_needle_body->getShapes(),
-                           hdof_needle_body->getFixedTransforms(), hdof_needle_body->getTouchLinks(),
-                           hdof_needle_body->getAttachedLinkName(), hdof_needle_body->getDetachPosture());
-  traj.front()->update();
+//  traj.front()->attachBody(hdof_needle_body->getName(), hdof_needle_body->getShapes(),
+//                           hdof_needle_body->getFixedTransforms(), hdof_needle_body->getTouchLinks(),
+//                           hdof_needle_body->getAttachedLinkName(), hdof_needle_body->getDetachPosture());
+//  traj.front()->update();
 
   for (int i = 0; i < traj.size(); i++)
   {
@@ -579,8 +608,9 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
         ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
       }
       traj[i]->printStatePositions(std::cout);
+//      publishRobotState(*traj[i]);
+      return no_collision;
     }
-    return no_collision;
   }
   return true;
   // check each state in order.
@@ -606,6 +636,7 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   robot_state::RobotState cp_start_state = ungrasped_state;
+//  publishRobotState(ungrasped_state);
   const robot_state::JointModelGroup *arm_joint_group = goal_state.getJointModelGroup(planning_group);
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
@@ -626,26 +657,33 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
 //  }
 
   std::vector<robot_state::RobotStatePtr> traj;
-  double translation_step_max = 0.001, rotation_step_max = 0.0;
+  double translation_step_max = 0.01, rotation_step_max = 0.0;
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
   double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
 
   bool found_cartesian_path = cp_start_state.computeCartesianPath(arm_joint_group, traj, tip_link,
-                                                                  tool_tip_pose, true, max_step,
-                                                                  jump_threshold);
-
+                                                                  tool_tip_pose, true, 0.001, 0.0);
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
-  if (!found_cartesian_path || traj.size() <=2)
+  cp_start_state.update();
+//  publishRobotState(cp_start_state);
+  const Eigen::Affine3d current_tip_pose = cp_start_state.getGlobalLinkTransform(tip_link);
+  bool is_same = current_tip_pose.isApprox(tool_tip_pose, 0.0001);
+
+  if (!found_cartesian_path || traj.size() <=2 || !is_same)
     return false;
+
   for (int i = 0; i < traj.size(); ++i)
   {
     traj[i]->update();
     if (!noCollision(*traj[i]))
+    {
+//      publishRobotState(*traj[i]);
       return false;
+    }
   }
   return found_cartesian_path;
 
@@ -715,7 +753,7 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
 
   planning_scene_->setCurrentState(rstate);
   collision_detection::CollisionRequest collision_request;
-//  collision_request.contacts = true;
+  collision_request.contacts = true;
   collision_detection::CollisionResult collision_result;
   planning_scene_->checkCollisionUnpadded(collision_request, collision_result, rstate);
   bool no_collision = (collision_result.collision == false) ? true : false;
@@ -725,24 +763,54 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
   hyStateSpace_->collision_checking_duration_ += elapsed;
 
 //
-//  if(collision_result.collision)
-//  {
-//    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-//    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-//    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
-//    {
-//      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-//    }
-////    rstate.printStatePositions(std::cout);
-//  }
+  if(collision_result.collision)
+  {
+    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
+    {
+      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+//    rstate.printStatePositions(std::cout);
+  }
   return no_collision;
 }
+
+bool HybridMotionValidator::isRobotStateReachedTarget(const robot_state::RobotState& rstate,
+                                                      const Eigen::Affine3d& target,
+                                                      const std::string& planning_group) const
+{
+  const robot_state::JointModelGroup *arm_joint_group = rstate.getJointModelGroup(planning_group);
+  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+  const Eigen::Affine3d robot_tip_pose = rstate.getGlobalLinkTransform(tip_link);
+
+
+  bool is_same = robot_tip_pose.isApprox(target);
+
+
+
+}
+
 
 void HybridMotionValidator::defaultSettings()
 {
   hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();
   if (hyStateSpace_ == nullptr)
     throw ompl::Exception("No state space for motion validator");
+}
+
+void HybridMotionValidator::publishRobotState(const robot_state::RobotState& rstate) const
+{
+  moveit_msgs::DisplayRobotState drstate;
+  robot_state_publisher_.publish(drstate);
+  ros::spinOnce();
+  ros::Duration(1.0).sleep();
+
+  moveit::core::robotStateToRobotStateMsg(rstate, drstate.state);
+
+  robot_state_publisher_.publish(drstate);
+  ros::spinOnce();
+  ros::Duration(1.0).sleep();
 }
 
 void HybridMotionValidator::initializeIKPlugin()

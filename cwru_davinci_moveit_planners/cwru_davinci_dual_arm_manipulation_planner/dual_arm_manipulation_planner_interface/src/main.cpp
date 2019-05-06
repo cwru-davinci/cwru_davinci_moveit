@@ -119,12 +119,12 @@ void plan(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.5);
-  se3_xyz_bounds.setHigh(0, 0.5);
-  se3_xyz_bounds.setLow(1, -0.5);
-  se3_xyz_bounds.setHigh(1, 0.5);
+  se3_xyz_bounds.setLow(0, -0.3);
+  se3_xyz_bounds.setHigh(0, 0.3);
+  se3_xyz_bounds.setLow(1, -0.3);
+  se3_xyz_bounds.setHigh(1, 0.3);
   se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.5);
+  se3_xyz_bounds.setHigh(2, 0.6);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -153,8 +153,8 @@ void plan(const ros::NodeHandle &node_handle,
 //  for(int i = 0; i < grasp_poses.size(); i++)
 //  {
     start->graspIndex().value = 0;
-    if(!si->isValid(start.get()))
-      ros::shutdown();
+//    if(!si->isValid(start.get()))
+//      ros::shutdown();
     std::cout << "Initial state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
 //  }
 //  robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
@@ -192,19 +192,20 @@ void plan(const ros::NodeHandle &node_handle,
                                            gs_needle_pose_orientation[2],
                                            gs_needle_pose_orientation[3]);
   goal->armIndex().value = gs_arm_index;  // set arm index
-  for(int i = 0; i < grasp_poses.size(); i++)
-  {
-    if(grasp_poses[i].part_id == 2)
-    {
-      goal->graspIndex().value = i;
-      if(si->isValid(goal.get()))
-        break;
-    }
-  }
+  goal->graspIndex().value = 0;
+//  for(int i = 0; i < grasp_poses.size(); i++)
+//  {
+//    if(grasp_poses[i].part_id == 2)
+//    {
+//      goal->graspIndex().value = i;
+//      if(si->isValid(goal.get()))
+//        break;
+//    }
+//  }
 
   std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
-  bool valid_ss = si->isValid(start.get());
-  bool valid_gs = si->isValid(goal.get());
+//  bool valid_ss = si->isValid(start.get());
+//  bool valid_gs = si->isValid(goal.get());
 
   hystsp->printState(start.get(), std::cout);
   hystsp->printState(goal.get(), std::cout);
@@ -228,8 +229,8 @@ void plan(const ros::NodeHandle &node_handle,
   pdef->print(std::cout);
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
-
-  ob::PlannerStatus solved = planner->ob::Planner::solve(50.0);
+  si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
+  ob::PlannerStatus solved = planner->ob::Planner::solve(100.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> planning_time = finish - start_ts;

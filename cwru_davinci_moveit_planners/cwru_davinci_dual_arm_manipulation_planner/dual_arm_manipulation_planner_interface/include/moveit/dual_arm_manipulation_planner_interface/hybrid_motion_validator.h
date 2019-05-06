@@ -105,6 +105,10 @@ private:
 
   bool noCollision(const robot_state::RobotState& rstate) const;
 
+  bool isRobotStateReachedTarget(const robot_state::RobotState& rstate,
+                                 const Eigen::Affine3d& target,
+                                 const std::string& planning_group) const;
+
   bool planPathFromTwoStates(const robot_state::RobotState &start_state,
                              const robot_state::RobotState &goal_state,
                              const std::string &planning_group) const;
@@ -119,7 +123,8 @@ private:
                  const std::string &tip_frame,
                  const Eigen::Affine3d& tip_pose_wrt_world) const;
 
-//  void publishRobotState(const robot_state::RobotState& rstate) const;
+
+  void publishRobotState(const robot_state::RobotState& rstate) const;
 
   HybridObjectStateSpace *hyStateSpace_;
 
