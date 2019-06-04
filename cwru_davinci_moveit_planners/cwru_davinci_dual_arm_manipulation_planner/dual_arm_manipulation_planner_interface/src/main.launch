@@ -10,6 +10,7 @@
     # specify to pick or place needle
     <arg name = "movement" default = "pick"/>
 
+<!--    <env name="GMON_OUT_PREFIX" value="main" />-->
     <node name="main" pkg="cwru_davinci_dual_arm_manipulation_planner" type="main" args="$(arg which_arm) $(arg needle_name) $(arg movement)" respawn="false" output="screen">
         <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
         <rosparam command="load" file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/config/kinematics.yaml"/>

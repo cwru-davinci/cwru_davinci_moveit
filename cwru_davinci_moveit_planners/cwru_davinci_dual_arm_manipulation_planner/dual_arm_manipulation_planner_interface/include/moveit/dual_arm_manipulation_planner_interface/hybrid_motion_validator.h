@@ -103,11 +103,11 @@ private:
                                      const robot_state::RobotState &goal_state,
                                      const std::string &planning_group) const;
 
-  bool noCollision(const robot_state::RobotState& rstate) const;
+  bool planObjectTransit(const robot_state::RobotState &start_state,
+                         const robot_state::RobotState &goal_state,
+                         const std::string &planning_group) const;
 
-  bool isRobotStateReachedTarget(const robot_state::RobotState& rstate,
-                                 const Eigen::Affine3d& target,
-                                 const std::string& planning_group) const;
+  bool noCollision(const robot_state::RobotState& rstate) const;
 
   bool planPathFromTwoStates(const robot_state::RobotState &start_state,
                              const robot_state::RobotState &goal_state,

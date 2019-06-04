@@ -1,18 +1,24 @@
-#s_needle_pose_translation : [0.12, -0.00673698, 0.447744]
-#ss_needle_pose_orientation : [0.0, 0.0, 1.0, 0.0]
-#ss_arm_index : 1
-#ss_grasp_pose_index : 156
-#ss_joint_values : [0.664327, 0.0919183, 0.069904, 0.00623299, 0.953258, -0.225286]
-
-ss_needle_pose_translation : [0.0, -0.00673698, 0.447744]
-ss_needle_pose_orientation : [0.0, 0.0, 1.0, 0.35355]
+ss_needle_pose_translation : [0.12, -0.00673698, 0.447744]
+ss_needle_pose_orientation : [0.0, 0.0, 1.0, 0.0]
 ss_arm_index : 1
 ss_grasp_pose_index : 156
 ss_joint_values : [0.664327, 0.0919183, 0.069904, 0.00623299, 0.953258, -0.225286]
 
+#ss_needle_pose_translation : [0.0, -0.00673698, 0.447744]
+#ss_needle_pose_orientation : [0.0, 0.0, 1.0, 0.35355]
+#ss_arm_index : 1
+#ss_grasp_pose_index : 156
+#ss_joint_values : [0.664327, 0.0919183, 0.069904, 0.00623299, 0.953258, -0.225286]
+
+#ss_needle_pose_translation : [0.01, -0.007, 0.45]
+#ss_needle_pose_orientation : [0.0, 0.0, 1.0, 0.35355]
+#ss_arm_index : 1
+#ss_grasp_pose_index : 156
+#ss_joint_values : [0.664327, 0.0919183, 0.069904, 0.00623299, 0.953258, -0.225286]
+
 #gs_needle_pose_translation : [0.105, 0.0, 0.43]
 #gs_needle_pose_orientation : [0.0, 0.0, 1.0, 0.0]
-#gs_arm_index : 1
+#gs_arm_index : 2
 #gs_grasp_pose_index : 156
 #gs_joint_values : [0.664327, 0.0919183, 0.069904, 0.00623299, 0.953258, -0.225286]
 
@@ -21,3 +27,9 @@ gs_needle_pose_orientation : [0.0, 0.0, 1.0, 0.35355]
 gs_arm_index : 2
 gs_grasp_pose_index : 156
 gs_joint_values : [0.664327, 0.0919183, 0.069904, 0.00623299, 0.953258, -0.225286]
+
+#gs_needle_pose_translation : [0.01, -0.007, 0.45]
+#gs_needle_pose_orientation : [0.0, 0.0, 1.0, 0.35355]
+#gs_arm_index : 2
+#gs_grasp_pose_index : 156
+#gs_joint_values : [0.664327, 0.0919183, 0.069904, 0.00623299, 0.953258, -0.225286]

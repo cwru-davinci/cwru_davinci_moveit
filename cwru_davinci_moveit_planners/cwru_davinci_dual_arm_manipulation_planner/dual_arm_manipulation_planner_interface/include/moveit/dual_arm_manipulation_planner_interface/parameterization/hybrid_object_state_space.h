@@ -90,7 +90,7 @@ public:
   void printExecutionDuration();
   void resetTimer();
 
-  static std::chrono::duration<double> low_level_planning_duration_;
+  static std::chrono::duration<double> object_transit_planning_duration_;
 
   static std::chrono::duration<double> check_motion_duration_;
 
@@ -116,7 +116,9 @@ public:
 
   static int call_interpolation_num;
 
-  static int low_level_motion_planner_num;
+  static int check_motion_num;
+
+  static int object_transit_motion_planner_num;
 
   static int hand_off_planning_num;
 
@@ -127,13 +129,17 @@ public:
   public:
     enum
     {
+      VALIDITY_KNOWN = 1,
+      VALIDITY_TRUE = 4,
       IS_TRANSFER = 8,
       IS_TRANSIT = 16,
+      JOINTS_COMPUTED = 256
     };
 
     StateType() : ompl::base::CompoundStateSpace::StateType(), flags(0)
     {
     }
+
 
 //    bool isTransfer() const
 //    {
@@ -155,10 +161,44 @@ public:
 //      flags |= IS_TRANSIT;
 //    }
 //
-//    void clearKnownInformation() const
-//    {
-//      flags = 0;
-//    }
+    void markInvalid()
+    {
+      flags &= ~VALIDITY_TRUE;
+      flags |= VALIDITY_KNOWN;
+    }
+
+    bool isValidityKnown() const
+    {
+      return flags & VALIDITY_KNOWN;
+    }
+
+    void markValid()
+    {
+      flags |= (VALIDITY_KNOWN | VALIDITY_TRUE);
+    }
+
+    bool isMarkedValid() const
+    {
+      return flags & VALIDITY_TRUE;
+    }
+
+    void setJointsComputed(bool value)
+    {
+      if (value)
+        flags |= JOINTS_COMPUTED;
+      else
+        flags &= ~JOINTS_COMPUTED;
+    }
+
+    bool jointsComputed() const
+    {
+      return flags & JOINTS_COMPUTED;
+    }
+
+    void clearKnownInformation()
+    {
+      flags = 0;
+    }
 
     /**
      * @brief Get the SE(3) components of the state and allow changing it as well
@@ -229,7 +269,7 @@ public:
     }
 
 //    double *values;
-    int tag;
+//    int tag;
     int flags;
 //    double distance;
   };
@@ -250,7 +290,7 @@ public:
 
   void setGraspIndexBounds(int lowerBound, int upperBound);
 
-  bool setjointVariables(const std::vector<double> &joint_variables, StateType *hybrid_state) const;
+  bool setJointValues(const std::vector<double> &joint_values, StateType *state) const;
 
   int getJointSpaceDimension() const;
 
@@ -333,11 +373,11 @@ private:
 
   int chooseSupportArm(const int from_arm_index, const int to_arm_index) const;
 
-  void chooseGrasp(const StateType *from,
-                   const StateType *to,
-                   StateType *cstate) const;
+  bool findSupportArmAndGrasp(const StateType *from,
+                              const StateType *to,
+                              StateType *cstate) const;
 
-  void chooseValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
+  bool findValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
 
   int handOffsNum(const int from_arm_index,
                   const int to_arm_index,

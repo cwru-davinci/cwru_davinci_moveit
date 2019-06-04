@@ -83,6 +83,10 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   auto start = std::chrono::high_resolution_clock::now();
   hyStateSpace_->validty_check_num += 1;
 
+  const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
+  if (hs->isValidityKnown())
+    return hs->isMarkedValid();
+
   bool is_valid = false;
   // check bounds
   if (!si_->satisfiesBounds(state))
@@ -91,19 +95,15 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   {
     // convert ompl state to moveit robot state
     robot_state::RobotState *kstate = tss_->getStateStorage();
-    const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
+    const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-    if(!convertObjectToRobotState(*kstate, hs))
+    if (!convertObjectToRobotState(*kstate, hs))
       printf("Invalid State: No IK solution.");
-    else
+
+    if(hs->jointsComputed())
     {
-      const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
       std::unique_ptr<moveit::core::AttachedBody> needle_model = createAttachedBody(selected_group_name, object_name_,
                                                                                     hs->graspIndex().value);
-//      if(!needle_model)
-//      {
-//        return false;
-//      }
       kstate->attachBody(needle_model.get());
       kstate->update();
 
@@ -113,9 +113,9 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 //        printf("Invalid State: State is not feasible.");
 //      else
 //      {
-        // check collision avoidance
-        collision_detection::CollisionResult res;
-        planning_scene_->checkCollisionUnpadded(collision_request_simple_, res, *kstate);
+      // check collision avoidance
+      collision_detection::CollisionResult res;
+      planning_scene_->checkCollisionUnpadded(collision_request_simple_, res, *kstate);
 //  if(res.collision)
 //  {
 //    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
@@ -127,11 +127,13 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 //  }
 //
 //        kstate->printStatePositions(std::cout);
-        needle_model.release();
-        kstate->clearAttachedBodies();
-
-        is_valid = !res.collision;
-//      }
+      needle_model.release();
+      kstate->clearAttachedBodies();
+      is_valid = !res.collision;
+      if(res.collision == true)
+        const_cast<HybridObjectStateSpace::StateType*>(hs)->markInvalid();
+      else
+        const_cast<HybridObjectStateSpace::StateType*>(hs)->markValid();
     }
   }
 
@@ -191,36 +193,45 @@ bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotSta
                                                            const HybridObjectStateSpace::StateType *hybrid_state) const
 {
   const std::string selected_group_name = (hybrid_state->armIndex().value == 1) ? "psm_one" : "psm_two";
-  const std::string rest_group_name = (selected_group_name == "psm_one") ? "psm_two" : "psm_one";
 
-  // convert object pose to robot tip pose
-  // this is the gripper tool tip link frame wrt /base_link
-  Eigen::Affine3d object_pose;  // object pose w/rt base frame
+  if(!hybrid_state->jointsComputed())
+  {
+    // convert object pose to robot tip pose
+    // this is the gripper tool tip link frame wrt /base_link
+    Eigen::Affine3d object_pose;  // object pose w/rt base frame
 //  si_->getStateSpace()->as<HybridObjectStateSpace>()->printState(hs, std::cout);
-  hyStateSpace_->se3ToEigen3d(hybrid_state, object_pose);
+    hyStateSpace_->se3ToEigen3d(hybrid_state, object_pose);
 
-  Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hybrid_state->graspIndex().value].grasp_pose;
-  Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
+    Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hybrid_state->graspIndex().value].grasp_pose;
+    Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
-  const robot_state::JointModelGroup *selected_joint_model_group = rstate.getJointModelGroup(selected_group_name);
-  std::size_t attempts = 5;
-  double timeout = 0.1;
-  bool found_ik = rstate.setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
+    const robot_state::JointModelGroup *selected_joint_model_group = rstate.getJointModelGroup(selected_group_name);
+    std::size_t attempts = 1;
+    double timeout = 0.1;
+    bool found_ik = rstate.setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
 //  bool found_ik = setFromIK(rstate, selected_joint_model_group, selected_group_name,
 //                            selected_joint_model_group->getOnlyOneEndEffectorTip()->getName(), tool_tip_pose);
-  if(found_ik)
-  {
-    const robot_state::JointModelGroup *rest_joint_model_group = rstate.getJointModelGroup(rest_group_name);
-    rstate.setToDefaultValues(rest_joint_model_group, rest_group_name + "_home");
-
-    std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
-    const robot_state::JointModelGroup *rest_joint_model_group_eef = rstate.getJointModelGroup(rest_group_eef_name);
-    rstate.setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
+    if(!found_ik)
+    {
+      const_cast<HybridObjectStateSpace::StateType *>(hybrid_state)->setJointsComputed(false);
+      const_cast<HybridObjectStateSpace::StateType *>(hybrid_state)->markInvalid();
+      return found_ik;
+    }
+    const_cast<HybridObjectStateSpace::StateType *>(hybrid_state)->setJointsComputed(true);
     rstate.copyJointGroupPositions(selected_joint_model_group, hybrid_state->jointVariables().values);
-//    rstate.update();
   }
-  return found_ik;
+  else
+    rstate.setJointGroupPositions(selected_group_name, hybrid_state->jointVariables().values);
+
+  const std::string rest_group_name = (selected_group_name == "psm_one") ? "psm_two" : "psm_one";
+  const robot_state::JointModelGroup *rest_joint_model_group = rstate.getJointModelGroup(rest_group_name);
+  rstate.setToDefaultValues(rest_joint_model_group, rest_group_name + "_home");
+  std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
+  const robot_state::JointModelGroup *rest_joint_model_group_eef = rstate.getJointModelGroup(rest_group_eef_name);
+  rstate.setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
+
+  return true;
 }
 
 std::unique_ptr<moveit::core::AttachedBody>

@@ -67,7 +67,7 @@ bool HybridValidStateSampler::sample(ompl::base::State *state)
   robot_sample_state->setToRandomPositions(selected_joint_model_group);
   std::vector<double> joint_variables;
   robot_sample_state->copyJointGroupPositions(selected_joint_model_group, joint_variables);
-  hyStateSpace_->setjointVariables(joint_variables, hss);
+  hyStateSpace_->setJointValues(joint_variables, hss);
 
   const Eigen::Affine3d tool_tip_pose = robot_sample_state->getGlobalLinkTransform(
     selected_joint_model_group->getOnlyOneEndEffectorTip());

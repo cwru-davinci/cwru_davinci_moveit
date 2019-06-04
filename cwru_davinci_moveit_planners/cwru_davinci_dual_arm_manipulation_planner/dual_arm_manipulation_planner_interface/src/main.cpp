@@ -155,7 +155,7 @@ void plan(const ros::NodeHandle &node_handle,
     start->graspIndex().value = 0;
 //    if(!si->isValid(start.get()))
 //      ros::shutdown();
-    std::cout << "Initial state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
+//      std::cout << "Initial state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
 //  }
 //  robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
 //  robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
@@ -192,23 +192,25 @@ void plan(const ros::NodeHandle &node_handle,
                                            gs_needle_pose_orientation[2],
                                            gs_needle_pose_orientation[3]);
   goal->armIndex().value = gs_arm_index;  // set arm index
-  goal->graspIndex().value = 0;
-//  for(int i = 0; i < grasp_poses.size(); i++)
-//  {
-//    if(grasp_poses[i].part_id == 2)
-//    {
-//      goal->graspIndex().value = i;
-//      if(si->isValid(goal.get()))
-//        break;
-//    }
-//  }
+//  goal->graspIndex().value = 0;
+  for(int i = 0; i < grasp_poses.size(); i++)
+  {
+    if(grasp_poses[i].part_id == 0)
+    {
+      goal->graspIndex().value = i;
+      if(si->isValid(goal.get()))
+        break;
+    }
+  }
 
   std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
-//  bool valid_ss = si->isValid(start.get());
-//  bool valid_gs = si->isValid(goal.get());
+  bool valid_ss = si->isValid(start.get());
+  bool valid_gs = si->isValid(goal.get());
 
   hystsp->printState(start.get(), std::cout);
   hystsp->printState(goal.get(), std::cout);
+
+  double distance_btw_s_g = hystsp->distance(start.get(), goal.get());
   // create a problem instance
   auto pdef(std::make_shared<ob::ProblemDefinition>(si));
 
@@ -220,7 +222,7 @@ void plan(const ros::NodeHandle &node_handle,
   auto planner(std::make_shared<og::RRTConnect>(si));
   // set the problem we are trying to solve for the planner
   planner->setProblemDefinition(pdef);
-  planner->setRange(1.0);
+  planner->setRange(10.0);
   // perform setup steps for the planner
   planner->setup();
   // print the settings for this space
@@ -230,7 +232,7 @@ void plan(const ros::NodeHandle &node_handle,
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
   si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-  ob::PlannerStatus solved = planner->ob::Planner::solve(100.0);
+  ob::PlannerStatus solved = planner->ob::Planner::solve(10000.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> planning_time = finish - start_ts;
