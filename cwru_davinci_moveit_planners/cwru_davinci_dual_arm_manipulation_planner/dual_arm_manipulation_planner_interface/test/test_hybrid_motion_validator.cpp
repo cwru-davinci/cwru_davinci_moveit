@@ -1,10 +1,6 @@
 //
 // Created by sulu on 12/13/18.
 //
-
-#ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_TEST_HYBRID_MOTION_VALIDATOR_H
-#define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_TEST_HYBRID_MOTION_VALIDATOR_H
-
 #include <ros/ros.h>
 #include <ompl/base/ScopedState.h>
 #include <ompl/base/SpaceInformation.h>
@@ -261,7 +257,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-
-
-#endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_TEST_HYBRID_MOTION_VALIDATOR_H

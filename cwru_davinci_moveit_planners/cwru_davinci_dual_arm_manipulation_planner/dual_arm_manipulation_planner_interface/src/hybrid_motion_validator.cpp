@@ -42,7 +42,7 @@
 
 // collision
 #include <moveit/collision_detection/collision_tools.h>
-#include <interactivity/interactive_robot.h>
+//#include <interactivity/interactive_robot.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -90,7 +90,7 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_handle,
 
 //  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
 
-  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
+//  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
 }
 
 bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const
@@ -130,23 +130,23 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2_eef_name),
                                    rest_group_s2_eef_name + "_home");
 
-    std::unique_ptr<moveit::core::AttachedBody> s1_needle = stateValidityChecker_.createAttachedBody(active_group_s1,
-                                                                                                     object_name_,
-                                                                                                     hs1->graspIndex().value);
-//    if (!s1_needle)
-//      return result;
-    std::unique_ptr<moveit::core::AttachedBody> s2_needle = stateValidityChecker_.createAttachedBody(active_group_s2,
-                                                                                                     object_name_,
-                                                                                                     hs2->graspIndex().value);
-//    if (!s2_needle)
-//      return result;
-    start_state->attachBody(s1_needle.get());
+    moveit::core::AttachedBody* s2_needle = stateValidityChecker_.createAttachedBody(active_group_s2,
+                                                                                     object_name_,
+                                                                                     hs2->graspIndex().value);
+    moveit::core::AttachedBody* s1_needle = stateValidityChecker_.createAttachedBody(active_group_s1,
+                                                                                     object_name_,
+                                                                                     hs1->graspIndex().value);
+    start_state->attachBody(s1_needle);
     start_state->update();
-    goal_state->attachBody(s2_needle.get());
+    goal_state->attachBody(s2_needle);
     goal_state->update();
 
     if (!start_state->hasAttachedBody(object_name_) || !goal_state->hasAttachedBody(object_name_))
+    {
+      start_state->clearAttachedBodies();
+      goal_state->clearAttachedBodies();
       return result;
+    }
 
     switch (hyStateSpace_->checkStateDiff(hs1, hs2))
     {
@@ -178,8 +178,6 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
       valid_++;
     else
       invalid_++;
-    s1_needle.release();
-    s2_needle.release();
     start_state->clearAttachedBodies();
     goal_state->clearAttachedBodies();
   }
@@ -341,8 +339,8 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   {
     Eigen::Vector3d approach_dir = grasped_tool_tip_pose.linear() * (distance * unit_approach_dir);
     pregrasp_tool_tip_pose.translation() = grasped_tool_tip_pose.translation() - approach_dir;
-    std::size_t attempts = 1;
-    double timeout = 0.025;
+    std::size_t attempts = 2;
+    double timeout = 0.5;
     found_ik = pre_grasp_state.setFromIK(arm_joint_group, pregrasp_tool_tip_pose, attempts, timeout);
 //    found_ik = setFromIK(pre_grasp_state, arm_joint_group, planning_group, tip_link->getName(), pregrasp_tool_tip_pose);
     if (found_ik)
@@ -500,8 +498,8 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
 
   auto start_ik = std::chrono::high_resolution_clock::now();
 
-  std::size_t attempts = 1;
-  double timeout = 0.025;
+  std::size_t attempts = 2;
+  double timeout = 0.5;
   bool found_ik = ungrasped_state.setFromIK(arm_joint_group, grasped_tool_tip_pose, attempts, timeout);
 //  bool found_ik = setFromIK(ungrasped_state, arm_joint_group, planning_group, tip_link->getName(), grasped_tool_tip_pose);
 
@@ -709,6 +707,7 @@ bool HybridMotionValidator::planObjectTransit(const robot_state::RobotState &sta
       return clear_path;
     }
   }
+
   clear_path = true;
   return clear_path;
 }
@@ -722,21 +721,21 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
   collision_request.contacts = true;
   collision_detection::CollisionResult collision_result;
   planning_scene_->checkCollisionUnpadded(collision_request, collision_result, rstate);
-  bool no_collision = (collision_result.collision == false) ? true : false;
+  bool no_collision = !collision_result.collision;
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->collision_checking_duration_ += elapsed;
 
-  if(collision_result.collision)
-  {
-    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
-    {
-      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-    }
-  }
+//  if(collision_result.collision)
+//  {
+//    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+//    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+//    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
+//    {
+//      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+//    }
+//  }
   return no_collision;
 }
 
@@ -825,16 +824,16 @@ void HybridMotionValidator::initializeIKPlugin()
 }
 
 bool HybridMotionValidator::setFromIK(robot_state::RobotState &rstate,
-                                       const robot_state::JointModelGroup *arm_joint_group,
-                                       const std::string &planning_group,
-                                       const std::string &tip_frame,
-                                       const Eigen::Affine3d &tip_pose_wrt_world) const
+                                      const robot_state::JointModelGroup *arm_joint_group,
+                                      const std::string &planning_group,
+                                      const std::string &tip_frame,
+                                      const Eigen::Affine3d &tip_pose_wrt_world) const
 {
   bool found_ik = false;
   std::string base_frame = (planning_group == "psm_one") ? "PSM1_psm_base_link" : "PSM2_psm_base_link";
 
   boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
-  if(planning_group == "psm_one")
+  if (planning_group == "psm_one")
   {
     kinematics_solver_ = psm_one_kinematics_solver_;
     if (kinematics_solver_->getGroupName() != planning_group)
@@ -849,7 +848,7 @@ bool HybridMotionValidator::setFromIK(robot_state::RobotState &rstate,
 
   std::vector<double> seed(kinematics_solver_->getJointNames().size(), 0.0);
   std::vector<double> solution(kinematics_solver_->getJointNames().size(), 0.0);
-  double timeout = 0.2;
+  double timeout = 2.0;
   Eigen::Affine3d affine_base_wrt_world = rstate.getFrameTransform(base_frame);
   Eigen::Affine3d affine_tip_pose_wrt_base = affine_base_wrt_world.inverse() * tip_pose_wrt_world;
   geometry_msgs::Pose tip_pose_wrt_base;

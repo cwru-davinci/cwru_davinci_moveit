@@ -68,6 +68,8 @@ class HybridStateSampler : public ompl::base::StateSampler
 public:
   HybridStateSampler(const HybridObjectStateSpace *space);
 
+  virtual ~HybridStateSampler() {kmodel_.reset();}
+
   void sampleUniform(ompl::base::State *state) override;
 
   void sampleUniformNear(ompl::base::State *state, const ompl::base::State *near, double distance) override;
@@ -87,7 +89,7 @@ class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
 {
 public:
 
-  void printExecutionDuration();
+  void printExecutionDuration(double* total_time, bool verbose = false);
   void resetTimer();
 
   static std::chrono::duration<double> object_transit_planning_duration_;
@@ -136,10 +138,10 @@ public:
       JOINTS_COMPUTED = 256
     };
 
+
     StateType() : ompl::base::CompoundStateSpace::StateType(), flags(0)
     {
     }
-
 
 //    bool isTransfer() const
 //    {
@@ -223,6 +225,7 @@ public:
       return *as<ompl::base::DiscreteStateSpace::StateType>(1);
     }
 
+
     /**
      * @brief Get the arm index components of the state and allow changing it as well
      * @return
@@ -231,7 +234,6 @@ public:
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(1);
     }
-
 
     /**
      * @brief Get the grasp index components of the state and allow changing it as well
@@ -267,10 +269,10 @@ public:
       delete[] rstate->values;
       delete rstate;
     }
-
 //    double *values;
 //    int tag;
     int flags;
+
 //    double distance;
   };
 
@@ -281,8 +283,7 @@ public:
                          const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                          const std::string &robot_name = "robot_description");
 
-  virtual ~HybridObjectStateSpace()
-  {}
+  virtual ~HybridObjectStateSpace() {kmodel_.reset();}
 
   void setSE3Bounds(const ompl::base::RealVectorBounds &bounds);
 

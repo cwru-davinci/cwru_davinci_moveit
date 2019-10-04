@@ -39,7 +39,7 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
 
-#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
+//#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
@@ -64,7 +64,7 @@ public:
                              const std::string &object_name,
                              const ompl::base::SpaceInformationPtr &si);
 
-  virtual ~HybridStateValidityChecker(){};
+  virtual ~HybridStateValidityChecker() {kmodel_.reset();}
 
   virtual bool isValid(const ompl::base::State* state) const override;
 
@@ -72,11 +72,12 @@ public:
 
   virtual double clearance(const ompl::base::State* state) const override;
 
-  bool convertObjectToRobotState(robot_state::RobotState &rstate, const HybridObjectStateSpace::StateType *hybrid_state) const;
+  bool convertObjectToRobotState(robot_state::RobotState &rstate,
+                                 const HybridObjectStateSpace::StateType *hybrid_state) const;
 
-  std::unique_ptr<moveit::core::AttachedBody> createAttachedBody(const std::string &active_group,
-                                                                 const std::string &object_name,
-                                                                 const int grasp_pose_id) const;
+  moveit::core::AttachedBody *createAttachedBody(const std::string &active_group,
+                                                 const std::string &object_name,
+                                                 const int grasp_pose_id) const;
 
 protected:
 
@@ -99,6 +100,10 @@ protected:
                  const std::string &tip_frame,
                  const Eigen::Affine3d &tip_pose_wrt_world) const;
 
+  void publishRobotState(const robot_state::RobotState& rstate) const;
+
+  ros::Publisher robot_state_publisher_;
+
   ros::NodeHandle node_handle_;
 
   HybridObjectStateSpace* hyStateSpace_;
@@ -114,7 +119,7 @@ protected:
   /// @brief Robot state containing the current position of all joints
   robot_state::RobotStatePtr complete_initial_robot_state_;
 
-  TSStateStoragePtr tss_;
+//  TSStateStoragePtr tss_;
 
   collision_detection::CollisionRequest collision_request_simple_;
 
@@ -128,8 +133,8 @@ protected:
   std::vector<shapes::ShapeConstPtr> needleShapes_;
 
   boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
-  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase> >
-    kinematics_loader_;
+  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;
+  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase>> kinematics_loader_;
 };
 }
 

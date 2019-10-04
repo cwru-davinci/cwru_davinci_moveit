@@ -283,7 +283,7 @@ public:
                             moveit_msgs::MoveItErrorCodes &error_code)
   {
     std::vector<std::string> link_names;
-    link_names.push_back("PSM1psm_base_link");
+    link_names.push_back("PSM1/psm_base_link");
     std::vector<geometry_msgs::Pose> solutions;
     solutions.resize(1);
 
@@ -316,7 +316,7 @@ TEST(ArmIKPlugin, initialize)
   EXPECT_TRUE(root_name == std::string("world"));
 
   std::string tip_name = ik_plugin_test.kinematics_solver->getTipFrame();
-  EXPECT_TRUE(tip_name == std::string("PSM1tool_tip_link"));
+  EXPECT_TRUE(tip_name == std::string("PSM1/tool_tip_link"));
 
   std::vector<std::string> joint_names = ik_plugin_test.kinematics_solver->getJointNames();
   EXPECT_EQ((int) joint_names.size(), davinci_moveit_kinematics::NUM_JOINTS_ARM7DOF);
@@ -327,7 +327,7 @@ TEST(ArmIKPlugin, initialize)
   EXPECT_EQ(joint_names[3], "outer_roll");
   EXPECT_EQ(joint_names[4], "outer_wrist_pitch");
   EXPECT_EQ(joint_names[5], "outer_wrist_yaw");
-  EXPECT_EQ(joint_names[6], "PSM1tool_tip_joint_");
+  EXPECT_EQ(joint_names[6], "PSM1/tool_tip_joint_");
 }
 
 //TEST(ArmIKPlugin, testFkCorrectness)
@@ -480,7 +480,7 @@ TEST(ArmIKPlugin, DISABLED_compareFK)
 
     Eigen::Affine3d affine_fk_pose_wrt_base = davinci_fk.fwd_kin_solve(q_vec);
 
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1psm_base_link");
+    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1/psm_base_link");
 
     Eigen::Affine3d affine_fk_pose_wrt_world = affine_base_wrt_world * affine_fk_pose_wrt_base;
 
@@ -552,7 +552,7 @@ TEST(ArmIKPlugin, searchIK)
   ros::WallTime start_time = ros::WallTime::now();
   for(unsigned int i = 0; i < (unsigned int) number_ik_tests; ++i)
   {
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1psm_base_link");
+    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1/psm_base_link");
 
     seed.resize(ik_plugin_test.kinematics_solver->getJointNames().size(), 0.0);
     fk_values.resize(ik_plugin_test.kinematics_solver->getJointNames().size(), 0.0);
@@ -567,7 +567,7 @@ TEST(ArmIKPlugin, searchIK)
 
     acctual_test_num++;
 
-    //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1psm_base_link");
+    //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1/psm_base_link");
     std::vector<geometry_msgs::Pose> poses_wrt_world;
     poses_wrt_world.resize(1);
     bool result_fk = ik_plugin_test.kinematics_solver->getPositionFK(fk_names, fk_values, poses_wrt_world);
@@ -627,7 +627,7 @@ TEST(ArmIKPlugin, searchIK)
 
       Eigen::Affine3d affine_fk_pose_wrt_base = davinci_fk.fwd_kin_solve(q_vec);
 
-      //      Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1psm_base_link");
+      //      Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1/psm_base_link");
 
       //      Eigen::Affine3d affine_fk_pose_wrt_world = affine_base_wrt_world * affine_fk_pose_wrt_base;
 
@@ -772,7 +772,7 @@ TEST(ArmIKPlugin, DISABLED_moveAlongWorldXTest)
   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
   kinematic_state->setToDefaultValues();
 
-  Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1tool_tip_link");
+  Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1/tool_tip_link");
   double init_tip_offset_wrt_world = fabs(affine_tool_tip_pose_wrt_world.matrix()(0, 3));
   double move_x_dist = 0.15;
   double final_tip_offset_wrt_world = init_tip_offset_wrt_world - move_x_dist;
@@ -821,7 +821,7 @@ TEST(ArmIKPlugin, DISABLED_moveAlongWorldXTest)
 
 
 
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1psm_base_link");
+    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1/psm_base_link");
     ROS_INFO_STREAM(affine_base_wrt_world.matrix());
     Eigen::Affine3d affine_tool_tip_goal_wrt_base = affine_base_wrt_world.inverse() * affine_tool_tip_pose_wrt_world;
 
@@ -994,11 +994,11 @@ TEST(ArmIKPlugin, DISABLED_specificJointSetIkTest)
   ros::WallTime start_time = ros::WallTime::now();
   for(int i = 0; i < joint_sets.size(); i++)
   {
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1psm_base_link");
+    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1/psm_base_link");
 
     seed.resize(ik_plugin_test.kinematics_solver->getJointNames().size(), 0.0);
 
-    //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1psm_base_link");
+    //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1/psm_base_link");
     std::vector<geometry_msgs::Pose> poses_wrt_world;
     poses_wrt_world.resize(1);
     bool result_fk = ik_plugin_test.kinematics_solver->getPositionFK(fk_names, joint_sets[i], poses_wrt_world);
@@ -1068,7 +1068,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
   kinematic_state->setToDefaultValues();
 
-  Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1tool_tip_link");
+  Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1/tool_tip_link");
   double init_tip_height_wrt_world = affine_tool_tip_pose_wrt_world.matrix()(2, 3);
   double insertion_dist = 0.15;
   double final_tip_height_wrt_world = init_tip_height_wrt_world - insertion_dist;
@@ -1109,7 +1109,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
     affine_tool_tip_pose_wrt_world.matrix()(2, 3) =
       init_tip_height_wrt_world - (number_ik_tests * resolution);  // subtraction means tool tip is going to insert
 
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1psm_base_link");
+    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1/psm_base_link");
     Eigen::Affine3d affine_tool_tip_goal_wrt_base = affine_base_wrt_world.inverse() * affine_tool_tip_pose_wrt_world;
 
     std::vector<geometry_msgs::Pose> poses_wrt_base;
@@ -1224,7 +1224,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 //  robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
 //  kinematic_state->setToDefaultValues();
 
-//  Eigen::Affine3d affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1psm_base_link");
+//  Eigen::Affine3d affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1/psm_base_link");
 
 //  ros::NodeHandle nh("~");
 //  int number_ik_tests;
@@ -1244,7 +1244,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 //  ros::WallTime start_time = ros::WallTime::now();
 //  for(unsigned int i=0; i < (unsigned int) number_ik_tests; ++i)
 //  {
-//    Eigen::Affine3d affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1psm_base_link");
+//    Eigen::Affine3d affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1/psm_base_link");
 ////    ROS_INFO("In IK test, the number of joints in total is %d", (int) ik_plugin_test.kinematics_solver->getJointNames().size());
 ////    ROS_INFO_STREAM("Base wrt World Translation: \n" << affine_base_wrt_world.translation());
 ////    ROS_INFO_STREAM("Base wrt World Rotation: \n" << affine_base_wrt_world.rotation());
@@ -1256,7 +1256,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 //    kinematic_state->setToRandomPositions(joint_model_group);
 //    kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
 
-//    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1psm_base_link");
+//    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1/psm_base_link");
 //    std::vector<geometry_msgs::Pose> poses_wrt_world;
 //    poses_wrt_world.resize(1);
 //    bool result_fk = ik_plugin_test.kinematics_solver->getPositionFK(fk_names, fk_values, poses_wrt_world);
@@ -1318,7 +1318,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 
 //      Eigen::Affine3d affine_fk_pose_wrt_base = davinci_fk.fwd_kin_solve(q_vec);
 
-////      Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1psm_base_link");
+////      Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1/psm_base_link");
 
 ////      Eigen::Affine3d affine_fk_pose_wrt_world = affine_base_wrt_world * affine_fk_pose_wrt_base;
 
@@ -1403,7 +1403,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 
 int main(int argc, char **argv)
 {
-   ros::init(argc, argv, "test_davinci_moveit_kinematics_plugin");
+  ros::init(argc, argv, "test_davinci_moveit_kinematics_plugin");
   ros::AsyncSpinner spinner(1);
   ros::Duration(3.0).sleep();
   spinner.start();

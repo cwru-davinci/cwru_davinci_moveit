@@ -38,6 +38,9 @@
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
 #include <geometric_shapes/shape_operations.h>
 
+#include <moveit/robot_state/conversions.h>
+
+
 using namespace dual_arm_manipulation_planner_interface;
 //using namespace davinci_moveit_object_handling;
 
@@ -60,7 +63,7 @@ HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &no
 
   complete_initial_robot_state_.reset(new robot_state::RobotState(kmodel_));
 
-  tss_.reset(new TSStateStorage(*complete_initial_robot_state_));
+//  tss_.reset(new TSStateStorage(*complete_initial_robot_state_));
 
   collision_request_with_distance_.distance = true;
 
@@ -72,6 +75,8 @@ HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &no
   hyStateSpace_->validity_checking_duration_ = std::chrono::duration<double>::zero();
 
   hyStateSpace_->validty_check_num = 0;
+
+//  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("collision_check_robot_state", 1);
 
   loadNeedleModel();
 }
@@ -94,7 +99,10 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   else
   {
     // convert ompl state to moveit robot state
-    robot_state::RobotState *kstate = tss_->getStateStorage();
+//    robot_state::RobotState *kstate = tss_->getStateStorage();
+    robot_state::RobotStatePtr kstate;
+    kstate.reset(new robot_state::RobotState(kmodel_));
+    kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
     if (!convertObjectToRobotState(*kstate, hs))
@@ -102,32 +110,26 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 
     if(hs->jointsComputed())
     {
-      std::unique_ptr<moveit::core::AttachedBody> needle_model = createAttachedBody(selected_group_name, object_name_,
-                                                                                    hs->graspIndex().value);
-      kstate->attachBody(needle_model.get());
+      moveit::core::AttachedBody* needle_model = createAttachedBody(selected_group_name, object_name_, hs->graspIndex().value);
+      kstate->attachBody(needle_model);
       kstate->update();
 
       // TODO check feasibility
       planning_scene_->setCurrentState(*kstate);
-//      if (!planning_scene_->isStateFeasible(*kstate))
-//        printf("Invalid State: State is not feasible.");
-//      else
-//      {
       // check collision avoidance
       collision_detection::CollisionResult res;
       planning_scene_->checkCollisionUnpadded(collision_request_simple_, res, *kstate);
-//  if(res.collision)
-//  {
-//    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-//    collision_detection::CollisionResult::ContactMap contactMap = res.contacts;
-//    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
-//    {
-//      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-//    }
-//  }
-//
-//        kstate->printStatePositions(std::cout);
-      needle_model.release();
+      if(res.collision)
+      {
+        ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+        collision_detection::CollisionResult::ContactMap contactMap = res.contacts;
+        for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
+        {
+          ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+        }
+//        publishRobotState(*kstate);
+      }
+
       kstate->clearAttachedBodies();
       is_valid = !res.collision;
       if(res.collision == true)
@@ -147,7 +149,10 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 {
   double cost = 0.0;
 
-  robot_state::RobotState *kstate = tss_->getStateStorage();
+//  robot_state::RobotState *kstate = tss_->getStateStorage();
+  robot_state::RobotStatePtr kstate;
+  kstate.reset(new robot_state::RobotState(kmodel_));
+  kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   if(!convertObjectToRobotState(*kstate, hs))
   {
@@ -172,7 +177,10 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
-  robot_state::RobotState *kstate = tss_->getStateStorage();
+//  robot_state::RobotState *kstate = tss_->getStateStorage();
+  robot_state::RobotStatePtr kstate;
+  kstate.reset(new robot_state::RobotState(kmodel_));
+  kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   if(!convertObjectToRobotState(*kstate, hs))
   {
@@ -206,8 +214,8 @@ bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotSta
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
     const robot_state::JointModelGroup *selected_joint_model_group = rstate.getJointModelGroup(selected_group_name);
-    std::size_t attempts = 1;
-    double timeout = 0.1;
+    std::size_t attempts = 2;
+    double timeout = 1.0;
     bool found_ik = rstate.setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
 //  bool found_ik = setFromIK(rstate, selected_joint_model_group, selected_group_name,
@@ -234,7 +242,7 @@ bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotSta
   return true;
 }
 
-std::unique_ptr<moveit::core::AttachedBody>
+moveit::core::AttachedBody*
 HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
                                                const std::string &object_name,
                                                const int grasp_pose_id) const
@@ -259,10 +267,12 @@ HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
 //  dettach_posture.points[1].positions.push_back(0.5);
 //  dettach_posture.points[2].positions.push_back(0.5);
 
-  return std::make_unique<moveit::core::AttachedBody>(tip_link, object_name, needleShapes_, attach_trans, touch_links,
-                                                      dettach_posture);
-//  return std::unique_ptr<moveit::core::AttachedBody>(
-//    new moveit::core::AttachedBody());
+  return new moveit::core::AttachedBody(tip_link,
+                                        object_name,
+                                        needleShapes_,
+                                        attach_trans,
+                                        touch_links,
+                                        dettach_posture);
 }
 
 void HybridStateValidityChecker::defaultSettings()
@@ -310,6 +320,20 @@ void HybridStateValidityChecker::initializeIKPlugin()
   psm_two_kinematics_solver_->initialize(robot_name_, "psm_two", "PSM2_psm_base_link", "PSM2_tool_tip_link", search_discretization);
 }
 
+void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState& rstate) const
+{
+  moveit_msgs::DisplayRobotState drstate;
+  robot_state_publisher_.publish(drstate);
+  ros::spinOnce();
+  ros::Duration(1.0).sleep();
+
+  moveit::core::robotStateToRobotStateMsg(rstate, drstate.state);
+
+  robot_state_publisher_.publish(drstate);
+  ros::spinOnce();
+  ros::Duration(1.0).sleep();
+}
+
 bool HybridStateValidityChecker::setFromIK(robot_state::RobotState &rstate,
                                       const robot_state::JointModelGroup *arm_joint_group,
                                       const std::string &planning_group,
@@ -335,7 +359,7 @@ bool HybridStateValidityChecker::setFromIK(robot_state::RobotState &rstate,
 
   std::vector<double> seed(kinematics_solver_->getJointNames().size(), 0.0);
   std::vector<double> solution(kinematics_solver_->getJointNames().size(), 0.0);
-  double timeout = 0.2;
+  double timeout = 2.0;
   Eigen::Affine3d affine_base_wrt_world = rstate.getFrameTransform(base_frame);
   Eigen::Affine3d affine_tip_pose_wrt_base = affine_base_wrt_world.inverse() * tip_pose_wrt_world;
   geometry_msgs::Pose tip_pose_wrt_base;

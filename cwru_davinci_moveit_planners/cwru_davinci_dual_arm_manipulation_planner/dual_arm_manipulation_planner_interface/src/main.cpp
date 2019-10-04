@@ -43,7 +43,6 @@
 #include <ompl/geometric/PathGeometric.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
-#include <ompl/geometric/planners/rrt/LazyRRT.h>
 #include <ompl/config.h>
 
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
@@ -232,13 +231,13 @@ void plan(const ros::NodeHandle &node_handle,
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
   si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-  ob::PlannerStatus solved = planner->ob::Planner::solve(10000.0);
+  ob::PlannerStatus solved = planner->ob::Planner::solve(100.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> planning_time = finish - start_ts;
 
 //  planner->getPlannerData(plannedData);
-  si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration();
+  si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(nullptr, true);
   if (solved)
   {
     if(pdef->hasExactSolution())
