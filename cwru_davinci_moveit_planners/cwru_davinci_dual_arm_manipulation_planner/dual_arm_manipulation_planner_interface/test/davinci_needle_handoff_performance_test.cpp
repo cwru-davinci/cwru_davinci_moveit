@@ -135,7 +135,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   se3_xyz_bounds.setLow(1, -0.3);
   se3_xyz_bounds.setHigh(1, 0.3);
   se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.6);
+  se3_xyz_bounds.setHigh(2, 0.49);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -287,7 +287,7 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   se3_xyz_bounds.setLow(1, -0.3);
   se3_xyz_bounds.setHigh(1, 0.3);
   se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.6);
+  se3_xyz_bounds.setHigh(2, 0.49);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -439,7 +439,7 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   se3_xyz_bounds.setLow(1, -0.3);
   se3_xyz_bounds.setHigh(1, 0.3);
   se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.6);
+  se3_xyz_bounds.setHigh(2, 0.49);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -696,9 +696,9 @@ int main(int argc, char** argv)
 
   std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(true);
 
-  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
-  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
-  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
+  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, 5);
+  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, 5);
+  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, 5);
 
   printPerformanceStats(oneHfStats, "One Handoff");
   printPerformanceStats(twoHfStats, "Two Handoff");

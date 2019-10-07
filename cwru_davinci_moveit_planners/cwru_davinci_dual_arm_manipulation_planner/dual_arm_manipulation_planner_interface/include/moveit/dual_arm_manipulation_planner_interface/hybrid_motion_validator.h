@@ -84,7 +84,7 @@ public:
                            const robot_state::RobotState &goal_state,
                            const std::string &ss_active_group) const;
 
-private:
+protected:
   void initializePlannerPlugin();
 
   bool planSafeStateToPreGraspState(const robot_state::RobotState &start_state,

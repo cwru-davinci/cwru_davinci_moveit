@@ -196,7 +196,8 @@ void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool ver
 
   std::chrono::duration<double> total_time_chro =
     sampling_duration_ + validity_checking_duration_ + interpolation_duration_ + check_motion_duration_;
-  *total_time = total_time_chro.count();
+  if(total_time)
+    *total_time = total_time_chro.count();
   std::cout << "Total Time is: " << total_time_chro.count() << "s" << std::endl;
 }
 
@@ -406,11 +407,11 @@ void HybridObjectStateSpace::interpolate(const State *from,
         break;
       case StateDiff::ArmDiffGraspAndPoseSame:
         components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = findSupportArmAndGrasp(hys_from, hys_to, cstate);
+        is_found = interpolateGrasp(hys_from, hys_to, cstate);
         break;
       case StateDiff::GraspDiffArmAndPoseSame:
         components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = findSupportArmAndGrasp(hys_from, hys_to, cstate);
+        is_found = interpolateGrasp(hys_from, hys_to, cstate);
         break;
 //      case StateDiff::PoseDiffArmAndGraspSame:
 //        components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
@@ -420,21 +421,22 @@ void HybridObjectStateSpace::interpolate(const State *from,
 //        break;
       case StateDiff::ArmAndGraspDiffPoseSame:
         components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = findSupportArmAndGrasp(hys_from, hys_to, cstate);
+        is_found = interpolateGrasp(hys_from, hys_to, cstate);
         break;
       case StateDiff::ArmAndPoseDiffGraspSame:
         components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = findSupportArmAndGrasp(hys_from, hys_to, cstate);
+        is_found = interpolateGrasp(hys_from, hys_to, cstate);
         break;
       case StateDiff::GraspAndPoseDiffArmSame:
         components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = findSupportArmAndGrasp(hys_from, hys_to, cstate);
+        is_found = interpolateGrasp(hys_from, hys_to, cstate);
         break;
       case StateDiff::AllDiff:
         components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = findSupportArmAndGrasp(hys_from, hys_to, cstate);
+        is_found = interpolateGrasp(hys_from, hys_to, cstate);
         break;
     }
+  }
 
     if(!is_found)
     {
@@ -443,7 +445,6 @@ void HybridObjectStateSpace::interpolate(const State *from,
       components_[2]->copyState(cstate->components[2], hys_from->components[2]);
       components_[3]->copyState(cstate->components[3], hys_from->components[3]);
     }
-  }
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
@@ -537,8 +538,8 @@ StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const 
 }
 
 
-bool HybridObjectStateSpace::findSupportArmAndGrasp(const StateType *from,
-                                                    const StateType *to,
+bool HybridObjectStateSpace::interpolateGrasp(const StateType *from,
+                                              const StateType *to,
                                                     StateType *cstate) const
 {
   const int from_arm_index = from->armIndex().value;

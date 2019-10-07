@@ -370,13 +370,13 @@ protected:
   /** \brief Whether setup() has been called. */
   bool setup_{false};
 
-private:
+protected:
 
   int chooseSupportArm(const int from_arm_index, const int to_arm_index) const;
 
-  bool findSupportArmAndGrasp(const StateType *from,
-                              const StateType *to,
-                              StateType *cstate) const;
+  bool interpolateGrasp(const StateType *from,
+                        const StateType *to,
+                        StateType *cstate) const;
 
   bool findValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
 

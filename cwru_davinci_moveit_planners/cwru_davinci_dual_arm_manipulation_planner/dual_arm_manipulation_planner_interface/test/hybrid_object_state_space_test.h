@@ -51,7 +51,7 @@ namespace hybrid_state_space_test
 /** \brief Encapsulate basic tests for state spaces. This class
     should be used for every state space included with ompl, to
     ensure basic functionality works. */
-class HybridStateSpaceTest
+class HybridObjectStateSpaceTest : public HybridObjectStateSpace
 {
 public:
 
@@ -59,13 +59,13 @@ public:
       space. When samples need to be taken to ensure certain
       functionality works, \e n samples are to be drawn. For
       distance comparisons, use an error margin of \e eps. */
-  HybridStateSpaceTest(const ompl::base::StateSpacePtr &space, int n = 1000,
-                       double eps = std::numeric_limits<double>::epsilon() * 10.0) :
+  HybridObjectStateSpaceTest(const ompl::base::StateSpacePtr &space, int n = 1000,
+                             double eps = std::numeric_limits<double>::epsilon() * 10.0) :
     space_(space), n_(n), eps_(eps)
   {
   }
 
-  ~HybridStateSpaceTest()
+  virtual ~HybridObjectStateSpaceTest()
   {
   }
 

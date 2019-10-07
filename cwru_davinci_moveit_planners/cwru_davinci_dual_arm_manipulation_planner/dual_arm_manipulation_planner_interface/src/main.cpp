@@ -118,12 +118,12 @@ void plan(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.3);
-  se3_xyz_bounds.setHigh(0, 0.3);
-  se3_xyz_bounds.setLow(1, -0.3);
-  se3_xyz_bounds.setHigh(1, 0.3);
-  se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.6);
+  se3_xyz_bounds.setLow(0, -0.2);
+  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(1, -0.06);
+  se3_xyz_bounds.setHigh(1, 0.09);
+  se3_xyz_bounds.setLow(2, 0.266);
+  se3_xyz_bounds.setHigh(2, 0.496);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -221,7 +221,7 @@ void plan(const ros::NodeHandle &node_handle,
   auto planner(std::make_shared<og::RRTConnect>(si));
   // set the problem we are trying to solve for the planner
   planner->setProblemDefinition(pdef);
-  planner->setRange(10.0);
+  planner->setRange(100.0);
   // perform setup steps for the planner
   planner->setup();
   // print the settings for this space
@@ -231,7 +231,7 @@ void plan(const ros::NodeHandle &node_handle,
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
   si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-  ob::PlannerStatus solved = planner->ob::Planner::solve(100.0);
+  ob::PlannerStatus solved = planner->ob::Planner::solve(500.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> planning_time = finish - start_ts;

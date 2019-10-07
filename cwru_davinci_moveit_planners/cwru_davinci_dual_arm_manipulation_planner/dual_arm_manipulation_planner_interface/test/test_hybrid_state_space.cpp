@@ -283,6 +283,11 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
   }
 
+  // test interpolate
+  {
+
+  }
+
 
 //
 //
