@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: cwru_davinci_geometry_models
+    relative_path: model_with_prefix/both_psms.urdf.xacro
+  SRDF:
+    relative_path: config/dvrk_psm.srdf
+  CONFIG:
+    author_name: Su Lu
+    author_email: sxl924@case.edu
+    generated_timestamp: 1524240852
