@@ -40,6 +40,7 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
+#include <moveit/robot_model/joint_model_group.h>
 
 
 bool isTwoVectorSame(const std::vector<double>& joint_values_fk, const std::vector<double>& joint_values_ik)
@@ -65,11 +66,33 @@ bool isTwoVectorSame(const std::vector<double>& joint_values_fk, const std::vect
   }
 }
 
+struct PoseComponent
+{
+  PoseComponent(const robot_model::JointModelGroup *subgroup, const robot_model::JointModelGroup::KinematicsSolver &k) :
+    subgroup_(subgroup)
+  , bijection_(k.bijection_)
+  {}
+
+//  bool computeStateFK(StateType *full_state, unsigned int idx) const;
+//  bool computeStateIK(StateType *full_state, unsigned int idx) const;
+
+  bool operator<(const PoseComponent &o) const
+  {
+    return subgroup_->getName() < o.subgroup_->getName();
+  }
+
+  const robot_model::JointModelGroup *subgroup_;
+  boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
+  std::vector<unsigned int> bijection_;
+//  ompl::base::StateSpacePtr state_space_;
+  std::vector<std::string> fk_link_;
+};
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "psm_one_kinematics");
   ros::AsyncSpinner spinner(1);
+  ros::Duration(4.0).sleep();
   spinner.start();
 
   // BEGIN_TUTORIAL
@@ -93,7 +116,11 @@ int main(int argc, char **argv)
   // .. _RobotModelLoader: http://docs.ros.org/indigo/api/moveit_ros_planning/html/classrobot__model__loader_1_1RobotModelLoader.html
 
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-  robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
+  robot_model::RobotModelPtr kinematic_model;
+
+  const boost::shared_ptr<srdf::Model> &srdf = robot_model_loader.getSRDF();
+  const boost::shared_ptr<urdf::ModelInterface> &urdf_model = robot_model_loader.getURDF();
+  kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
 
   ROS_INFO("Model Frame: %s", kinematic_model->getModelFrame().c_str());
 
@@ -108,13 +135,25 @@ int main(int argc, char **argv)
   // model for a particular group, e.g. the "right_arm" of the PR2
   // robot.
   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
-  ROS_INFO_STREAM("\n" << kinematic_state->getFrameTransform("PSM1tool_wrist_sca_shaft_link").matrix());
+//  ROS_INFO_STREAM("\n" << kinematic_state->getFrameTransform("PSM1tool_wrist_sca_shaft_link").matrix());
 
-  ROS_INFO_STREAM("\n" << kinematic_state->getGlobalLinkTransform("PSM1tool_wrist_sca_shaft_link").matrix());
+//  ROS_INFO_STREAM("\n" << kinematic_state->getGlobalLinkTransform("PSM1tool_wrist_sca_shaft_link").matrix());
 
   kinematic_state->setToDefaultValues();
 
-  const robot_state::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup("psm_one");
+  const robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup("psm_one");
+
+  std::vector<PoseComponent> poses_;
+  if (joint_model_group->getGroupKinematics().first)
+    poses_.push_back(PoseComponent(joint_model_group, joint_model_group->getGroupKinematics().first));
+  else if (!joint_model_group->getGroupKinematics().second.empty())
+  {
+    const robot_model::JointModelGroup::KinematicsSolverMap &m = joint_model_group->getGroupKinematics().second;
+    for (robot_model::JointModelGroup::KinematicsSolverMap::const_iterator it = m.begin() ; it != m.end() ; ++it)
+      poses_.push_back(PoseComponent(it->first, it->second));
+  }
+  if (poses_.empty())
+    ROS_INFO("No kinematics solvers specified. Unable to construct a PoseModelStateSpace");
 
   const std::vector<std::string> &joint_names = joint_model_group->getVariableNames();
 
@@ -169,14 +208,14 @@ int main(int argc, char **argv)
     kinematic_state->setToRandomPositions(joint_model_group);
 
     const Eigen::Affine3d &end_effector_state = kinematic_state->getGlobalLinkTransform(
-      "PSM1tool_wrist_sca_shaft_link");
+      "PSM1_tool_wrist_sca_shaft_link");
 
     /* Print end-effector pose. Remember that this is in the model frame */
     ROS_INFO_STREAM("Translation: \n" << end_effector_state.translation());
     ROS_INFO_STREAM("Rotation: \n" << end_effector_state.rotation());
 
 //    ROS_INFO_STREAM("\n" << planning_scene.getFrameTransform("/psm_one_tool_wrist_sca_shaft_link").matrix());
-    ROS_INFO_STREAM("\n" << kinematic_state->getFrameTransform("/PSM1tool_wrist_sca_shaft_link").matrix());
+    ROS_INFO_STREAM("\n" << kinematic_state->getFrameTransform("/PSM1_tool_wrist_sca_shaft_link").matrix());
     kinematic_state->copyJointGroupPositions(joint_model_group, joint_values_fk);
     // Inverse Kinematics
     // ^^^^^^^^^^^^^^^^^^

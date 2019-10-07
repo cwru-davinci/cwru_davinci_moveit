@@ -1,5 +1,5 @@
 <launch>
-    <!-- <include file="$(find cwru_davinci_both_psms_moveit_config)/launch/dvrk_psm_both_sim.launch" /> -->s
+    <!-- <include file="$(find cwru_davinci_both_psms_moveit_config)/launch/dvrk_psm_both_sim.launch" /> -->
 
     <include file="$(find cwru_davinci_control)/launch/dvrk_psm_joint_state_controller.launch" />
 

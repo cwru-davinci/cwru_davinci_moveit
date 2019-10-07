@@ -190,13 +190,13 @@ namespace davinci_moveit_kinematics
       ROS_INFO("Min limit %f = min(%f, %f)", min_limit, davinci_psm_ik_->solver_info_.limits[0].min_position,
                 0 - max_consistency);
     }
-    else
-    {
-      ROS_INFO("Max limit %f", max_limit);
-      ROS_INFO("Min limit %f", min_limit);
-    }
-
-    ROS_INFO("positive increments, negative increments: %d %d", num_positive_increments, num_negative_increments);
+//    else
+//    {
+//      ROS_INFO("Max limit %f", max_limit);
+//      ROS_INFO("Min limit %f", min_limit);
+//    }
+//
+//    ROS_INFO("positive increments, negative increments: %d %d", num_positive_increments, num_negative_increments);
 
     unsigned int testnum = 0;
     geometry_msgs::Pose ik_pose_msg;
