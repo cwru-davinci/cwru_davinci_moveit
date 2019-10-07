@@ -381,8 +381,10 @@ private:
   bool findValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
 
   int handOffsNum(const int from_arm_index,
-                  const int to_arm_index,
+                  const int from_grasp_index,
                   const int from_part_id,
+                  const int to_arm_index,
+                  const int to_grasp_index,
                   const int to_part_id) const;
 
   bool computeStateIK(StateType *hystate) const;

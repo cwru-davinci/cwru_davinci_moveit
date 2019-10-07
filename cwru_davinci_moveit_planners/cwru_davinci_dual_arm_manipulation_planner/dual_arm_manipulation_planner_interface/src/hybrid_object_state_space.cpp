@@ -246,16 +246,10 @@ bool HybridObjectStateSpace::isHybrid() const
 
 double HybridObjectStateSpace::distance(const State *state1, const State *state2) const
 {
-//  double se3_dist_trans, se3_dist_rot;
-
-  double total_dist = 0;
-  double se3_dist = 0;
-  int num_handoff = 0;
-
   const auto *hs1 = static_cast<const StateType *>(state1);
   const auto *hs2 = static_cast<const StateType *>(state2);
 
-  se3_dist = components_[0]->distance(hs1->components[0], hs2->components[0]);
+  double se3_dist = components_[0]->distance(hs1->components[0], hs2->components[0]);
 
   const int s1_arm_index = hs1->armIndex().value;
   const int s2_arm_index = hs2->armIndex().value;
@@ -266,28 +260,15 @@ double HybridObjectStateSpace::distance(const State *state1, const State *state2
   const int s1_part_id = possible_grasps_[s1_grasp_index].part_id;
   const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
 
-  if (s1_arm_index != s2_arm_index)
-  {
-    if (s1_part_id != s2_part_id)
-      num_handoff = 1;
-    else
-      num_handoff = 3;
-  }
-  else  // s1_arm_index == s2_arm_index
-  {
-    if(s1_part_id != s2_part_id)
-      num_handoff = 2;
-    else
-    {
-      if(s1_grasp_index == s2_grasp_index)
-        num_handoff = 0;
-      else
-        num_handoff = 2;
-    }
-  }
+  int num_handoff = handOffsNum(s1_arm_index,
+                                s1_grasp_index,
+                                s1_part_id,
+                                s2_arm_index,
+                                s2_grasp_index,
+                                s2_part_id);
 
   int scale = 100;
-  total_dist = scale * num_handoff + se3_dist;
+  double total_dist = scale * num_handoff + se3_dist;
 
   return total_dist;
 }
@@ -325,12 +306,9 @@ bool HybridObjectStateSpace::equalStates(const State *state1, const State *state
 {
   const auto *hs1 = static_cast<const StateType *>(state1);
   const auto *hs2 = static_cast<const StateType *>(state2);
-  bool is_se3_equal = false;
-  bool is_armid_equal = false;
-  bool is_graspid_equal = false;
-  is_se3_equal = components_[0]->equalStates(hs1->components[0], hs2->components[0]);
-  is_armid_equal = components_[1]->equalStates(hs1->components[1], hs2->components[1]);
-  is_graspid_equal = components_[2]->equalStates(hs1->components[2], hs2->components[2]);
+  bool is_se3_equal = components_[0]->equalStates(hs1->components[0], hs2->components[0]);
+  bool is_armid_equal = components_[1]->equalStates(hs1->components[1], hs2->components[1]);
+  bool is_graspid_equal = components_[2]->equalStates(hs1->components[2], hs2->components[2]);
   if(is_se3_equal && is_armid_equal && is_graspid_equal)
     return true;
   return false;
@@ -371,7 +349,7 @@ unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, cons
   const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
 
   unsigned int se3_count = components_[0]->validSegmentCount(hs1->components[0], hs2->components[0]);
-  unsigned int handoff_count = 0;
+
 
   if (s1_arm_index == s2_arm_index && s1_grasp_index == s2_grasp_index)
   {
@@ -379,24 +357,13 @@ unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, cons
   }
   else
   {
-    if (s1_arm_index != s2_arm_index)
-    {
-      if (s1_part_id != s2_part_id)
-      {
-        handoff_count = 1;
-        return handoff_count + se3_count;
-      }
-      else
-      {
-        handoff_count = 3;
-        return handoff_count + se3_count;
-      }
-    }
-    else  // s1_arm_index == s2_arm_index
-    {
-      handoff_count = 2;
-      return handoff_count + se3_count;
-    }
+    unsigned int handoff_count = handOffsNum(s1_arm_index,
+                                             s1_grasp_index,
+                                             s1_part_id,
+                                             s2_arm_index,
+                                             s2_grasp_index,
+                                             s2_part_id);
+    return handoff_count + se3_count;
   }
 }
 
@@ -584,7 +551,7 @@ bool HybridObjectStateSpace::findSupportArmAndGrasp(const StateType *from,
   const int to_part_id = possible_grasps_[to_grasp_index].part_id;
 
   bool is_found = false;
-  switch (handOffsNum(from_arm_index, to_arm_index, from_part_id, to_part_id))
+  switch (handOffsNum(from_arm_index, 0, from_part_id, to_arm_index, 0, to_part_id))
   {
     case 1:
       cstate->armIndex().value = to_arm_index;
@@ -606,30 +573,28 @@ bool HybridObjectStateSpace::findSupportArmAndGrasp(const StateType *from,
 
 
 int HybridObjectStateSpace::handOffsNum(const int from_arm_index,
-                                        const int to_arm_index,
+                                        const int from_grasp_index,
                                         const int from_part_id,
+                                        const int to_arm_index,
+                                        const int to_grasp_index,
                                         const int to_part_id) const
 {
   int num_handoff = 0;
 
   if (from_arm_index != to_arm_index)
   {
-    if (from_part_id != to_part_id)  // case 1 time of handoff
-    {
+    if (from_part_id != to_part_id)
       num_handoff = 1;
-      return num_handoff;
-    }
-    else  // case 3 time of handoffs
-    {
+    else
       num_handoff = 3;
-      return num_handoff;
-    }
   }
-  else  // s1_arm_index == s2_arm_index
+  else  // from_arm_index == to_arm_index
   {
-    num_handoff = 2;
-    return num_handoff;
+    if(from_grasp_index != to_grasp_index)
+      num_handoff = 2;
   }
+
+  return num_handoff;
 }
 
 int HybridObjectStateSpace::chooseSupportArm(const int from_arm_index, const int to_arm_index) const

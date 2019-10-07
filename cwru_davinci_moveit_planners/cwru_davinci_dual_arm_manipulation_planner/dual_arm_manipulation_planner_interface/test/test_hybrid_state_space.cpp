@@ -57,18 +57,48 @@ using namespace dual_arm_manipulation_planner_interface;
 // using namespace hybrid_state_space_test;
 namespace ob =  ompl::base;
 
+void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspIndex,
+                      const int from_grasp_index,
+                      int& to_grasp_index,
+                      bool same_grasp_part)
+{
+  if(same_grasp_part)
+  {
+    for(std::size_t i = 0; i < graspIndex.size(); ++i)
+    {
+      if(graspIndex[i].part_id == graspIndex[from_grasp_index].part_id && i != from_grasp_index)
+      {
+        to_grasp_index = i;
+        return;
+      }
+    }
+  }
+  else
+  {
+    for(std::size_t i = 0; i < graspIndex.size(); ++i)
+    {
+      if(graspIndex[i].part_id != graspIndex[from_grasp_index].part_id && i != from_grasp_index)
+      {
+        to_grasp_index = i;
+        return;
+      }
+    }
+  }
+}
+
+
 TEST(TestHybridRRT, HybridObjectStateSpace)
 {
   ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr pSimpleGrasp_(
+  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr pSimpleGrasp(
         new cwru_davinci_grasp::DavinciSimpleNeedleGrasper(node_handle,
                                                            node_handle_priv,
                                                            "psm_one",
                                                            "needle_r"));
-  EXPECT_TRUE(hybridSSTester.initialize());
+//  EXPECT_TRUE(pSimpleGrasp);
 
-  std::vector<cwru_davinci_grasp::GraspInfo> grasp_pose = pSimpleGrasp_->getAllPossibleNeedleGrasps();
+  std::vector<cwru_davinci_grasp::GraspInfo> grasp_pose = pSimpleGrasp->getAllPossibleNeedleGrasps();
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_pose.size(), grasp_pose));
 
   ob::RealVectorBounds se3_xyz_bounds(3);
@@ -129,7 +159,17 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     s2->armIndex().value = 1;
 
     s1->graspIndex().value = 10;  // a random number
-    s2->graspIndex().value = 50;  // a random number
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, false);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id != grasp_pose[s2->graspIndex().value].part_id);
+
+    EXPECT_EQ(StateDiff::GraspDiffArmAndPoseSame, hystsp->checkStateDiff(s1.get(), s2.get()));
+    EXPECT_EQ(200, hystsp->distance(s1.get(), s2.get()));
+
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, true);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id == grasp_pose[s2->graspIndex().value].part_id);
+
     EXPECT_EQ(StateDiff::GraspDiffArmAndPoseSame, hystsp->checkStateDiff(s1.get(), s2.get()));
     EXPECT_EQ(200, hystsp->distance(s1.get(), s2.get()));
 
@@ -144,7 +184,7 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     s2->armIndex().value = 1;
     s2->graspIndex().value = 1;
     EXPECT_EQ(StateDiff::PoseDiffArmAndGraspSame, hystsp->checkStateDiff(s1.get(), s2.get()));
-    double object_se3_dist = hystsp->components_[0]->distance(s1->components[0], s2->components[0]);
+    double object_se3_dist = hystsp->getSubspace(0)->distance(s1->components[0], s2->components[0]);
     double handoff_dist = 0;
     double total_dist = object_se3_dist + handoff_dist;
     EXPECT_EQ(object_se3_dist, hystsp->distance(s1.get(), s2.get()));
@@ -158,11 +198,23 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     s2->se3State().setX(1.0); s2->se3State().setY(0.0); s2->se3State().setZ(0.0);
     s2->se3State().rotation().setAxisAngle(1.0, 0.0, 0.0, M_PI);
     s2->armIndex().value = 2;
-    s2->graspIndex().value = 50;
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, false);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id != grasp_pose[s2->graspIndex().value].part_id);
+
     EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, hystsp->checkStateDiff(s1.get(), s2.get()));
-    object_se3_dist = hystsp->components_[0]->distance(s1->components[0], s2->components[0]);
-    handoff_dist =
-    EXPECT_EQ(object_se3_dist, hystsp->distance(s1.get(), s2.get()));
+    object_se3_dist = hystsp->getSubspace(0)->distance(s1->components[0], s2->components[0]);
+    handoff_dist = 100;
+    total_dist = object_se3_dist + handoff_dist;
+    EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, true);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id == grasp_pose[s2->graspIndex().value].part_id);
+    EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, hystsp->checkStateDiff(s1.get(), s2.get()));
+    handoff_dist = 300;
+    total_dist = object_se3_dist + handoff_dist;
+    EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
 
     // case StateDiff::ArmAndPoseDiffGraspSame
     s1->se3State().setX(1.0); s1->se3State().setY(0.0); s1->se3State().setZ(0.0);
@@ -175,6 +227,10 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     s2->armIndex().value = 2;
     s2->graspIndex().value = 10;
     EXPECT_EQ(StateDiff::ArmAndPoseDiffGraspSame, hystsp->checkStateDiff(s1.get(), s2.get()));
+    object_se3_dist = hystsp->getSubspace(0)->distance(s1->components[0], s2->components[0]);
+    handoff_dist = 300;
+    total_dist = object_se3_dist + handoff_dist;
+    EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
 
     // case StateDiff::GraspAndPoseDiffArmSame
     s1->se3State().setX(1.0); s1->se3State().setY(0.0); s1->se3State().setZ(0.0);
@@ -185,8 +241,20 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     s2->se3State().setX(1.0); s2->se3State().setY(0.0); s2->se3State().setZ(0.0);
     s2->se3State().rotation().setAxisAngle(0.0, 1.0, 0.0, M_PI);
     s2->armIndex().value = 1;
-    s2->graspIndex().value = 50;
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, false);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id != grasp_pose[s2->graspIndex().value].part_id);
     EXPECT_EQ(StateDiff::GraspAndPoseDiffArmSame, hystsp->checkStateDiff(s1.get(), s2.get()));
+    object_se3_dist = hystsp->getSubspace(0)->distance(s1->components[0], s2->components[0]);
+    handoff_dist = 200;
+    total_dist = object_se3_dist + handoff_dist;
+    EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, true);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id == grasp_pose[s2->graspIndex().value].part_id);
+    EXPECT_EQ(StateDiff::GraspAndPoseDiffArmSame, hystsp->checkStateDiff(s1.get(), s2.get()));
+    EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
 
     // case StateDiff::AllDiff
     s1->se3State().setX(1.0); s1->se3State().setY(0.0); s1->se3State().setZ(0.0);
@@ -197,8 +265,22 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     s2->se3State().setX(1.0); s2->se3State().setY(0.0); s2->se3State().setZ(0.0);
     s2->se3State().rotation().setAxisAngle(0.0, 1.0, 0.0, M_PI);
     s2->armIndex().value = 2;
-    s2->graspIndex().value = 50;
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, false);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id != grasp_pose[s2->graspIndex().value].part_id);
     EXPECT_EQ(StateDiff::AllDiff, hystsp->checkStateDiff(s1.get(), s2.get()));
+    object_se3_dist = hystsp->getSubspace(0)->distance(s1->components[0], s2->components[0]);
+    handoff_dist = 100;
+    total_dist = object_se3_dist + handoff_dist;
+    EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    chooseGraspIndex(grasp_pose, s1->graspIndex().value, s2->graspIndex().value, true);
+    EXPECT_TRUE(s1->graspIndex().value != s2->graspIndex().value);
+    EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id == grasp_pose[s2->graspIndex().value].part_id);
+    EXPECT_EQ(StateDiff::AllDiff, hystsp->checkStateDiff(s1.get(), s2.get()));
+    handoff_dist = 300;
+    total_dist = object_se3_dist + handoff_dist;
+    EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
   }
 
 
