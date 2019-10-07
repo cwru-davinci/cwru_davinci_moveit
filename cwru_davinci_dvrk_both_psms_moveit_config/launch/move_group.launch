@@ -37,7 +37,7 @@
     <arg name="moveit_sensor_manager" value="dvrk_psm" />
   </include>
 
-  <param name="/robot_description" command="$(find xacro)/xacro.py '$(find cwru_davinci_geometry_models)/model_with_prefix/both_psms.urdf.xacro'"/>
+  <param name="/robot_description" command="$(find xacro)/xacro.py '$(find uv_geometry)/cal/cwru/general_manip_config.xacro'"/>
 
 <!-- Start the actual move_group node/action server -->
   <node name="move_group" launch-prefix="$(arg launch_prefix)" pkg="moveit_ros_move_group" type="move_group" respawn="false" output="screen" args="$(arg command_args)">

@@ -20,7 +20,7 @@
     
 
     <!--Spawn PSMs-->
-    <param name="robot_description" command="$(find xacro)/xacro.py '$(find cwru_davinci_geometry_models)/model/PSM1.urdf.xacro'"/>
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(find cwru_davinci_geometry_models)/model_with_prefix/PSM1.urdf.xacro'"/>
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model dvrk_psm"/>
     <node name="dvrk_psm_one_controller" pkg="cwru_davinci_control" type="dvrk_psm_one_controller"/>
 </launch>

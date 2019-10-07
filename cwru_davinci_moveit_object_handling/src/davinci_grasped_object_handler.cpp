@@ -52,6 +52,11 @@ namespace davinci_moveit_object_handling
     initializeClient(get_planning_scene_service);
   }
 
+  DavinciMoveitGraspedObjectHandler::~DavinciMoveitGraspedObjectHandler()
+  {
+    convenience_ros_functions::ROSFunctions::destroySingleton();
+  }
+
   bool DavinciMoveitGraspedObjectHandler::attachObjectToRobot(const std::string &object_name,
                                                               const std::string &attach_link_name)
   {
@@ -321,6 +326,7 @@ namespace davinci_moveit_object_handling
     new_pose.pose = pose;
     new_pose.header.frame_id = from_frame;
     new_pose.header.stamp = ros::Time(0); //in order to get the most recent transform
+
     if(convenience_ros_functions::ROSFunctions::Singleton()->transformPose(new_pose, to_frame, result_pose, 1) != 0)
     {
       ROS_ERROR("DavinciMoveitGraspedObjectHandler: Transform into frame %s failed. Ignoring transform.",

@@ -149,8 +149,8 @@ namespace davinci_moveit_kinematics
 
     bool active_;
 //    int free_angle_;
-    urdf::Model robot_model_;
-    ros::NodeHandle node_handle_, root_handle_;
+//    urdf::Model robot_model_;
+//    ros::NodeHandle node_handle_, root_handle_;
     boost::shared_ptr<davinci_moveit_kinematics::DavinciMoveitIKSolver> davinci_moveit_ik_solver_ptr_;
     int dimension_;
     boost::shared_ptr<KDL::ChainFkSolverPos_recursive> jnt_to_pose_solver_ptr_;
