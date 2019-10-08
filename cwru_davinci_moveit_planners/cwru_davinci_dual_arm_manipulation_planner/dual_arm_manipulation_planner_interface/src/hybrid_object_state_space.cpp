@@ -383,68 +383,68 @@ void HybridObjectStateSpace::interpolate(const State *from,
 //  printState(hys_from, std::cout);
 //  printState(hys_to, std::cout);
 
-  ompl::RNG randNum;
-  double random_num = randNum.gaussian01();
-  bool bound = 0.45;
-  bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
-  bool do_transit = within_1Sd ? true : false;
+//  ompl::RNG randNum;
+//  double random_num = randNum.gaussian01();
+//  bool bound = 0.45;
+//  bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
+//  bool do_transit = within_1Sd ? true : false;
 
-  if(do_transit)
+//  if(do_transit)
+//  {
+//    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+//    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+//    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
+//    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
+//  }
+//  else
+//  {
+  bool is_found = false;
+  switch (checkStateDiff(hys_from, hys_to))
+  {
+    case StateDiff::AllSame:
+      copyState(cstate, hys_to);
+      is_found = true;
+      break;
+    case StateDiff::ArmDiffGraspAndPoseSame:
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
+      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      break;
+    case StateDiff::GraspDiffArmAndPoseSame:
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
+      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      break;
+    case StateDiff::PoseDiffArmAndGraspSame:
+      components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+      components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+      components_[2]->copyState(cstate->components[2], hys_from->components[2]);
+      components_[3]->copyState(cstate->components[3], hys_from->components[3]);
+      break;
+    case StateDiff::ArmAndGraspDiffPoseSame:
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
+      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      break;
+    case StateDiff::ArmAndPoseDiffGraspSame:
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
+      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      break;
+    case StateDiff::GraspAndPoseDiffArmSame:
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
+      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      break;
+    case StateDiff::AllDiff:
+      components_[0]->copyState(cstate->components[0], hys_from->components[0]);
+      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      break;
+  }
+
+  if(!is_found)
   {
     components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
     components_[1]->copyState(cstate->components[1], hys_from->components[1]);
     components_[2]->copyState(cstate->components[2], hys_from->components[2]);
     components_[3]->copyState(cstate->components[3], hys_from->components[3]);
   }
-  else
-  {
-    bool is_found = false;
-    switch (checkStateDiff(hys_from, hys_to))
-    {
-      case StateDiff::AllSame:
-        copyState(cstate, hys_to);
-        is_found = true;
-        break;
-      case StateDiff::ArmDiffGraspAndPoseSame:
-        components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = interpolateGrasp(hys_from, hys_to, cstate);
-        break;
-      case StateDiff::GraspDiffArmAndPoseSame:
-        components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = interpolateGrasp(hys_from, hys_to, cstate);
-        break;
-//      case StateDiff::PoseDiffArmAndGraspSame:
-//        components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-//        components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-//        components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-//        components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-//        break;
-      case StateDiff::ArmAndGraspDiffPoseSame:
-        components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = interpolateGrasp(hys_from, hys_to, cstate);
-        break;
-      case StateDiff::ArmAndPoseDiffGraspSame:
-        components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = interpolateGrasp(hys_from, hys_to, cstate);
-        break;
-      case StateDiff::GraspAndPoseDiffArmSame:
-        components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = interpolateGrasp(hys_from, hys_to, cstate);
-        break;
-      case StateDiff::AllDiff:
-        components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-        is_found = interpolateGrasp(hys_from, hys_to, cstate);
-        break;
-    }
-  }
-
-    if(!is_found)
-    {
-      components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-      components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-      components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-      components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-    }
+//  }
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;

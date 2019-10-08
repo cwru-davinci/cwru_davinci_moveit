@@ -38,12 +38,13 @@
 #include "ompl/base/StateSpace.h"
 #include "ompl/base/ScopedState.h"
 #include "ompl/util/RandomNumbers.h"
-#include <limits>
+#include "hybrid_object_state_space.h"
 
-// define a convenience macro
-//#ifndef BOOST_OMPL_EXPECT_NEAR
-//#define BOOST_OMPL_EXPECT_NEAR(a, b, diff) BOOST_CHECK_SMALL((a) - (b), diff)
-//#endif
+#include <gtest/gtest.h>
+#include <thread>
+#include <atomic>
+#include <chrono>
+#include <limits>
 
 namespace hybrid_state_space_test
 {
@@ -55,13 +56,13 @@ class HybridObjectStateSpaceTest : public HybridObjectStateSpace
 {
 public:
 
-  /** \brief Construct a testing setup for state space \e
+  /** \brief Construct a testing setup for hybrid object state space \e
       space. When samples need to be taken to ensure certain
       functionality works, \e n samples are to be drawn. For
       distance comparisons, use an error margin of \e eps. */
-  HybridObjectStateSpaceTest(const ompl::base::StateSpacePtr &space, int n = 1000,
+  HybridObjectStateSpaceTest(const std::shared_ptr<HybridObjectStateSpace>& pHyStateSpace, int n = 1000,
                              double eps = std::numeric_limits<double>::epsilon() * 10.0) :
-    space_(space), n_(n), eps_(eps)
+    pHyStateSpace_(pHyStateSpace), n_(n), eps_(eps)
   {
   }
 
@@ -69,33 +70,12 @@ public:
   {
   }
 
-  /** \brief Test that distances are always positive */
-  void testDistance()
-  {
-    ompl::base::ScopedState<> s1(space_);
-    ompl::base::ScopedState<> s2(space_);
-
-    for (int i = 0 ; i < n_ ; ++i)
-    {
-//      s1.random();
-//      BOOST_OMPL_EXPECT_NEAR(s1.distance(s1), 0.0, eps_);
-//      s2.random();
-//      if (s1 != s2)
-//      {
-//        double d12 = s1.distance(s2);
-//        BOOST_CHECK(d12 > 0.0);
-//        double d21 = s2.distance(s1);
-//        BOOST_OMPL_EXPECT_NEAR(d12, d21, eps_);
-//      }
-    }
-  }
-
   /** \brief Test that interpolation works as expected and also test triangle inequality */
   void testInterpolation()
   {
-    ompl::base::ScopedState<> s1(space_);
-    ompl::base::ScopedState<> s2(space_);
-    ompl::base::ScopedState<> s3(space_);
+    ompl::base::ScopedState<HybridObjectStateSpace> from(pHyStateSpace_);
+    ompl::base::ScopedState<HybridObjectStateSpace> to(pHyStateSpace_);
+    ompl::base::ScopedState<HybridObjectStateSpace> cstate(pHyStateSpace_);
 
     for (int i = 0 ; i < n_ ; ++i)
     {
@@ -138,10 +118,9 @@ public:
 
 private:
 
-  ompl::base::StateSpacePtr           space_;
-  ompl::RNG                           rng_;
+  std::shared_ptr<HybridObjectStateSpace>           pHyStateSpace_;
+  ompl::RNG                                         rng_;
 
-  int                           n_;
-  double                        eps_;
+  double                                            eps_;
 };
 }

@@ -102,19 +102,15 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_pose.size(), grasp_pose));
 
   ob::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.3);
-  se3_xyz_bounds.setHigh(0, 0.3);
-  se3_xyz_bounds.setLow(1, -0.3);
-  se3_xyz_bounds.setHigh(1, 0.3);
-  se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.6);
+  se3_xyz_bounds.setLow(0, -0.2);
+  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(1, -0.06);
+  se3_xyz_bounds.setHigh(1, 0.09);
+  se3_xyz_bounds.setLow(2, 0.266);
+  se3_xyz_bounds.setHigh(2, 0.496);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
   hystsp->setup();
-
-//  ob::ScopedState<HybridObjectStateSpace> s1(hystsp);
-//  ob::ScopedState<HybridObjectStateSpace> s2(hystsp);
-//  ob::ScopedState<HybridObjectStateSpace> cstate(hystsp);
   
   // test checkStateDiff and distance
   {
@@ -285,6 +281,9 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
 
   // test interpolate
   {
+    ob::ScopedState<HybridObjectStateSpace> from(hystsp);
+    ob::ScopedState<HybridObjectStateSpace> to(hystsp);
+    ob::ScopedState<HybridObjectStateSpace> cstate(hystsp);
 
   }
 

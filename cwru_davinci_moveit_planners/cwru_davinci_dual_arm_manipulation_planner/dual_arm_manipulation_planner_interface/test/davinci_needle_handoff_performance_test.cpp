@@ -130,12 +130,12 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.3);
-  se3_xyz_bounds.setHigh(0, 0.3);
-  se3_xyz_bounds.setLow(1, -0.3);
-  se3_xyz_bounds.setHigh(1, 0.3);
-  se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.49);
+  se3_xyz_bounds.setLow(0, -0.2);
+  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(1, -0.06);
+  se3_xyz_bounds.setHigh(1, 0.09);
+  se3_xyz_bounds.setLow(2, 0.266);
+  se3_xyz_bounds.setHigh(2, 0.496);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -202,7 +202,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
     planner->setProblemDefinition(pdef);
-    planner->setRange(1.0);
+    planner->setRange(100.0);
     // perform setup steps for the planner
     planner->setup();
     // print the settings for this space
@@ -282,12 +282,12 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.3);
-  se3_xyz_bounds.setHigh(0, 0.3);
-  se3_xyz_bounds.setLow(1, -0.3);
-  se3_xyz_bounds.setHigh(1, 0.3);
-  se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.49);
+  se3_xyz_bounds.setLow(0, -0.2);
+  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(1, -0.06);
+  se3_xyz_bounds.setHigh(1, 0.09);
+  se3_xyz_bounds.setLow(2, 0.266);
+  se3_xyz_bounds.setHigh(2, 0.496);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -354,7 +354,7 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
     planner->setProblemDefinition(pdef);
-    planner->setRange(10.0);
+    planner->setRange(100.0);
     // perform setup steps for the planner
     planner->setup();
     // print the settings for this space
@@ -434,12 +434,12 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.3);
-  se3_xyz_bounds.setHigh(0, 0.3);
-  se3_xyz_bounds.setLow(1, -0.3);
-  se3_xyz_bounds.setHigh(1, 0.3);
-  se3_xyz_bounds.setLow(2, 0.3);
-  se3_xyz_bounds.setHigh(2, 0.49);
+  se3_xyz_bounds.setLow(0, -0.2);
+  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(1, -0.06);
+  se3_xyz_bounds.setHigh(1, 0.09);
+  se3_xyz_bounds.setLow(2, 0.266);
+  se3_xyz_bounds.setHigh(2, 0.496);
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
@@ -506,7 +506,7 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
     planner->setProblemDefinition(pdef);
-    planner->setRange(10.0);
+    planner->setRange(100.0);
     // perform setup steps for the planner
     planner->setup();
     // print the settings for this space
