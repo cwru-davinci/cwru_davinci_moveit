@@ -102,8 +102,8 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_pose.size(), grasp_pose));
 
   ob::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.2);
-  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(0, -0.101);
+  se3_xyz_bounds.setHigh(0, 0.101);
   se3_xyz_bounds.setLow(1, -0.06);
   se3_xyz_bounds.setHigh(1, 0.09);
   se3_xyz_bounds.setLow(2, 0.266);
@@ -279,12 +279,67 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
   }
 
+  // test copyToReals
+  {
+    ob::ScopedState<HybridObjectStateSpace> s1(hystsp);
+    s1->se3State().setX(1.0); s1->se3State().setY(0.0); s1->se3State().setZ(0.0);
+    s1->se3State().rotation().setAxisAngle(1.0, 0.0, 0.0, 0.0);
+    s1->armIndex().value = 1;
+    s1->graspIndex().value = 10;
+
+    std::vector<double> s1Vec;
+    hystsp->copyToReals(s1Vec, s1.get());
+    EXPECT_EQ(1.0, s1Vec[6]);
+  }
+
   // test interpolate
   {
     ob::ScopedState<HybridObjectStateSpace> from(hystsp);
     ob::ScopedState<HybridObjectStateSpace> to(hystsp);
-    ob::ScopedState<HybridObjectStateSpace> cstate(hystsp);
 
+    from->se3State().setX(0.0891485);
+    from->se3State().setY(-0.0156728);
+    from->se3State().setZ(0.308404);
+    from->se3State().rotation().x = 0.0750505;
+    from->se3State().rotation().y = 0.0357382;
+    from->se3State().rotation().z = 0.91119;
+    from->se3State().rotation().w = 0.403514;
+    from->armIndex().value = 1;
+    from->graspIndex().value = 8;
+
+    to->se3State().setX(0.00540861);
+    to->se3State().setY(-0.00887215);
+    to->se3State().setZ(0.39268);
+    to->se3State().rotation().x = -0.0715043;
+    to->se3State().rotation().y = -0.0940231;
+    to->se3State().rotation().z = 0.775785;
+    to->se3State().rotation().w = 0.619842;
+    to->armIndex().value = 1;
+    to->graspIndex().value = 8;
+    ompl::base::SO3StateSpace* pSO3StSp = dynamic_cast<ob::SO3StateSpace*>(
+      dynamic_cast<ob::SE3StateSpace*>(hystsp->getSubspace(0).get())->getSubspace(1).get());
+
+    EXPECT_TRUE(pSO3StSp);
+    pSO3StSp->enforceBounds(&from->se3State().rotation());
+    pSO3StSp->enforceBounds(&to->se3State().rotation());
+
+    std::vector<double> fromVec;
+    std::vector<double> toVec;
+    hystsp->copyToReals(fromVec, from.get());
+    hystsp->copyToReals(toVec, to.get());
+
+    EXPECT_EQ(StateDiff::PoseDiffArmAndGraspSame, hystsp->checkStateDiff(from.get(), to.get()));
+    double se3_dist = hystsp->getSubspace(0)->distance(&from->se3State(), &to->se3State());
+    double hybrid_dist = hystsp->distance(from.get(), to.get());
+    EXPECT_EQ(se3_dist, hybrid_dist);
+    double max_distance = 100;
+    EXPECT_LT(hybrid_dist, max_distance);
+
+    ob::ScopedState<HybridObjectStateSpace> hybridCState(hystsp);
+    ob::ScopedState<ob::SE3StateSpace> se3CState(hystsp->getSubspace(0));
+    hystsp->interpolate(from.get(), to.get(), se3_dist/max_distance, hybridCState.get());
+    hystsp->getSubspace(0)->interpolate(&from->se3State(), &to->se3State(), se3_dist/max_distance, se3CState.get());
+    EXPECT_TRUE(hystsp->getSubspace(0)->equalStates(&hybridCState->se3State(), se3CState.get()));
   }
 
 
@@ -393,7 +448,7 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
 //  s1.random();
 //  s2.random();
 //
-//  hystsp->as<ompl::base::SE3StateSpace>(0)->copyState(&(s1->se3State()), &(s2->se3State()));
+//  hystsp->as<ob::SE3StateSpace>(0)->copyState(&(s1->se3State()), &(s2->se3State()));
 //
 //  s1->armIndex().value = 1;
 //  s2->armIndex().value = 2;

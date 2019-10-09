@@ -91,7 +91,6 @@
     <disable_collisions link1="PSM1_outer_insertion_link" link2="PSM2_outer_pitch_back_link" reason="Never" />
     <disable_collisions link1="PSM1_outer_insertion_link" link2="davinci_endo_cam_l" reason="Never" />
     <disable_collisions link1="PSM1_outer_insertion_link" link2="davinci_endo_cam_l_camera" reason="Never" />
-    <disable_collisions link1="PSM1_outer_insertion_link" link2="davinci_endo_cam_r" reason="Never" />
     <disable_collisions link1="PSM1_outer_insertion_link" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM1_outer_pitch_back_link" link2="PSM1_outer_pitch_front_link" reason="Never" />
     <disable_collisions link1="PSM1_outer_pitch_back_link" link2="PSM1_outer_pitch_top_link" reason="Adjacent" />
@@ -158,7 +157,6 @@
     <disable_collisions link1="PSM1_outer_pitch_top_link" link2="PSM2_tool_tip_link" reason="Never" />
     <disable_collisions link1="PSM1_outer_pitch_top_link" link2="davinci_endo_cam_l" reason="Never" />
     <disable_collisions link1="PSM1_outer_pitch_top_link" link2="davinci_endo_cam_l_camera" reason="Never" />
-    <disable_collisions link1="PSM1_outer_pitch_top_link" link2="davinci_endo_cam_r" reason="Never" />
     <disable_collisions link1="PSM1_outer_pitch_top_link" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM1_outer_yaw_link" link2="PSM1_psm_base_link" reason="Adjacent" />
     <disable_collisions link1="PSM1_outer_yaw_link" link2="PSM1_tool_main_link" reason="Adjacent" />
@@ -253,7 +251,9 @@
     <disable_collisions link1="PSM1_tool_wrist_link" link2="PSM2_outer_yaw_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_link" link2="PSM2_psm_base_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_link" link2="PSM2_tool_tip_link" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_link" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_link" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_link" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_link" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="PSM1_tool_wrist_sca_ee_link_2" reason="Default" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="PSM1_tool_wrist_sca_shaft_link" reason="Adjacent" />
@@ -263,7 +263,9 @@
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="PSM2_outer_yaw_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="PSM2_psm_base_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="PSM2_tool_tip_link" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="PSM1_tool_wrist_sca_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="PSM1_tool_wrist_shaft_link" reason="Never" />
@@ -272,7 +274,9 @@
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="PSM2_outer_yaw_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="PSM2_psm_base_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="PSM2_tool_tip_link" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="PSM1_tool_wrist_sca_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="PSM1_tool_wrist_shaft_link" reason="Adjacent" />
@@ -281,7 +285,9 @@
     <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="PSM2_outer_yaw_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="PSM2_psm_base_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="PSM2_tool_tip_link" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_link" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="PSM1_tool_wrist_shaft_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="PSM2_outer_pitch_back_link" reason="Never" />
@@ -296,14 +302,18 @@
     <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="PSM2_tool_wrist_sca_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="PSM2_tool_wrist_sca_shaft_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="PSM2_tool_wrist_shaft_link" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_sca_shaft_link" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="PSM2_outer_pitch_back_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="PSM2_outer_pitch_front_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="PSM2_outer_yaw_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="PSM2_psm_base_link" reason="Never" />
     <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="PSM2_tool_tip_link" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM1_tool_wrist_shaft_link" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM2_outer_insertion_link" link2="PSM2_outer_pitch_back_link" reason="Adjacent" />
     <disable_collisions link1="PSM2_outer_insertion_link" link2="PSM2_outer_pitch_front_link" reason="Never" />
@@ -318,7 +328,6 @@
     <disable_collisions link1="PSM2_outer_insertion_link" link2="PSM2_tool_wrist_sca_link" reason="Never" />
     <disable_collisions link1="PSM2_outer_insertion_link" link2="PSM2_tool_wrist_sca_shaft_link" reason="Never" />
     <disable_collisions link1="PSM2_outer_insertion_link" link2="PSM2_tool_wrist_shaft_link" reason="Never" />
-    <disable_collisions link1="PSM2_outer_insertion_link" link2="davinci_endo_cam_l" reason="Never" />
     <disable_collisions link1="PSM2_outer_insertion_link" link2="davinci_endo_cam_l_camera" reason="Never" />
     <disable_collisions link1="PSM2_outer_insertion_link" link2="davinci_endo_cam_r" reason="Never" />
     <disable_collisions link1="PSM2_outer_insertion_link" link2="davinci_endo_cam_r_camera" reason="Never" />
@@ -363,7 +372,6 @@
     <disable_collisions link1="PSM2_outer_pitch_top_link" link2="PSM2_tool_wrist_sca_link" reason="Never" />
     <disable_collisions link1="PSM2_outer_pitch_top_link" link2="PSM2_tool_wrist_sca_shaft_link" reason="Never" />
     <disable_collisions link1="PSM2_outer_pitch_top_link" link2="PSM2_tool_wrist_shaft_link" reason="Never" />
-    <disable_collisions link1="PSM2_outer_pitch_top_link" link2="davinci_endo_cam_l" reason="Never" />
     <disable_collisions link1="PSM2_outer_pitch_top_link" link2="davinci_endo_cam_l_camera" reason="Never" />
     <disable_collisions link1="PSM2_outer_pitch_top_link" link2="davinci_endo_cam_r" reason="Never" />
     <disable_collisions link1="PSM2_outer_pitch_top_link" link2="davinci_endo_cam_r_camera" reason="Never" />
@@ -416,20 +424,26 @@
     <disable_collisions link1="PSM2_tool_wrist_link" link2="PSM2_tool_wrist_sca_link" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_link" link2="PSM2_tool_wrist_sca_shaft_link" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_link" link2="PSM2_tool_wrist_shaft_link" reason="Adjacent" />
+    <disable_collisions link1="PSM2_tool_wrist_link" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM2_tool_wrist_link" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM2_tool_wrist_link" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM2_tool_wrist_link" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_1" link2="PSM2_tool_wrist_sca_ee_link_2" reason="Default" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_1" link2="PSM2_tool_wrist_sca_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_1" link2="PSM2_tool_wrist_shaft_link" reason="Never" />
+    <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_l_camera" reason="Never" />
+    <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_r" reason="User" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_1" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_2" link2="PSM2_tool_wrist_sca_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_2" link2="PSM2_tool_wrist_shaft_link" reason="Never" />
+    <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_l_camera" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_r" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_sca_ee_link_2" link2="davinci_endo_cam_r_camera" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_sca_link" link2="PSM2_tool_wrist_sca_shaft_link" reason="Adjacent" />
     <disable_collisions link1="PSM2_tool_wrist_sca_link" link2="PSM2_tool_wrist_shaft_link" reason="Adjacent" />
+    <disable_collisions link1="PSM2_tool_wrist_sca_link" link2="davinci_endo_cam_l" reason="User" />
     <disable_collisions link1="PSM2_tool_wrist_sca_link" link2="davinci_endo_cam_l_camera" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_sca_link" link2="davinci_endo_cam_r" reason="Never" />
     <disable_collisions link1="PSM2_tool_wrist_sca_link" link2="davinci_endo_cam_r_camera" reason="Never" />

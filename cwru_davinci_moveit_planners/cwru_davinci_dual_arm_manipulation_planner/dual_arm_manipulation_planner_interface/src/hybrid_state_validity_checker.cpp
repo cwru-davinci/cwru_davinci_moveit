@@ -118,7 +118,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
       planning_scene_->setCurrentState(*kstate);
       // check collision avoidance
       collision_detection::CollisionResult res;
-      planning_scene_->checkCollisionUnpadded(collision_request_simple_, res, *kstate);
+      planning_scene_->checkCollision(collision_request_simple_, res, *kstate);
       if(res.collision)
       {
         ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");

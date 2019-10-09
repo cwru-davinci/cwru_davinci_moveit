@@ -130,8 +130,8 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.2);
-  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(0, -0.101);
+  se3_xyz_bounds.setHigh(0, 0.101);
   se3_xyz_bounds.setLow(1, -0.06);
   se3_xyz_bounds.setHigh(1, 0.09);
   se3_xyz_bounds.setLow(2, 0.266);
@@ -212,7 +212,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
     // attempt to solve the problem within one second of planning time
     auto start_ts = std::chrono::high_resolution_clock::now();
     si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-    ob::PlannerStatus solved = planner->ob::Planner::solve(100.0);
+    ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> planning_time = finish - start_ts;
@@ -257,8 +257,6 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
       failed_num += 1;
     }
 
-//    si->freeState(start.get());
-//    si->freeState(goal.get());
     planner->clear();
   }
   PerformanceStats stats;
@@ -282,8 +280,8 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.2);
-  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(0, -0.101);
+  se3_xyz_bounds.setHigh(0, 0.101);
   se3_xyz_bounds.setLow(1, -0.06);
   se3_xyz_bounds.setHigh(1, 0.09);
   se3_xyz_bounds.setLow(2, 0.266);
@@ -409,8 +407,6 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
       failed_num += 1;
     }
 
-//    si->freeState(start.get());
-//    si->freeState(goal.get());
     planner->clear();
   }
   PerformanceStats stats;
@@ -434,8 +430,8 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.2);
-  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(0, -0.101);
+  se3_xyz_bounds.setHigh(0, 0.101);
   se3_xyz_bounds.setLow(1, -0.06);
   se3_xyz_bounds.setHigh(1, 0.09);
   se3_xyz_bounds.setLow(2, 0.266);
@@ -561,8 +557,6 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
       failed_num += 1;
     }
 
-//    si->freeState(start.get());
-//    si->freeState(goal.get());
     planner->clear();
   }
   PerformanceStats stats;
@@ -696,9 +690,9 @@ int main(int argc, char** argv)
 
   std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(true);
 
-  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, 5);
-  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, 5);
-  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, 5);
+  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
+  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
+  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
 
   printPerformanceStats(oneHfStats, "One Handoff");
   printPerformanceStats(twoHfStats, "Two Handoff");
