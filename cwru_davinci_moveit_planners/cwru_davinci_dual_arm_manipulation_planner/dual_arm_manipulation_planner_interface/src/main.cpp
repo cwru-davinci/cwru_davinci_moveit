@@ -85,41 +85,17 @@ void plan(const ros::NodeHandle &node_handle,
           int gs_grasp_pose_index,
           std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses)
 {
-
-//  for(int i = 0; i < grasp_poses.size(); i++)
-//  {
-//    if(grasp_poses[i].graspParamInfo.grasp_id == 121)
-//    {
-//      ss_grasp_pose_index = i;
-//      continue;
-//    }
-//    else if(grasp_poses[i].graspParamInfo.grasp_id == 121)
-//    {
-//      gs_grasp_pose_index = i;
-//      continue;
-//    }
-//    else
-//    {
-//      if (grasp_poses[ss_grasp_pose_index].graspParamInfo.grasp_id ==
-//          121 && grasp_poses[gs_grasp_pose_index].graspParamInfo.grasp_id == 121)
-//      {
-//        break;
-//      }
-//    }
-//  }
-//  gs_grasp_pose_index = ss_grasp_pose_index;
-
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
   // create an instance of state space
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size(), grasp_poses));
 
-  // construct an instance of  space information from this state space
+  // construct an instance of space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.2);
-  se3_xyz_bounds.setHigh(0, 0.2);
+  se3_xyz_bounds.setLow(0, -0.101);
+  se3_xyz_bounds.setHigh(0, 0.101);
   se3_xyz_bounds.setLow(1, -0.06);
   se3_xyz_bounds.setHigh(1, 0.09);
   se3_xyz_bounds.setLow(2, 0.266);
@@ -130,93 +106,52 @@ void plan(const ros::NodeHandle &node_handle,
 
   si->setStateValidityChecker(
     std::make_shared<HybridStateValidityChecker>(node_handle, robot_name, object_name, si));
-// or this call:
-//  si->setStateValidityCheckingResolution(0.03); // 3%
   si->setMotionValidator(
     std::make_shared<HybridMotionValidator>(node_handle, node_handle_priv, robot_name, object_name, si));
 
   si->setup();
 
+  ob::StateSamplerPtr stateSampler;  // setup a sampler
+  stateSampler = si->allocStateSampler();  // assign HybridStateSampler to stateSampler
+
   // create a random start state
   ob::ScopedState<HybridObjectStateSpace> start(hystsp);
   ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-  start->se3State().setXYZ(ss_needle_pose_translation[0],
-                           ss_needle_pose_translation[1],
-                           ss_needle_pose_translation[2]);
-  start->se3State().rotation().setAxisAngle(ss_needle_pose_orientation[0],
-                                            ss_needle_pose_orientation[1],
-                                            ss_needle_pose_orientation[2],
-                                            ss_needle_pose_orientation[3]);
-  start->armIndex().value = ss_arm_index;  // set arm index
-//  for(int i = 0; i < grasp_poses.size(); i++)
-//  {
-    start->graspIndex().value = 0;
-//    if(!si->isValid(start.get()))
-//      ros::shutdown();
-//      std::cout << "Initial state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
-//  }
-//  robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-//  robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
-//
-//  moveit::core::RobotStatePtr daVinciRobotState(new robot_state::RobotState(robot_model));
-//  planning_scene::PlanningScenePtr planning_scene(new planning_scene::PlanningScene(robot_model));
-//
-//  static const std::string PSM_ONE_PLANNING_GROUP = "psm_one";
-//  static const std::string PSM_TWO_PLANNING_GROUP = "psm_two";
-//
-//  const robot_state::JointModelGroup* psm1_jt_group_parent = daVinciRobotState->getJointModelGroup(PSM_ONE_PLANNING_GROUP);
-//  daVinciRobotState->setToDefaultValues(psm1_jt_group_parent, "psm_one_home");
-//  const moveit::core::LinkModel* tip_link = psm1_jt_group_parent->getOnlyOneEndEffectorTip();
-//  Eigen::Affine3d tip_frame_wrt_world = daVinciRobotState->getGlobalLinkTransform(tip_link);
-//
-//  Eigen::Affine3d needle_wrt_world = tip_frame_wrt_world * grasp_poses[gs_grasp_pose_index].grasp_pose;
-//  Eigen::AngleAxisd angle_ax(needle_wrt_world.linear());
-//  Eigen::Vector3d axis = angle_ax.axis();
-//  axis.normalize();
-//
-//  goal->se3State().setXYZ(needle_wrt_world.translation()[0],
-//                          needle_wrt_world.translation()[1],
-//                          needle_wrt_world.translation()[2]);
-//  goal->se3State().rotation().setAxisAngle(axis(0),
-//                                           axis(1),
-//                                           axis(2),
-//                                           angle_ax.angle());
-
-  goal->se3State().setXYZ(gs_needle_pose_translation[0],
-                          gs_needle_pose_translation[1],
-                          gs_needle_pose_translation[2]);
-  goal->se3State().rotation().setAxisAngle(gs_needle_pose_orientation[0],
-                                           gs_needle_pose_orientation[1],
-                                           gs_needle_pose_orientation[2],
-                                           gs_needle_pose_orientation[3]);
-  goal->armIndex().value = gs_arm_index;  // set arm index
-//  goal->graspIndex().value = 0;
-  for(int i = 0; i < grasp_poses.size(); i++)
+  bool is_ss_valid= false;
+  while(!is_ss_valid)
   {
-    if(grasp_poses[i].part_id == 0)
-    {
-      goal->graspIndex().value = i;
-      if(si->isValid(goal.get()))
-        break;
-    }
+    stateSampler->sampleUniform(start.get());
+    is_ss_valid = si->isValid(start.get());
   }
 
-  std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
-  bool valid_ss = si->isValid(start.get());
-  bool valid_gs = si->isValid(goal.get());
+  stateSampler->sampleUniform(goal.get());
 
-  hystsp->printState(start.get(), std::cout);
-  hystsp->printState(goal.get(), std::cout);
+  int start_arm_index = start->armIndex().value;
+  int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
+  int goal_arm_index = goal->armIndex().value;
+  int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
+  bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
+  bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
 
-  double distance_btw_s_g = hystsp->distance(start.get(), goal.get());
+  bool is_gs_valid = si->isValid(goal.get());
+  while(same_arm || same_grasp_part || !is_gs_valid)
+  {
+    stateSampler->sampleUniform(goal.get());
+    is_gs_valid = si->isValid(goal.get());
+    if(!is_gs_valid)
+      continue;
+    same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
+    same_grasp_part = ( start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+  }
+
   // create a problem instance
   auto pdef(std::make_shared<ob::ProblemDefinition>(si));
 
   // set the start and goal states
   pdef->setStartAndGoalStates(start, goal);
 
-  si->setValidStateSamplerAllocator(allocHybridValidStateSampler);
+//    si->setValidStateSamplerAllocator(allocHybridValidStateSampler);
   // create a planner for the defined space
   auto planner(std::make_shared<og::RRTConnect>(si));
   // set the problem we are trying to solve for the planner
@@ -231,53 +166,42 @@ void plan(const ros::NodeHandle &node_handle,
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
   si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-  ob::PlannerStatus solved = planner->ob::Planner::solve(500.0);
+  ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> planning_time = finish - start_ts;
 
-//  planner->getPlannerData(plannedData);
-  si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(nullptr, true);
   if (solved)
   {
-    if(pdef->hasExactSolution())
+    if (pdef->hasExactSolution())
     {
       std::cout << "Has exact solution" << std::endl;
+      double *total_time = new double;
+      si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
+      delete total_time;
     }
     else
-    {
       std::cout << "Do not have exact solution" << std::endl;
-    }
-
 
     og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
     // print the path to screen
-    std::cout << "Found solution:\n" << std::endl;
+    std::cout << "Found solution:\n" << "\n";
     std::cout << "Found solution with " << slnPath.getStateCount()
-                 << " states and length " << slnPath.length( ) << std::endl;
+              << " states and length " << slnPath.length() << std::endl;
     // print the path to screen
     slnPath.printAsMatrix(std::cout);
 
-//    DavinciNeedleHandoffExecution handOffExecute(slnPath, hystsp->getJointSpaceDimension());
-
     std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
-    ob::PlannerData plannedData(si);
-    planner->getPlannerData(plannedData);
-    plannedData.computeEdgeWeights();
+    ob::PlannerData data(si);
+    planner->getPlannerData(data);
+    data.computeEdgeWeights();
 
-    std::cout << "Found " << plannedData.numVertices() << " vertices " << std::endl;
-    std::cout << "Found " << plannedData.numEdges ( ) << " edges " << std::endl;
-    std::cout << "Actual Planning Time is: " << planning_time.count() << "s\n";
-//
-//    for(int i = 0; i < plannedData.numVertices(); i++)
-//    {
-//      plannedData.getVertex(i).getState()->as<HybridObjectStateSpace::StateType>()->clearJointValues();
-//    }
-//
-//    plannedData.printGraphviz();
-//    plannedData.printGraphML();
-//    ob::PlannerDataStorage dataStorage;
-//    dataStorage.store(plannedData , "myPlannerData");
+    std::cout << "Found " << data.numVertices() << " vertices " << "\n";
+    std::cout << "Found " << data.numEdges() << " edges " << "\n";
+    std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
+
+    ob::PlannerDataStorage dataStorage;
+    dataStorage.store(data, "myPlannerData");
   }
   else
     std::cout << "No solution found" << std::endl;
