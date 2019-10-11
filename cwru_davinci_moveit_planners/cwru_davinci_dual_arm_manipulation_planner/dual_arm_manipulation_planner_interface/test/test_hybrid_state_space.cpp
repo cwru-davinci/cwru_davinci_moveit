@@ -111,7 +111,120 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
   hystsp->setup();
-  
+
+  // construct an instance of space information from hybrid object state space
+  auto si(std::make_shared<ob::SpaceInformation>(hystsp));
+
+  // test HybridObjectStateSpace::StateType
+  {
+    ob::ScopedState<HybridObjectStateSpace> hyState(hystsp);
+    EXPECT_EQ(0, hyState->flags);
+    EXPECT_TRUE(!hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    hyState->markInvalid();
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    hyState->setJointsComputed(false);
+    EXPECT_TRUE(!hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    hyState->setJointsComputed(true);
+    EXPECT_TRUE(hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    hyState->markValid();
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(hyState->jointsComputed());
+    hyState->setJointsComputed(true);
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(hyState->jointsComputed());
+    hyState->setJointsComputed(false);
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    hyState->markInvalid();
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+
+    hyState->clearKnownInformation();
+    EXPECT_EQ(0, hyState->flags);
+    EXPECT_TRUE(!hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    hyState->markValid();
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    hyState->setJointsComputed(true);
+    EXPECT_TRUE(hyState->jointsComputed());
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    hyState->setJointsComputed(false);
+    EXPECT_TRUE(!hyState->jointsComputed());
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    hyState->markInvalid();
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    hyState->setJointsComputed(false);
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    hyState->setJointsComputed(true);
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(hyState->jointsComputed());
+    hyState->markValid();
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(hyState->jointsComputed());
+
+    hyState->clearKnownInformation();
+    EXPECT_EQ(0, hyState->flags);
+    EXPECT_TRUE(!hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    hyState->setJointsComputed(true);
+    EXPECT_TRUE(hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    hyState->setJointsComputed(false);
+    EXPECT_TRUE(!hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    hyState->setJointsComputed(true);
+    EXPECT_TRUE(hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    hyState->markValid();
+    EXPECT_TRUE(hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(hyState->jointsComputed());
+    hyState->markInvalid();
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(hyState->jointsComputed());
+    hyState->setJointsComputed(false);
+    EXPECT_TRUE(!hyState->jointsComputed());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    hyState->setJointsComputed(true);
+    EXPECT_TRUE(hyState->jointsComputed());
+    EXPECT_TRUE(hyState->isValidityKnown());
+    EXPECT_TRUE(!hyState->isMarkedValid());
+
+    ob::State* state = si->allocState();
+    HybridObjectStateSpace::StateType* pHyState = state->as<HybridObjectStateSpace::StateType>();
+    EXPECT_TRUE(pHyState);
+    EXPECT_EQ(0, pHyState->flags);
+  }
+
   // test checkStateDiff and distance
   {
     ob::ScopedState<HybridObjectStateSpace> s1(hystsp);
