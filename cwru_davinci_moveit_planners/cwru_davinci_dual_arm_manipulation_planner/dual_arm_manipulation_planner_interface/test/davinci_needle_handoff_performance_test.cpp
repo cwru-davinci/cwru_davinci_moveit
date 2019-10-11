@@ -124,7 +124,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
   // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size(), grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
   // construct an instance of  space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -274,7 +274,7 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
   // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size(), grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
   // construct an instance of  space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -424,7 +424,7 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
   // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size(), grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
   // construct an instance of  space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -690,9 +690,9 @@ int main(int argc, char** argv)
 
   std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(true);
 
-  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
-  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
-  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, 100);
+  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, 10);
+  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, 10);
+  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, 10);
 
   printPerformanceStats(oneHfStats, "One Handoff");
   printPerformanceStats(twoHfStats, "Two Handoff");

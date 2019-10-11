@@ -276,10 +276,10 @@ public:
 //    double distance;
   };
 
-  HybridObjectStateSpace(int armIndexLowerBound,
-                         int armIndexUpperBound,
-                         int graspIndexLowerBound,
-                         int graspIndexUpperBound,
+  HybridObjectStateSpace(int arm_idx_lw_bd,
+                         int arm_idx_up_bd,
+                         int grasp_idx_lw_bd,
+                         int grasp_idx_up_bd,
                          const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                          const std::string &robot_name = "robot_description");
 
@@ -304,6 +304,8 @@ public:
   virtual ompl::base::State *allocState() const override;
 
   virtual void freeState(ompl::base::State *state) const override;
+
+  virtual bool satisfiesBounds(const ompl::base::State *state) const;
 
   virtual void copyState(ompl::base::State *destination, const ompl::base::State *source) const override;
 
@@ -374,7 +376,7 @@ protected:
 
   int chooseSupportArm(const int from_arm_index, const int to_arm_index) const;
 
-  bool interpolateGrasp(const StateType *from,
+  void interpolateGrasp(const StateType *from,
                         const StateType *to,
                         StateType *cstate) const;
 
@@ -397,11 +399,6 @@ protected:
    */
   int chooseGraspPart(int from_part_id, int to_part_id) const;
 
-  robot_model::RobotModelPtr kmodel_;
-
-  robot_model_loader::RobotModelLoader robot_model_loader_;
-
-  std::string robot_name_;
 
   void initializeIKPlugin();
 
@@ -411,34 +408,23 @@ protected:
                  const std::string &tip_frame,
                  const Eigen::Affine3d &tip_pose_wrt_world) const;
 
+protected:
+  int arm_idx_lw_bd_;
+  int arm_idx_up_bd_;
+  int grasp_idx_lw_bd_;
+  int grasp_idx_up_bd_;
+
+  robot_model::RobotModelPtr kmodel_;
+
+  robot_model_loader::RobotModelLoader robot_model_loader_;
+
+  std::string robot_name_;
+
   boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
   boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;
   boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase> >
     kinematics_loader_;
-//  struct PoseComponent
-//  {
-//    PoseComponent(const robot_model::JointModelGroup *subgroup,
-//                  const robot_model::JointModelGroup::KinematicsSolver &k,
-//                  const moveit_msgs::Grasp &grasp);
-//
-//    bool computeStateFK(StateType *full_state) const;
-//
-//    bool computeStateIK(StateType *full_state) const;
-//
-//    bool operator<(const PoseComponent &o) const
-//    {
-//      return subgroup_->getName() < o.subgroup_->getName();
-//    }
-//
-//    const robot_model::JointModelGroup *subgroup_;
-//    boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
-//    moveit_msgs::Grasp grasp_;
-////    std::vector<unsigned int> bijection_;
-//    ompl::base::StateSpacePtr state_space_;
-//    std::vector<std::string> fk_link_;
-//  };
-//
-//  PoseComponent object_pose_;
+
 };
 }
 

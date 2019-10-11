@@ -99,7 +99,7 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
 //  EXPECT_TRUE(pSimpleGrasp);
 
   std::vector<cwru_davinci_grasp::GraspInfo> grasp_pose = pSimpleGrasp->getAllPossibleNeedleGrasps();
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_pose.size(), grasp_pose));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_pose.size()-1, grasp_pose));
 
   ob::RealVectorBounds se3_xyz_bounds(3);
   se3_xyz_bounds.setLow(0, -0.101);

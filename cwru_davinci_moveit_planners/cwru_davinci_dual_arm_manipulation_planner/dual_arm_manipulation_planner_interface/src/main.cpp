@@ -88,7 +88,7 @@ void plan(const ros::NodeHandle &node_handle,
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
   // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size(), grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
   // construct an instance of space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -156,7 +156,7 @@ void plan(const ros::NodeHandle &node_handle,
   auto planner(std::make_shared<og::RRTConnect>(si));
   // set the problem we are trying to solve for the planner
   planner->setProblemDefinition(pdef);
-  planner->setRange(100.0);
+  planner->setRange(90.0);
   // perform setup steps for the planner
   planner->setup();
   // print the settings for this space
@@ -201,7 +201,7 @@ void plan(const ros::NodeHandle &node_handle,
     std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
 
     ob::PlannerDataStorage dataStorage;
-    dataStorage.store(data, "myPlannerData");
+    dataStorage.store(data, std::cout);
   }
   else
     std::cout << "No solution found" << std::endl;

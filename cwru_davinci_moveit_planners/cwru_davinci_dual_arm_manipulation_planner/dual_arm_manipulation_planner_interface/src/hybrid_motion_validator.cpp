@@ -720,7 +720,7 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
   collision_detection::CollisionRequest collision_request;
   collision_request.contacts = true;
   collision_detection::CollisionResult collision_result;
-  planning_scene_->checkCollisionUnpadded(collision_request, collision_result, rstate);
+  planning_scene_->checkCollision(collision_request, collision_result, rstate);
   bool no_collision = !collision_result.collision;
 
   auto finish_ik = std::chrono::high_resolution_clock::now();

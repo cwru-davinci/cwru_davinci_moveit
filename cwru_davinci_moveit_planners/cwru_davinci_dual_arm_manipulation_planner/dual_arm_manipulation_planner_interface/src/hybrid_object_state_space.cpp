@@ -97,13 +97,20 @@ void HybridStateSampler::sampleGaussian(State *state, const State *mean, double 
   // left blank
 }
 
-HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
-                                               int armIndexUpperBound,
-                                               int graspIndexLowerBound,
-                                               int graspIndexUpperBound,
+HybridObjectStateSpace::HybridObjectStateSpace(int arm_idx_lw_bd,
+                                               int arm_idx_up_bd,
+                                               int grasp_idx_lw_bd,
+                                               int grasp_idx_up_bd,
                                                const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                                                const std::string &robot_name)
-  : CompoundStateSpace(), possible_grasps_(possible_grasps), robot_model_loader_(robot_name)
+  : CompoundStateSpace(),
+    possible_grasps_(possible_grasps),
+    robot_model_loader_(robot_name),
+    arm_idx_lw_bd_(arm_idx_lw_bd),
+    arm_idx_up_bd_(arm_idx_up_bd),
+    grasp_idx_lw_bd_(grasp_idx_lw_bd),
+    grasp_idx_up_bd_(grasp_idx_up_bd)
+
 {
 //  initializeIKPlugin();
 
@@ -113,17 +120,17 @@ HybridObjectStateSpace::HybridObjectStateSpace(int armIndexLowerBound,
   addSubspace(std::make_shared<SE3StateSpace>(), 1.0);  // object pose space
   components_.back()->setName(components_.back()->getName() + ":ObjectPose");
 
-  addSubspace(std::make_shared<DiscreteStateSpace>(armIndexLowerBound, armIndexUpperBound),
+  addSubspace(std::make_shared<DiscreteStateSpace>(arm_idx_lw_bd_, arm_idx_up_bd_),
               1.0);  // arm index
   components_.back()->setName(components_.back()->getName() + ":ArmIndex");
 
-  addSubspace(std::make_shared<DiscreteStateSpace>(graspIndexLowerBound, graspIndexUpperBound),
+  addSubspace(std::make_shared<DiscreteStateSpace>(grasp_idx_lw_bd_, grasp_idx_up_bd_),
               1.0);  // grasp index
   components_.back()->setName(components_.back()->getName() + ":GraspIndex");
 
   addSubspace(std::make_shared<RealVectorStateSpace>(6), 1.0);
   components_.back()->setName(components_.back()->getName() + ":JointVariables");
-  components_[3]->as<RealVectorStateSpace>()->setBounds(-5, 5);
+  components_[3]->as<RealVectorStateSpace>()->setBounds(-7, 7);
 
   kmodel_ = robot_model_loader_.getModel();
 
@@ -298,6 +305,15 @@ void HybridObjectStateSpace::freeState(State *state) const
   ompl::base::CompoundStateSpace::freeState(state);
 }
 
+bool HybridObjectStateSpace::satisfiesBounds(const State *state) const
+{
+  const auto *cstate = static_cast<const StateType *>(state);
+  for (unsigned int i = 0; i < componentCount_ - 1; ++i)
+    if (!components_[i]->satisfiesBounds(cstate->components[i]))
+      return false;
+  return true;
+}
+
 void HybridObjectStateSpace::copyState(State *destination, const State *source) const
 {
   ompl::base::CompoundStateSpace::copyState(destination, source);
@@ -380,38 +396,19 @@ void HybridObjectStateSpace::interpolate(const State *from,
 
   const auto *hys_from = static_cast<const StateType *>(from);
   const auto *hys_to = static_cast<const StateType *>(to);
-//  printState(hys_from, std::cout);
-//  printState(hys_to, std::cout);
 
-//  ompl::RNG randNum;
-//  double random_num = randNum.gaussian01();
-//  bool bound = 0.45;
-//  bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
-//  bool do_transit = within_1Sd ? true : false;
-
-//  if(do_transit)
-//  {
-//    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-//    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-//    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-//    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-//  }
-//  else
-//  {
-  bool is_found = false;
   switch (checkStateDiff(hys_from, hys_to))
   {
     case StateDiff::AllSame:
       copyState(cstate, hys_to);
-      is_found = true;
       break;
     case StateDiff::ArmDiffGraspAndPoseSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      interpolateGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::GraspDiffArmAndPoseSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      interpolateGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::PoseDiffArmAndGraspSame:
       components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
@@ -421,30 +418,21 @@ void HybridObjectStateSpace::interpolate(const State *from,
       break;
     case StateDiff::ArmAndGraspDiffPoseSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      interpolateGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::ArmAndPoseDiffGraspSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      interpolateGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::GraspAndPoseDiffArmSame:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      interpolateGrasp(hys_from, hys_to, cstate);
       break;
     case StateDiff::AllDiff:
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
-      is_found = interpolateGrasp(hys_from, hys_to, cstate);
+      interpolateGrasp(hys_from, hys_to, cstate);
       break;
   }
-
-  if(!is_found)
-  {
-    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-  }
-//  }
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
@@ -538,9 +526,9 @@ StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const 
 }
 
 
-bool HybridObjectStateSpace::interpolateGrasp(const StateType *from,
+void HybridObjectStateSpace::interpolateGrasp(const StateType *from,
                                               const StateType *to,
-                                                    StateType *cstate) const
+                                              StateType *cstate) const
 {
   const int from_arm_index = from->armIndex().value;
   const int to_arm_index = to->armIndex().value;
@@ -551,24 +539,22 @@ bool HybridObjectStateSpace::interpolateGrasp(const StateType *from,
   const int from_part_id = possible_grasps_[from_grasp_index].part_id;
   const int to_part_id = possible_grasps_[to_grasp_index].part_id;
 
-  bool is_found = false;
-  switch (handOffsNum(from_arm_index, 0, from_part_id, to_arm_index, 0, to_part_id))
+  int num_handoff = handOffsNum(from_arm_index,from_grasp_index, from_part_id, to_arm_index, to_grasp_index, to_part_id);
+
+  switch (num_handoff)
   {
     case 1:
       cstate->armIndex().value = to_arm_index;
       cstate->graspIndex().value = to_grasp_index;
-      is_found = true;
-      return is_found;
+      break;
     case 2:
       cstate->armIndex().value = chooseSupportArm(from_arm_index, to_arm_index);
-//      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
-      is_found = findValidGrasp(from_part_id, to_part_id, cstate);
-      return is_found;
+      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
+      break;
     case 3:
       cstate->armIndex().value = to_arm_index;
-//      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
-      is_found = findValidGrasp(from_part_id, to_part_id, cstate);
-      return is_found;
+      cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
+      break;
   }
 }
 
@@ -612,23 +598,30 @@ int HybridObjectStateSpace::chooseSupportArm(const int from_arm_index, const int
 
 int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) const
 {
-  int cs_grasp_id;
+  ompl::RNG randNumGenerator;
+  int cs_grasp_id = randNumGenerator.uniformInt(grasp_idx_lw_bd_, grasp_idx_up_bd_);
 
-  ompl::base::DiscreteStateSampler grasp_index_sampler(components_[2].get());
-  ompl::base::DiscreteStateSpace::StateType *temp_state = components_[2]->allocState()->as<ompl::base::DiscreteStateSpace::StateType>();
+  std::unordered_set<int> invalid_grasp_list;
 
-  grasp_index_sampler.sampleUniform(temp_state);
-  int grasp_part = possible_grasps_[temp_state->value].part_id;
-
-  while((grasp_part == from_part_id) || (grasp_part == to_part_id))
+  int stop_it_num = grasp_idx_up_bd_ + 1;
+  while(invalid_grasp_list.size() < stop_it_num)
   {
-    grasp_index_sampler.sampleUniform(temp_state);
-    grasp_part = possible_grasps_[temp_state->value].part_id;
+    if(invalid_grasp_list.find(cs_grasp_id) == invalid_grasp_list.end())  // element is not in the container
+    {
+      int cs_grasp_part = possible_grasps_[cs_grasp_id].part_id;
+      if((cs_grasp_part != from_part_id) && (cs_grasp_part != to_part_id))  // if failed insert to invalid_grasp_list
+      {
+        return cs_grasp_id;
+      }
+      else
+      {
+        invalid_grasp_list.insert(cs_grasp_id);
+        cs_grasp_id = randNumGenerator.uniformInt(grasp_idx_lw_bd_, grasp_idx_up_bd_);
+      }
+    }
   }
 
-  cs_grasp_id = temp_state->value;
-  components_[2]->freeState(temp_state);
-
+  cs_grasp_id = grasp_idx_up_bd_ + 1; // should not be there
   return cs_grasp_id;
 }
 
@@ -637,51 +630,6 @@ bool HybridObjectStateSpace::findValidGrasp(int from_part_id, int to_part_id, St
   auto start = std::chrono::high_resolution_clock::now();
 
   bool is_found = false;
-//  for(int i = 0; possible_grasps_.size(); i++)
-//  {
-//    int grasp_part = possible_grasps_[i].part_id;
-//    if((grasp_part != from_part_id) && (grasp_part != to_part_id))
-//    {
-//      cstate->graspIndex().value = i;
-//      if(computeStateIK(cstate))
-//      {
-//        is_found = true;
-//        return is_found;
-//      }
-//    }
-//  }
-
-//  std::vector<int> invalid_grasp_list;
-//  for(int i = 0; i < possible_grasps_.size(); i++)
-//    invalid_grasp_list.push_back(i);
-
-//  int random_range = invalid_grasp_list.size() - 1;
-//  ompl::RNG randNumGenerator;
-
-//  for(int i = 0; i < invalid_grasp_list.size(); i++)
-//  {
-//    int random_grasp_index = randNumGenerator.uniformInt(0, random_range);
-//    int grasp_part = possible_grasps_[random_grasp_index].part_id;
-//    // first round screen
-//    if ((grasp_part == from_part_id) || (grasp_part == to_part_id))  // if failed insert to invalid_grasp_list
-//    {
-//      invalid_grasp_list[random_grasp_index] = random_range;
-//      random_range--;
-//      continue;
-//    }
-//    // if past first round scree then check validity here
-//    cstate->graspIndex().value = random_grasp_index;
-//    if(computeStateIK(cstate))
-//    {
-//      auto finish = std::chrono::high_resolution_clock::now();
-//      std::chrono::duration<double> elapsed = finish - start;
-//      choose_grasp_duration_ += elapsed;
-//      is_found = true;
-//      return is_found;
-//    }
-//    invalid_grasp_list[random_grasp_index] = random_range;
-//    random_range--;
-//  }
 
   std::unordered_set<int> invalid_grasp_list;
   ompl::RNG randNumGenerator;
@@ -815,101 +763,3 @@ bool HybridObjectStateSpace::setFromIK(robot_state::RobotState &rstate,
   }
   return found_ik;
 }
-
-//bool HybridObjectStateSpace::discreteGeodesic(const State *from, const State *to, bool interpolate,
-//                                              std::vector<ompl::base::State *> *geodesic) const
-//{
-//  auto &&svc = si_->getStateValidityChecker();
-//
-//  // We can't traverse the manifold if we don't start on it.
-//  if (!(interpolate || svc->isValid(from)))
-//    return false;
-//
-//  auto afrom = from->as<StateType>();
-//  auto ato = to->as<StateType>();
-//
-//  if (geodesic != nullptr)
-//  {
-//    geodesic->clear();
-//    geodesic->push_back(cloneState(from));
-//  }
-//
-//  // No need to traverse the manifold if we are already there
-//  const double tolerance = delta_;
-//  const double distTo = distance(from, to);
-//  if (distTo <= tolerance)
-//    return true;
-//
-//
-//
-//  // Create a scratch state to use for movement.
-//  auto scratch = cloneState(from)->as<StateType>();
-//  auto temp = allocState()->as<StateType>();
-//
-//
-//
-//}
-
-
-//bool HybridObjectStateSpace::computeStateFK(ompl::base::State *state) const
-//{
-//
-//}
-//
-//bool HybridObjectStateSpace::computeStateIK(ompl::base::State *state) const
-//{
-//  if (state->as<StateType>()->jointsComputed())
-//    return true;
-//  for (std::size_t i = 0 ; i < poses_.size() ; ++i)
-//    if (!poses_[i].computeStateIK(state->as<StateType>(), i))
-//    {
-//      state->as<StateType>()->markInvalid();
-//      return false;
-//    }
-//  state->as<StateType>()->setJointsComputed(true);
-//  return true;
-//}
-//
-//bool HybridObjectStateSpace::computeStateK(ompl::base::State *state) const
-//{
-//  if (state->as<StateType>()->jointsComputed() && !state->as<StateType>()->poseComputed())
-//    return computeStateFK(state);
-//  if (!state->as<StateType>()->jointsComputed() && state->as<StateType>()->poseComputed())
-//    return computeStateIK(state);
-//  if (state->as<StateType>()->jointsComputed() && state->as<StateType>()->poseComputed())
-//    return true;
-//  state->as<StateType>()->markInvalid();
-//  return false;
-//}
-//
-//bool HybridObjectStateSpace::computeStateIK(StateType *state) const
-//{
-//  // construct the pose
-//  geometry_msgs::Pose pose;
-//  const ompl::base::SE3StateSpace::StateType *se3_state = full_state->poses[idx];
-//  pose.position.x = se3_state->getX();
-//  pose.position.y = se3_state->getY();
-//  pose.position.z = se3_state->getZ();
-//  const ompl::base::SO3StateSpace::StateType &so3_state = se3_state->rotation();
-//  pose.orientation.x = so3_state.x;
-//  pose.orientation.y = so3_state.y;
-//  pose.orientation.z = so3_state.z;
-//  pose.orientation.w = so3_state.w;
-//
-//  // run IK
-//  std::vector<double> solution(kinematics_solver_->getJointNames().size(), 0.0);
-//  std::vector<double> seed(kinematics_solver_->getJointNames().size(), 0.0);
-//  moveit_msgs::MoveItErrorCodes err_code;
-//  if (!kinematics_solver_->searchPositionIK(pose, seed, timeout, solution,
-//                                                                           error_code))
-//  {
-//    if (err_code.val != moveit_msgs::MoveItErrorCodes::TIMED_OUT ||
-//        !kinematics_solver_->searchPositionIK(pose, seed_values, kinematics_solver_->getDefaultTimeout() * 2.0, solution, err_code))
-//      return false;
-//  }
-//
-//  for (std::size_t i = 0 ; i < bijection_.size() ; ++i)
-//    full_state->values[bijection_[i]] = solution[i];
-//
-//  return true;
-//}
