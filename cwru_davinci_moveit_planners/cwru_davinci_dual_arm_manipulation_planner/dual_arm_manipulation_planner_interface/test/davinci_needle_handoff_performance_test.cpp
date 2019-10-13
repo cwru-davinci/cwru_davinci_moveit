@@ -202,7 +202,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
     planner->setProblemDefinition(pdef);
-    planner->setRange(100.0);
+    planner->setRange(90.0);
     // perform setup steps for the planner
     planner->setup();
     // print the settings for this space
@@ -352,7 +352,7 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
     planner->setProblemDefinition(pdef);
-    planner->setRange(100.0);
+    planner->setRange(90.0);
     // perform setup steps for the planner
     planner->setup();
     // print the settings for this space
@@ -502,7 +502,7 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
     planner->setProblemDefinition(pdef);
-    planner->setRange(100.0);
+    planner->setRange(90.0);
     // perform setup steps for the planner
     planner->setup();
     // print the settings for this space

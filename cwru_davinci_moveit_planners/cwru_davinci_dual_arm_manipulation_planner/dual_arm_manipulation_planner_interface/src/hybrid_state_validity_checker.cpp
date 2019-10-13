@@ -105,7 +105,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
     kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-    if (!convertObjectToRobotState(*kstate, hs))
+    if (!convertObjectToRobotState(*kstate, hs, selected_group_name))
       printf("Invalid State: No IK solution.");
 
     if(hs->jointsComputed())
@@ -154,7 +154,9 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
   kstate.reset(new robot_state::RobotState(kmodel_));
   kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
-  if(!convertObjectToRobotState(*kstate, hs))
+  const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
+
+  if(!convertObjectToRobotState(*kstate, hs, selected_group_name))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -182,7 +184,9 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
   kstate.reset(new robot_state::RobotState(kmodel_));
   kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
-  if(!convertObjectToRobotState(*kstate, hs))
+  const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
+
+  if(!convertObjectToRobotState(*kstate, hs, selected_group_name))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -198,19 +202,18 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 
 
 bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotState &rstate,
-                                                           const HybridObjectStateSpace::StateType *hybrid_state) const
+                                                           const HybridObjectStateSpace::StateType *hyState,
+                                                           const std::string &selected_group_name) const
 {
-  const std::string selected_group_name = (hybrid_state->armIndex().value == 1) ? "psm_one" : "psm_two";
-
-  if(!hybrid_state->jointsComputed())
+  if(!hyState->jointsComputed())
   {
     // convert object pose to robot tip pose
     // this is the gripper tool tip link frame wrt /base_link
     Eigen::Affine3d object_pose;  // object pose w/rt base frame
 //  si_->getStateSpace()->as<HybridObjectStateSpace>()->printState(hs, std::cout);
-    hyStateSpace_->se3ToEigen3d(hybrid_state, object_pose);
+    hyStateSpace_->se3ToEigen3d(hyState, object_pose);
 
-    Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hybrid_state->graspIndex().value].grasp_pose;
+    Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
     const robot_state::JointModelGroup *selected_joint_model_group = rstate.getJointModelGroup(selected_group_name);
@@ -222,15 +225,15 @@ bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotSta
 //                            selected_joint_model_group->getOnlyOneEndEffectorTip()->getName(), tool_tip_pose);
     if(!found_ik)
     {
-      const_cast<HybridObjectStateSpace::StateType *>(hybrid_state)->setJointsComputed(false);
-      const_cast<HybridObjectStateSpace::StateType *>(hybrid_state)->markInvalid();
+      const_cast<HybridObjectStateSpace::StateType *>(hyState)->setJointsComputed(false);
+      const_cast<HybridObjectStateSpace::StateType *>(hyState)->markInvalid();
       return found_ik;
     }
-    const_cast<HybridObjectStateSpace::StateType *>(hybrid_state)->setJointsComputed(true);
-    rstate.copyJointGroupPositions(selected_joint_model_group, hybrid_state->jointVariables().values);
+    const_cast<HybridObjectStateSpace::StateType *>(hyState)->setJointsComputed(true);
+    rstate.copyJointGroupPositions(selected_joint_model_group, hyState->jointVariables().values);
   }
   else
-    rstate.setJointGroupPositions(selected_group_name, hybrid_state->jointVariables().values);
+    rstate.setJointGroupPositions(selected_group_name, hyState->jointVariables().values);
 
   const std::string rest_group_name = (selected_group_name == "psm_one") ? "psm_two" : "psm_one";
   const robot_state::JointModelGroup *rest_joint_model_group = rstate.getJointModelGroup(rest_group_name);
