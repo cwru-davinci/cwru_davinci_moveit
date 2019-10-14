@@ -36,26 +36,16 @@
 
 
 #include <ros/ros.h>
-#include "ompl/base/ScopedState.h"
-#include "ompl/base/SpaceInformation.h"
-//#include "Hybrid_State_Space_Test.h"
+#include <ompl/base/ScopedState.h>
+#include <ompl/base/SpaceInformation.h>
 
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
 #include <gtest/gtest.h>
-#include <thread>
-#include <atomic>
-#include <chrono>
 
-using namespace std;
-using namespace std::chrono;
-using namespace std::this_thread;
-
-
-using namespace dual_arm_manipulation_planner_interface;
-// using namespace hybrid_state_space_test;
 namespace ob =  ompl::base;
+using namespace dual_arm_manipulation_planner_interface;
 
 void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspIndex,
                       const int from_grasp_index,
@@ -454,198 +444,6 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     hystsp->getSubspace(0)->interpolate(&from->se3State(), &to->se3State(), se3_dist/max_distance, se3CState.get());
     EXPECT_TRUE(hystsp->getSubspace(0)->equalStates(&hybridCState->se3State(), se3CState.get()));
   }
-
-
-//
-//
-//
-//
-//
-//
-//
-//  // case StateDiff::AllSame
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::AllSame" << std::endl;
-//  s1.random();
-//  s2 = s1;
-//
-//  double distance = hystsp->distance(s1.get(), s2.get());
-//  EXPECT_EQ(0, distance);
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
-//
-//  // case StateDiff::ArmDiffGraspAndPoseSame
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::ArmDiffGraspAndPoseSame" << std::endl;
-//  s1.random();
-//  s2 = s1;
-//
-//  s1->armIndex().value = 1;
-//  s2->armIndex().value = 2;
-//  distance = hystsp->distance(s1.get(), s2.get());
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
-//
-//
-//  // case StateDiff::GraspDiffArmAndPoseSame
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::GraspDiffArmAndPoseSame" << std::endl;
-//  s1.random();
-//  s2 = s1;
-//
-//  s1->graspIndex().value = 8743;  // a random number
-//  s2->graspIndex().value = 4532;  // a random number
-//  distance = hystsp->distance(s1.get(), s2.get());
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
-//
-//  // case StateDiff::PoseDiffArmAndGraspSame
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::PoseDiffArmAndGraspSame" << std::endl;
-//
-//  s1.random();
-//  s2.random();
-//
-//  s2->armIndex().value = s1->armIndex().value;
-//  s2->graspIndex().value = s1->graspIndex().value;
-//  distance = hystsp->distance(s1.get(), s2.get());
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
-//
-//
-//  // case StateDiff::ArmAndGraspDiffPoseSame
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::ArmAndGraspDiffPoseSame" << std::endl;
-//
-//  s1.random();
-//  s2.random();
-//
-//  hystsp->as<ob::SE3StateSpace>(0)->copyState(&(s1->se3State()), &(s2->se3State()));
-//
-//  s1->armIndex().value = 1;
-//  s2->armIndex().value = 2;
-//  distance = hystsp->distance(s1.get(), s2.get());
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
-//
-//
-//  // case StateDiff::ArmAndPoseDiffGraspSame
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::ArmAndPoseDiffGraspSame" << std::endl;
-//
-//  s1.random();
-//  s2.random();
-//
-//  s1->armIndex().value = 1;
-//  s2->armIndex().value = 2;
-//
-//  s2->graspIndex().value = s1->graspIndex().value;
-//  distance = hystsp->distance(s1.get(), s2.get());
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
-//
-//
-//  // case StateDiff::GraspAndPoseDiffArmSame
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::GraspAndPoseDiffArmSame" << std::endl;
-//
-//  s1.random();
-//  s2.random();
-//
-//  s2->armIndex().value = s1->armIndex().value;
-//  distance = hystsp->distance(s1.get(), s2.get());
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
-//
-//
-//  // case StateDiff::AllDiff
-//
-//  std::cout << "!----------------------------------------------------!" << std::endl;
-//  std::cout << "case StateDiff::AllDiff" << std::endl;
-//  s1.random();
-//  s2.random();
-//  distance = hystsp->distance(s1.get(), s2.get());
-//
-//  hystsp->interpolate(s1.get(), s2.get(), 0.5, cstate.get());
-//
-//  hystsp->printState(s1.get(), std::cout);
-//  printGraspPart(grasp_pose[s1->graspIndex().value].part_id);
-//
-//  hystsp->printState(s2.get(), std::cout);
-//  printGraspPart(grasp_pose[s2->graspIndex().value].part_id);
-//
-//  hystsp->printState(cstate.get(), std::cout);
-//  printGraspPart(grasp_pose[cstate->graspIndex().value].part_id);
 
 }
 
