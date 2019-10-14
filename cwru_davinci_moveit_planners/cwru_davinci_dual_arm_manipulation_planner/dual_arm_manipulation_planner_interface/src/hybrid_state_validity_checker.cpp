@@ -204,7 +204,7 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 }
 
 
-bool HybridStateValidityChecker::convertObjectToRobotState(const moveit::core::RobotStatePtr &pRSstate,
+bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::RobotStatePtr &pRSstate,
                                                            const HybridObjectStateSpace::StateType *pHyState,
                                                            const std::string &selected_group_name) const
 {

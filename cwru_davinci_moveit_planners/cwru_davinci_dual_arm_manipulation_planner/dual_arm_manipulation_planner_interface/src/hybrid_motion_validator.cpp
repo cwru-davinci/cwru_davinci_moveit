@@ -36,7 +36,7 @@
  * Description: The class to do state motion validity check
  */
 
-#include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
+#include <moveit/dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/robot_state/conversions.h>
 
@@ -112,7 +112,7 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     std::string rest_group_s1 = (active_group_s1 == "psm_one") ? "psm_two" : "psm_one";
     std::string rest_group_s2 = (active_group_s2 == "psm_one") ? "psm_two" : "psm_one";
 
-    const robot_state::RobotStatePtr start_state(new robot_state::RobotState(planning_scene_->getCurrentState()));
+    const robot_state::RobotStatePtr start_state(new robot_state::RobotState(kmodel_));
     start_state->setJointGroupPositions(active_group_s1, hs1->jointVariables().values);
     start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1), rest_group_s1 + "_home");
     std::string rest_group_s1_eef_name = start_state->getJointModelGroup(
@@ -120,7 +120,7 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1_eef_name),
                                     rest_group_s1_eef_name + "_home");
 
-    const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(planning_scene_->getCurrentState()));
+    const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(kmodel_));
     goal_state->setJointGroupPositions(active_group_s2, hs2->jointVariables().values);
     goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2), rest_group_s2 + "_home");
     std::string rest_group_s2_eef_name = goal_state->getJointModelGroup(

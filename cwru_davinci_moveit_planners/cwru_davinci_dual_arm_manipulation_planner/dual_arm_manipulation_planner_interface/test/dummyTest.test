@@ -1,3 +1,0 @@
-<launch>
-    <test test-name="dummyTest" pkg="cwru_davinci_dual_arm_manipulation_planner" type="dummyTest" />
-</launch>
