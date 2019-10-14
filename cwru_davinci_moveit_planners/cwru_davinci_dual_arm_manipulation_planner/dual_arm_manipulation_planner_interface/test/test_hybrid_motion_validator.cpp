@@ -35,40 +35,31 @@
 /* Author: Su Lu */
 
 #include <ros/ros.h>
-#include <ompl/base/ScopedState.h>
-#include <ompl/base/SpaceInformation.h>
-#include <ompl/geometric/SimpleSetup.h>
-
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_valid_state_sampler.h>
-#include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
-
 #include <gtest/gtest.h>
+#include "hybrid_motion_validator_tester.hpp"
 
-namespace ob = ompl::base;
 using namespace dual_arm_manipulation_planner_interface;
-
-class HybridMotionValidatorTester : HybridMotionValidator
-{
-public:
-  HybridMotionValidator(const ros::NodeHandle &node_handle,
-                        const ros::NodeHandle &node_priv,
-                        const std::string &robot_name,
-                        const std::string &object_name,
-                        const ompl::base::SpaceInformationPtr &si)
-protected:
-};
+namespace ob = ompl::base;
 
 TEST(TestHybridRRT, HybridMotionValidator)
 {
+  ros::NodeHandle node_handle;
+  ros::NodeHandle node_handle_priv("~");
+  std::string object_name = "needle_r";
+  std::string robot_name = "robot_description";
+
+  // construct an instance of space information from this state space
+  auto si(std::make_shared<ob::SpaceInformation>());
+
+  HybridMotionValidatorTester tester(node_handle, node_handle_priv, object_name, robot_name, si);
+  const robot_state::RobotStatePtr pRStateHome(new robot_state::);
 }
 
 
 int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "test_hybrid_state_space");
+  ros::init(argc, argv, "test_hybrid_motion_validator");
   ros::NodeHandle nh;
   ros::Duration(3.0).sleep();
   return RUN_ALL_TESTS();
