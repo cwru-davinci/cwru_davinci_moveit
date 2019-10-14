@@ -100,12 +100,13 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   {
     // convert ompl state to moveit robot state
 //    robot_state::RobotState *kstate = tss_->getStateStorage();
-    robot_state::RobotStatePtr kstate;
-    kstate.reset(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+    if(!kstate)
+      return is_valid;
     kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-    if (!convertObjectToRobotState(*kstate, hs, selected_group_name))
+    if (!convertObjectToRobotState(kstate, hs, selected_group_name))
       printf("Invalid State: No IK solution.");
 
     if(hs->jointsComputed())
@@ -150,13 +151,14 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
   double cost = 0.0;
 
 //  robot_state::RobotState *kstate = tss_->getStateStorage();
-  robot_state::RobotStatePtr kstate;
-  kstate.reset(new robot_state::RobotState(kmodel_));
+  const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+  if(!kstate)
+    return false;
   kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-  if(!convertObjectToRobotState(*kstate, hs, selected_group_name))
+  if(!convertObjectToRobotState(kstate, hs, selected_group_name))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -180,13 +182,14 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
 //  robot_state::RobotState *kstate = tss_->getStateStorage();
-  robot_state::RobotStatePtr kstate;
-  kstate.reset(new robot_state::RobotState(kmodel_));
+  const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+  if(!kstate)
+    return false;
   kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-  if(!convertObjectToRobotState(*kstate, hs, selected_group_name))
+  if(!convertObjectToRobotState(kstate, hs, selected_group_name))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -201,46 +204,46 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 }
 
 
-bool HybridStateValidityChecker::convertObjectToRobotState(robot_state::RobotState &rstate,
-                                                           const HybridObjectStateSpace::StateType *hyState,
+bool HybridStateValidityChecker::convertObjectToRobotState(const moveit::core::RobotStatePtr &pRSstate,
+                                                           const HybridObjectStateSpace::StateType *pHyState,
                                                            const std::string &selected_group_name) const
 {
-  if(!hyState->jointsComputed())
+  if(!pHyState->jointsComputed())
   {
     // convert object pose to robot tip pose
     // this is the gripper tool tip link frame wrt /base_link
     Eigen::Affine3d object_pose;  // object pose w/rt base frame
 //  si_->getStateSpace()->as<HybridObjectStateSpace>()->printState(hs, std::cout);
-    hyStateSpace_->se3ToEigen3d(hyState, object_pose);
+    hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
 
-    Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hyState->graspIndex().value].grasp_pose;
+    Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[pHyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
-    const robot_state::JointModelGroup *selected_joint_model_group = rstate.getJointModelGroup(selected_group_name);
+    const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(selected_group_name);
     std::size_t attempts = 2;
     double timeout = 1.0;
-    bool found_ik = rstate.setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
+    bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
 //  bool found_ik = setFromIK(rstate, selected_joint_model_group, selected_group_name,
 //                            selected_joint_model_group->getOnlyOneEndEffectorTip()->getName(), tool_tip_pose);
     if(!found_ik)
     {
-      const_cast<HybridObjectStateSpace::StateType *>(hyState)->setJointsComputed(false);
-      const_cast<HybridObjectStateSpace::StateType *>(hyState)->markInvalid();
+      const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(false);
+      const_cast<HybridObjectStateSpace::StateType *>(pHyState)->markInvalid();
       return found_ik;
     }
-    const_cast<HybridObjectStateSpace::StateType *>(hyState)->setJointsComputed(true);
-    rstate.copyJointGroupPositions(selected_joint_model_group, hyState->jointVariables().values);
+    const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(true);
+    pRSstate->copyJointGroupPositions(selected_joint_model_group, pHyState->jointVariables().values);
   }
   else
-    rstate.setJointGroupPositions(selected_group_name, hyState->jointVariables().values);
+    pRSstate->setJointGroupPositions(selected_group_name, pHyState->jointVariables().values);
 
   const std::string rest_group_name = (selected_group_name == "psm_one") ? "psm_two" : "psm_one";
-  const robot_state::JointModelGroup *rest_joint_model_group = rstate.getJointModelGroup(rest_group_name);
-  rstate.setToDefaultValues(rest_joint_model_group, rest_group_name + "_home");
+  const robot_state::JointModelGroup *rest_joint_model_group = pRSstate->getJointModelGroup(rest_group_name);
+  pRSstate->setToDefaultValues(rest_joint_model_group, rest_group_name + "_home");
   std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
-  const robot_state::JointModelGroup *rest_joint_model_group_eef = rstate.getJointModelGroup(rest_group_eef_name);
-  rstate.setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
+  const robot_state::JointModelGroup *rest_joint_model_group_eef = pRSstate->getJointModelGroup(rest_group_eef_name);
+  pRSstate->setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
 
   return true;
 }

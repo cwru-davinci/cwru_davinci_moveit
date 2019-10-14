@@ -317,6 +317,7 @@ bool HybridObjectStateSpace::satisfiesBounds(const State *state) const
 void HybridObjectStateSpace::copyState(State *destination, const State *source) const
 {
   ompl::base::CompoundStateSpace::copyState(destination, source);
+  destination->as<StateType>()->flags = source->as<StateType>()->flags;
 }
 
 bool HybridObjectStateSpace::equalStates(const State *state1, const State *state2) const

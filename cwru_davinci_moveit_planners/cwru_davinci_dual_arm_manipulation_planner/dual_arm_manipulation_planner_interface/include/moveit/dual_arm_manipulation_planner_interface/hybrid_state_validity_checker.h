@@ -72,8 +72,8 @@ public:
 
   virtual double clearance(const ompl::base::State* state) const override;
 
-  bool convertObjectToRobotState(robot_state::RobotState &rstate,
-                                 const HybridObjectStateSpace::StateType *hyState,
+  bool convertObjectToRobotState(const moveit::core::RobotStatePtr &pRSstate,
+                                 const HybridObjectStateSpace::StateType *pHyState,
                                  const std::string &selected_group_name) const;
 
   moveit::core::AttachedBody *createAttachedBody(const std::string &active_group,
