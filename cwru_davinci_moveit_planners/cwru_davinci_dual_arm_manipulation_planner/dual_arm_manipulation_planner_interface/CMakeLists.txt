@@ -31,7 +31,7 @@ target_link_libraries(${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} $
 #set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 #set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
 
-add_library(hybrid_motion_validator_tester test/hybrid_motion_validator_tester.hpp)
+add_library(hybrid_motion_validator_tester test/hybrid_motion_validator_tester.cpp)
 target_link_libraries(hybrid_motion_validator_tester ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(main src/main.cpp)

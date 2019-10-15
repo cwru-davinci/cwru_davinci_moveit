@@ -64,7 +64,7 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_handle,
 
   kmodel_ = robot_model_loader_.getModel();
 
-  initializePlannerPlugin();
+//  initializePlannerPlugin();
 
 //  initializeIKPlugin();
 

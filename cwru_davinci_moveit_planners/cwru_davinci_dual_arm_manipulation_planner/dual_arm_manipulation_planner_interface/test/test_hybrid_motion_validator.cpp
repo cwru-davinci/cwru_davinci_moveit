@@ -36,7 +36,7 @@
 
 #include <ros/ros.h>
 #include <gtest/gtest.h>
-#include "hybrid_motion_validator_tester.hpp"
+#include "hybrid_motion_validator_tester.cpp"
 
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
@@ -45,16 +45,59 @@ TEST(TestHybridRRT, HybridMotionValidator)
 {
   ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
-  std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
+  std::string object_name = "needle_r";
 
   // construct an instance of space information from this state space
-  auto si(std::make_shared<ob::SpaceInformation>());
+  auto se3SS(std::make_shared<ob::SE3StateSpace>());
+  auto si(std::make_shared<ob::SpaceInformation>(se3SS));
 
-  HybridMotionValidatorTester tester(node_handle, node_handle_priv, object_name, robot_name, si);
-  const robot_state::RobotStatePtr pRStateHome(new robot_state::);
+  HybridMotionValidatorTester tester(node_handle, node_handle_priv, robot_name, object_name, si);
+
+  size_t test_num = 100;
+  for (size_t i = 0; i < test_num; i++)
+  {
+
+    const robot_state::RobotStatePtr pRStateHome(new robot_state::RobotState(tester.getRobotModel()));
+    pRStateHome->setToDefaultValues();
+    size_t variable_count = pRStateHome->getVariableCount();
+    EXPECT_EQ(variable_count, pRStateHome->getVariableNames().size());
+
+    std::vector<double> rstate_home_position(variable_count);
+    for (size_t i = 0; i < variable_count; i++)
+    {
+      rstate_home_position[i] = pRStateHome->getVariablePosition(pRStateHome->getVariableNames()[i]);
+    }
+
+    const robot_state::RobotStatePtr& pRdmRState = tester.sampleRobotState();
+    EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
+    std::vector<double> rstate_random_position(variable_count);
+    for (size_t i = 0; i < variable_count; i++)
+    {
+      rstate_random_position[i] = pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]);
+    }
+
+    for (size_t i = 0; i < variable_count; i++)
+    {
+      EXPECT_EQ(pRdmRState->getVariableNames()[i], pRStateHome->getVariableNames()[i]);
+    }
+
+    bool testResult = tester.testComputeCartesianPath(*pRStateHome, *pRdmRState);
+    EXPECT_TRUE(testResult);
+
+    EXPECT_EQ(variable_count, pRStateHome->getVariableNames().size());
+    for (size_t i = 0; i < variable_count; i++)
+    {
+      EXPECT_EQ(rstate_home_position[i], pRStateHome->getVariablePosition(pRStateHome->getVariableNames()[i]));
+    }
+
+    EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
+    for (size_t i = 0; i < variable_count; i++)
+    {
+      rstate_random_position[i] = pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]);
+    }
+  }
 }
-
 
 int main(int argc, char **argv)
 {

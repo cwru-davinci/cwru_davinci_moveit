@@ -58,12 +58,14 @@ public:
 
   inline const robot_model::RobotModelConstPtr getRobotModel() const
   {
-
+    return kmodel_;
   }
+
 private:
   bool samePose(const Eigen::Affine3d &a, const Eigen::Affine3d &b);
 
-  double eps = std::numeric_limits<double>::epsilon();
+//  double eps = std::numeric_limits<double>::epsilon();
+  double eps = 1e-5;
 
   std::string planning_group_ = "psm_one";
 };
@@ -94,20 +96,23 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
 //    double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
     moveit::core::JumpThreshold jump_threshold;
 
-    double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group_),
-                                                                    traj,
-                                                                    tip_link,
-                                                                    goal_tool_tip_pose,
-                                                                    true,
-                                                                    max_step,
-                                                                    jump_threshold);
-    cp_start_state->update();
+    double path_percent = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group_),
+                                                               traj,
+                                                               tip_link,
+                                                               goal_tool_tip_pose,
+                                                               true,
+                                                               max_step,
+                                                               jump_threshold);
+    if((path_percent - 1.0) < eps)
+    {
+      cp_start_state->update();
 
-    const Eigen::Affine3d current_tip_pose = cp_start_state->getGlobalLinkTransform(tip_link);
-    bool same_mat = current_tip_pose.isApprox(goal_tool_tip_pose, eps);
-    bool same_tq = samePose(current_tip_pose, goal_tool_tip_pose);
-    if (same_mat || same_tq)
-      first = true;
+      const Eigen::Affine3d current_tip_pose = cp_start_state->getGlobalLinkTransform(tip_link);
+      bool same_mat = current_tip_pose.isApprox(goal_tool_tip_pose, eps);
+      bool same_tq = samePose(current_tip_pose, goal_tool_tip_pose);
+      if (same_mat || same_tq)
+        first = true;
+    }
   }
 
   bool second = false;
@@ -118,23 +123,26 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
     const Eigen::Affine3d goal_tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
     std::vector <robot_state::RobotStatePtr> traj;
-    double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group_),
-                                                                    traj,
-                                                                    tip_link,
-                                                                    goal_tool_tip_pose,
-                                                                    true,
-                                                                    0.001,
-                                                                    0.0);
-    cp_start_state->update();
+    double path_percent = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group_),
+                                                               traj,
+                                                               tip_link,
+                                                               goal_tool_tip_pose,
+                                                               true,
+                                                               0.001,
+                                                               0.0);
+    if((path_percent - 1.0) < eps)
+    {
+      cp_start_state->update();
 
-    const Eigen::Affine3d current_tip_pose = cp_start_state->getGlobalLinkTransform(tip_link);
-    bool same_mat = current_tip_pose.isApprox(goal_tool_tip_pose, eps);
-    bool same_tq = samePose(current_tip_pose, goal_tool_tip_pose);
-    if (same_mat || same_tq)
-      second = true;
+      const Eigen::Affine3d current_tip_pose = cp_start_state->getGlobalLinkTransform(tip_link);
+      bool same_mat = current_tip_pose.isApprox(goal_tool_tip_pose, eps);
+      bool same_tq = samePose(current_tip_pose, goal_tool_tip_pose);
+      if (same_mat || same_tq)
+        second = true;
+    }
   }
 
-  if (first == second)
+  if (first && second)
     return true;
 
   return false;
@@ -142,9 +150,10 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
 
 const robot_state::RobotStatePtr& HybridMotionValidatorTester::sampleRobotState()
 {
-  robot_state::RobotStatePtr pRState(new robot_state::RobotState(kmodel_));
+  static robot_state::RobotStatePtr pRState(new robot_state::RobotState(kmodel_));
   const robot_state::JointModelGroup* selected_joint_model_group = pRState->getJointModelGroup(planning_group_);
   pRState->setToRandomPositions(selected_joint_model_group);
+  pRState->update();
   return pRState;
 }
 
