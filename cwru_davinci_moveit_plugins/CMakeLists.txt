@@ -25,10 +25,6 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning_interface
 )
 
-if (CATKIN_ENABLE_TESTING)
-    find_package(rostest REQUIRED)
-endif()
-
 ## System dependencies are found with CMake's conventions
 #find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED thread)
@@ -120,8 +116,8 @@ find_package(Boost REQUIRED thread)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS
-  LIBRARIES
+  INCLUDE_DIRS cwru_davinci_moveit_kinematics_plugin/include
+  LIBRARIES cwru_davinci_moveit_kinematics_plugin
   CATKIN_DEPENDS roscpp moveit_core
   DEPENDS moveit_core
 )

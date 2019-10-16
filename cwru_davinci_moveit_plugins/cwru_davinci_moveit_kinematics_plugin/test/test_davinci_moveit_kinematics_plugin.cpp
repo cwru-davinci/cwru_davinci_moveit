@@ -115,7 +115,7 @@ bool isJointSetEqual(std::vector<double> &joint_set_1, std::vector<double> &join
     diff_vector[i] = findMin(joint_set_1[i], joint_set_2[i]);
   }
 
-  if(diff_vector.norm() <= IK_NEAR)
+  if(diff_vector.norm() <= IK_NEAR_ORIENTATION)
   {
     is_equal = true;
   }
@@ -152,7 +152,7 @@ bool isTwoRotationEqual(const Eigen::Matrix3d &a, const Eigen::Matrix3d &b)
 
   //  ROS_INFO_STREAM(diff);
 
-  if(diff.norm() < IK_NEAR)
+  if(diff.norm() < IK_NEAR_ORIENTATION)
   {
     return true;
   }
@@ -195,15 +195,15 @@ class DavinciMoveitKinematicsPluginTest
 {
 public:
 
-  boost::shared_ptr<kinematics::KinematicsBase> kinematicsSolver;
-  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase>> kinematicsLoader;
+  boost::shared_ptr<kinematics::KinematicsBase> m_pKinematicsSolver;
+  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase>> m_pKinematicsLoader;
 
   bool initialize()
   {
     double search_discretization;
     ros::NodeHandle nh("~");
-    kinematicsSolver = NULL;
-    kinematicsLoader.reset(
+    m_pKinematicsSolver = NULL;
+    m_pKinematicsLoader.reset(
       new pluginlib::ClassLoader<kinematics::KinematicsBase>("moveit_core", "kinematics::KinematicsBase"));
     std::string plugin_name;
 
@@ -216,7 +216,7 @@ public:
     ROS_INFO("Plugin name: %s", plugin_name.c_str());
     try
     {
-      kinematicsSolver = kinematicsLoader->createInstance(plugin_name);
+      m_pKinematicsSolver = m_pKinematicsLoader->createInstance(plugin_name);
     }
     catch(pluginlib::PluginlibException &ex)//handle the class failing to load
     {
@@ -259,7 +259,7 @@ public:
       return false;
     }
 
-    if(kinematicsSolver->initialize("robot_description", "psm_one", root_name, tip_name, search_discretization))
+    if(m_pKinematicsSolver->initialize("robot_description", "psm_one", root_name, tip_name, search_discretization))
     {
       return true;
     }
@@ -286,7 +286,7 @@ public:
     std::vector<geometry_msgs::Pose> solutions;
     solutions.resize(1);
 
-    if(!kinematicsSolver->getPositionFK(link_names, joint_state, solutions))
+    if(!m_pKinematicsSolver->getPositionFK(link_names, joint_state, solutions))
     {
       error_code.val = error_code.PLANNING_FAILED;
     }
@@ -300,59 +300,110 @@ public:
     }
   }
 
-  //  kinematics::KinematicsBase* kinematicsSolver;
+  //  kinematics::KinematicsBase* m_pKinematicsSolver;
 
 };
 
 DavinciMoveitKinematicsPluginTest ik_plugin_test;
 
-TEST(ArmIKPlugin, initialize)
-//TEST(ArmIKPlugin, DISABLED_initialize)
+TEST(ArmIKPlugin, TestKDLKinematics)
+{
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
+  const robot_model::RobotModelConstPtr pKModel = robotModelLoader.getModel();
+
+  ros::NodeHandle nh("~");
+  double time_out = 0;
+  int test_num = 0;
+  nh.getParam("time_out", time_out);
+  nh.getParam("test_num", test_num);
+
+  int succeeded_num = 0;
+
+  // fk robot state
+  const robot_state::RobotStatePtr pRStateFK(new robot_state::RobotState(pKModel));
+  const robot_state::JointModelGroup* arm_joint_group_fk = pRStateFK->getJointModelGroup("psm_one");
+  const moveit::core::LinkModel *tip_link = arm_joint_group_fk->getOnlyOneEndEffectorTip();
+  std::vector<double> randomPositionByFK;
+
+  // ik robot state
+  const robot_state::RobotStatePtr pRStateIK(new robot_state::RobotState(pKModel));
+  const robot_state::JointModelGroup* arm_joint_group_ik = pRStateIK->getJointModelGroup("psm_one");
+  std::vector<double> positionByIK;
+
+  ros::WallTime start_time = ros::WallTime::now();
+  for(size_t i = 0; i < test_num; i++)
+  {
+    pRStateFK->setToRandomPositions(arm_joint_group_fk);
+    pRStateFK->update();
+    pRStateFK->copyJointGroupPositions("psm_one", randomPositionByFK);
+    const Eigen::Affine3d goal_tool_tip_pose = pRStateFK->getGlobalLinkTransform(tip_link);
+
+    bool found_ik = pRStateIK->setFromIK(arm_joint_group_ik, goal_tool_tip_pose, 1, time_out);
+    pRStateIK->update();
+    if(found_ik)
+    {
+      succeeded_num += 1;
+      pRStateFK->copyJointGroupPositions("psm_one", positionByIK);
+      EXPECT_EQ(randomPositionByFK.size(), positionByIK.size());
+
+      for(size_t j = 0; j < randomPositionByFK.size(); j++)
+      {
+        EXPECT_NEAR(randomPositionByFK[j], positionByIK[j], 1e-5);
+      }
+    }
+  }
+  ROS_INFO("Success Rate: %f", (double) succeeded_num / test_num);
+  bool success_count = (succeeded_num >= 0.9999 * test_num) ? true : false;
+  EXPECT_TRUE(success_count);
+  ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
+}
+
+//TEST(ArmIKPlugin, TestInitialize)
+TEST(ArmIKPlugin, DISABLED_TestInitialize)
 {
   ASSERT_TRUE(ik_plugin_test.initialize());
   //   Test getting chain information
-  std::string root_name = ik_plugin_test.kinematicsSolver->getBaseFrame();
+  std::string root_name = ik_plugin_test.m_pKinematicsSolver->getBaseFrame();
   EXPECT_TRUE(root_name == std::string("world"));
 
-  std::string tip_name = ik_plugin_test.kinematicsSolver->getTipFrame();
+  std::string tip_name = ik_plugin_test.m_pKinematicsSolver->getTipFrame();
   EXPECT_TRUE(tip_name == std::string("PSM1_tool_tip_link"));
 
-  std::vector<std::string> joint_names = ik_plugin_test.kinematicsSolver->getJointNames();
+  std::vector<std::string> joint_names = ik_plugin_test.m_pKinematicsSolver->getJointNames();
   EXPECT_EQ((int) joint_names.size(), davinci_moveit_kinematics::NUM_JOINTS_ARM7DOF);
 
-  EXPECT_EQ(joint_names[0], "outer_yaw");
-  EXPECT_EQ(joint_names[1], "outer_pitch");
-  EXPECT_EQ(joint_names[2], "outer_insertion");
-  EXPECT_EQ(joint_names[3], "outer_roll");
-  EXPECT_EQ(joint_names[4], "outer_wrist_pitch");
-  EXPECT_EQ(joint_names[5], "outer_wrist_yaw");
-  EXPECT_EQ(joint_names[6], "PSM1_tool_tip_joint_");
+  EXPECT_EQ(joint_names[0], "PSM1_outer_yaw");
+  EXPECT_EQ(joint_names[1], "PSM1_outer_pitch");
+  EXPECT_EQ(joint_names[2], "PSM1_outer_insertion");
+  EXPECT_EQ(joint_names[3], "PSM1_outer_roll");
+  EXPECT_EQ(joint_names[4], "PSM1_outer_wrist_pitch");
+  EXPECT_EQ(joint_names[5], "PSM1_outer_wrist_yaw");
 }
 
-//TEST(ArmIKPlugin, testFkCorrectness)
-TEST(ArmIKPlugin, TestFK)
+//TEST(ArmIKPlugin, TestFK)
+TEST(ArmIKPlugin, DISABLED_TestFK)
 {
   rdf_loader::RDFLoader rdf_loader;
   const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
-  const robot_model::RobotModelPtr kinematic_model(new robot_model::RobotModel(urdf_model, srdf));
+  const robot_model::RobotModelPtr pKinematicModel(new robot_model::RobotModel(urdf_model, srdf));
 
   //  robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-  //  robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
-  ROS_INFO("Model frame: %s", kinematic_model->getModelFrame().c_str());
-  robot_state::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.kinematicsSolver->getGroupName());
+  //  robot_model::RobotModelPtr pKinematicModel = robot_model_loader.getModel();
+  ROS_INFO("Model frame: %s", pKinematicModel->getModelFrame().c_str());
+  robot_state::JointModelGroup *joint_model_group = pKinematicModel->getJointModelGroup(
+    ik_plugin_test.m_pKinematicsSolver->getGroupName());
 
   //Test FK
   std::vector<double> seed, fk_values, solution;
 
   moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
   std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.kinematicsSolver->getTipFrame());
-  robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
-  kinematic_state->setToDefaultValues();
+  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
+  const robot_state::RobotStatePtr pKinematicState(new robot_state::RobotState(pKinematicModel));
+  pKinematicState->setToDefaultValues();
 
 
   ros::NodeHandle nh("~");
@@ -362,12 +413,12 @@ TEST(ArmIKPlugin, TestFK)
 
   for(int i = 0; i < test_num; ++i)
   {
-    seed.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
-    kinematic_state->setToRandomPositions(joint_model_group);  // populate psm one joints with random values
-    kinematic_state->update();
-    kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);  // get random set joints values
+    pKinematicState->setToRandomPositions(joint_model_group);  // populate psm one joints with random values
+    pKinematicState->update();
+    pKinematicState->copyJointGroupPositions(joint_model_group, fk_values);  // get random set joints values
 
     for(int i = 0; i < fk_values.size(); ++i)
     {
@@ -377,14 +428,14 @@ TEST(ArmIKPlugin, TestFK)
 
     std::vector<geometry_msgs::Pose> poses;
     poses.resize(1);
-    bool result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, fk_values, poses);
+    bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, fk_values, poses);
     ASSERT_TRUE(result_fk);
 
     Eigen::Affine3d fk_tip_wrt_world;
     tf::poseMsgToEigen(poses[0], fk_tip_wrt_world);
 
-    Eigen::Affine3d ik_tip_wrt_world = kinematic_state->getGlobalLinkTransform(
-      ik_plugin_test.kinematicsSolver->getTipFrame());
+    Eigen::Affine3d ik_tip_wrt_world = pKinematicState->getGlobalLinkTransform(
+      ik_plugin_test.m_pKinematicsSolver->getTipFrame());
 
     bool result = isTwoPoseEqual(ik_tip_wrt_world, fk_tip_wrt_world);
     EXPECT_TRUE(result);
@@ -402,8 +453,8 @@ TEST(ArmIKPlugin, TestFK)
 }
 
 
-//TEST(ArmIKPlugin, compareFK)
-TEST(ArmIKPlugin, DISABLED_compareFK)
+//TEST(ArmIKPlugin, TestCompareFK)
+TEST(ArmIKPlugin, DISABLED_TestCompareFK)
 {
   rdf_loader::RDFLoader rdf_loader;
   robot_model::RobotModelPtr kinematic_model;
@@ -415,16 +466,16 @@ TEST(ArmIKPlugin, DISABLED_compareFK)
   //  robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
   ROS_INFO("Model frame: %s", kinematic_model->getModelFrame().c_str());
   robot_state::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.kinematicsSolver->getGroupName());
+    ik_plugin_test.m_pKinematicsSolver->getGroupName());
 
   //Test FK
   std::vector<double> seed, fk_values, solution;
 
   moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
   std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.kinematicsSolver->getTipFrame());
+  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
   kinematic_state->setToDefaultValues();
 
@@ -439,14 +490,14 @@ TEST(ArmIKPlugin, DISABLED_compareFK)
 
   for(int i = 0; i < number_fk_compare_tests; ++i)
   {
-    seed.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
     kinematic_state->setToRandomPositions(joint_model_group);  // populate psm one joints with random values
     kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
 
     poses.resize(1);
-    bool result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, fk_values, poses);
+    bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, fk_values, poses);
     ASSERT_TRUE(result_fk);
     Eigen::Affine3d fk_by_kdl;
     tf::poseMsgToEigen(poses[0], fk_by_kdl);
@@ -458,12 +509,6 @@ TEST(ArmIKPlugin, DISABLED_compareFK)
     {
       q_vec(i) = fk_values[i];
     }
-
-    //    for(int i = 0; i < q_vec.rows(); ++i)
-    //    {
-    //      std::cout << q_vec(i) << ' ';
-    //    }
-    //    std::cout << std::endl;
 
     davinci_kinematics::Forward davinci_fk;
 
@@ -491,34 +536,32 @@ TEST(ArmIKPlugin, DISABLED_compareFK)
 }
 
 
-//TEST(ArmIKPlugin, DISABLED_searchIK)
-TEST(ArmIKPlugin, searchIK)
+//TEST(ArmIKPlugin, TestSearchIK)
+TEST(ArmIKPlugin, DISABLED_TestSearchIK)
 {
   //  ASSERT_TRUE(ik_plugin_test.initialize());
   rdf_loader::RDFLoader rdf_loader;
-  robot_model::RobotModelPtr kinematic_model;
   const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
-  kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
-  robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.kinematicsSolver->getGroupName());
+  const robot_model::RobotModelPtr pKinematicModel(new robot_model::RobotModel(urdf_model, srdf));
+  robot_model::JointModelGroup *joint_model_group = pKinematicModel->getJointModelGroup(
+    ik_plugin_test.m_pKinematicsSolver->getGroupName());
 
   //Test inverse kinematics
   std::vector<double> seed, fk_values, solution;
   double timeout = 2.0;
   moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
   std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.kinematicsSolver->getTipFrame());
+  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
 
-  robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
-  kinematic_state->setToDefaultValues();
+  const robot_state::RobotStatePtr pKinematicState(new robot_state::RobotState(pKinematicModel));
+  pKinematicState->setToDefaultValues();
 
   ros::NodeHandle nh("~");
-  int number_ik_tests;
+  int number_ik_tests = 3000;
   int acctual_test_num = 0;
-  nh.param("number_ik_tests", number_ik_tests, 3000);
   unsigned int ik_found_success = 0;
   unsigned int ik_correct_success = 0;
   unsigned int fk_found_success = 0;
@@ -541,30 +584,23 @@ TEST(ArmIKPlugin, searchIK)
   ros::WallTime start_time = ros::WallTime::now();
   for(unsigned int i = 0; i < (unsigned int) number_ik_tests; ++i)
   {
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
+    Eigen::Affine3d affine_base_wrt_world = pKinematicState->getFrameTransform("PSM1_psm_base_link");
 
-    seed.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
-    kinematic_state->setToRandomPositions(joint_model_group);
-    kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
-
-    if(!isWithinJointLimit(fk_values))
-    {
-      continue;
-    }
+    pKinematicState->setToRandomPositions(joint_model_group);
+    pKinematicState->copyJointGroupPositions(joint_model_group, fk_values);
 
     acctual_test_num++;
 
-    //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1_psm_base_link");
     std::vector<geometry_msgs::Pose> poses_wrt_world;
     poses_wrt_world.resize(1);
-    bool result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, fk_values, poses_wrt_world);
+    bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, fk_values, poses_wrt_world);
     if(result_fk)
     {
       fk_found_success++;
     }
-    //    ASSERT_TRUE(result_fk);
 
     // transform pose wrt world to pose wrt base frame
     Eigen::Affine3d affine_poses_wrt_world;
@@ -577,17 +613,17 @@ TEST(ArmIKPlugin, searchIK)
     poses_wrt_base.resize(1);
     tf::poseEigenToMsg(affine_poses_wrt_base, poses_wrt_base[0]);
 
-    bool result_ik = ik_plugin_test.kinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
                                                                         error_code);
     if(result_ik)
     {
       ik_found_success++;
-      result_ik = ik_plugin_test.kinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
       if(result_ik)
       {
         std::vector<geometry_msgs::Pose> new_poses_wrt_world;
 //        new_poses_wrt_world.resize(1);
-//        result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
+//        result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
 
         if(isJointSetEqual(fk_values, solution))
         {
@@ -599,7 +635,7 @@ TEST(ArmIKPlugin, searchIK)
     {
       std::vector<geometry_msgs::Pose> new_poses_wrt_world;
       new_poses_wrt_world.resize(1);
-      result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
+      result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
       if(result_fk)
       {
         failed_ik_pose.push_back(new_poses_wrt_world[0]);
@@ -616,7 +652,7 @@ TEST(ArmIKPlugin, searchIK)
 
       Eigen::Affine3d affine_fk_pose_wrt_base = davinci_fk.fwd_kin_solve(q_vec);
 
-      //      Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
+      //      Eigen::Affine3d affine_base_wrt_world = pKinematicState->getFrameTransform("PSM1_psm_base_link");
 
       //      Eigen::Affine3d affine_fk_pose_wrt_world = affine_base_wrt_world * affine_fk_pose_wrt_base;
 
@@ -682,12 +718,12 @@ TEST(ArmIKPlugin, searchIK)
 
   // The :move_group_interface:`MoveGroup` class can be easily
   // setup using just the name of the planning group you would like to control and plan for.
-  moveit::planning_interface::MoveGroupInterface move_group(ik_plugin_test.kinematicsSolver->getGroupName());
+  moveit::planning_interface::MoveGroupInterface move_group(ik_plugin_test.m_pKinematicsSolver->getGroupName());
   moveit::planning_interface::MoveGroupInterface::Plan my_plan;
   bool success = false;
   for(int i = 0; i < failed_ik_joint_sets.size(); i++)
   {
-    kinematic_state->setToDefaultValues();
+    pKinematicState->setToDefaultValues();
     move_group.setJointValueTarget(failed_ik_joint_sets[i]);
     success = (bool) move_group.plan(my_plan);
     ROS_INFO_NAMED("IK search test", "(joint space goal) %s", success ? "" : "FAILED");
@@ -747,16 +783,16 @@ TEST(ArmIKPlugin, DISABLED_moveAlongWorldXTest)
   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
   kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
   robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.kinematicsSolver->getGroupName());
+    ik_plugin_test.m_pKinematicsSolver->getGroupName());
 
   //Test inverse kinematics
   std::vector<double> seed, fk_values, solution;
   double timeout = 2.0;
   moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
   std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.kinematicsSolver->getTipFrame());
+  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
 
   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
   kinematic_state->setToDefaultValues();
@@ -819,15 +855,15 @@ TEST(ArmIKPlugin, DISABLED_moveAlongWorldXTest)
     poses_wrt_base.resize(1);
     tf::poseEigenToMsg(affine_tool_tip_goal_wrt_base, poses_wrt_base[0]);
 
-    seed.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
-    bool result_ik = ik_plugin_test.kinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
                                                                         error_code);
     if(result_ik)
     {
       ik_found_success++;
-      result_ik = ik_plugin_test.kinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
       if(result_ik)
       {
         output2 << "ik solution joint set:" << "\n";
@@ -906,16 +942,16 @@ TEST(ArmIKPlugin, DISABLED_specificJointSetIkTest)
   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
   kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
   robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.kinematicsSolver->getGroupName());
+    ik_plugin_test.m_pKinematicsSolver->getGroupName());
 
   //Test inverse kinematics
   std::vector<double> seed, fk_values, solution;
   double timeout = 2.0;
   moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
   std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.kinematicsSolver->getTipFrame());
+  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
 
   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
   kinematic_state->setToDefaultValues();
@@ -985,12 +1021,12 @@ TEST(ArmIKPlugin, DISABLED_specificJointSetIkTest)
   {
     Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
 
-    seed.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
     //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1_psm_base_link");
     std::vector<geometry_msgs::Pose> poses_wrt_world;
     poses_wrt_world.resize(1);
-    bool result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, joint_sets[i], poses_wrt_world);
+    bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, joint_sets[i], poses_wrt_world);
     ASSERT_TRUE(result_fk);
 
     // transform pose wrt world to pose wrt base frame
@@ -1004,12 +1040,12 @@ TEST(ArmIKPlugin, DISABLED_specificJointSetIkTest)
     poses_wrt_base.resize(1);
     tf::poseEigenToMsg(affine_poses_wrt_base, poses_wrt_base[0]);
 
-    bool result_ik = ik_plugin_test.kinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
                                                                         error_code);
     if(result_ik)
     {
       ik_found_success++;
-      result_ik = ik_plugin_test.kinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
       if(result_ik)
       {
         if(isJointSetEqual(fk_values, solution))
@@ -1043,16 +1079,16 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
   kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
   robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.kinematicsSolver->getGroupName());
+    ik_plugin_test.m_pKinematicsSolver->getGroupName());
 
   //Test inverse kinematics
   std::vector<double> seed, fk_values, solution;
   double timeout = 2.0;
   moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
   std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.kinematicsSolver->getTipFrame());
+  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
 
   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
   kinematic_state->setToDefaultValues();
@@ -1105,15 +1141,15 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
     poses_wrt_base.resize(1);
     tf::poseEigenToMsg(affine_tool_tip_goal_wrt_base, poses_wrt_base[0]);
 
-    seed.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
-    bool result_ik = ik_plugin_test.kinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
                                                                         error_code);
     if(result_ik)
     {
       ik_found_success++;
-      result_ik = ik_plugin_test.kinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
       output2 << "ik solution joint set:" << "\n";
       for(int i = 0; i < solution.size(); i++)
       {
@@ -1199,16 +1235,16 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 
 
 //  robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-//    ik_plugin_test.kinematicsSolver->getGroupName());
+//    ik_plugin_test.m_pKinematicsSolver->getGroupName());
 
 //  //Test inverse kinematics
 //  std::vector<double> seed, fk_values, solution;
 //  double timeout = 2.0;
 //  moveit_msgs::MoveItErrorCodes error_code;
-//  solution.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+//  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
 //  std::vector<std::string> fk_names;
-//  fk_names.push_back(ik_plugin_test.kinematicsSolver->getTipFrame());
+//  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
 
 //  robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
 //  kinematic_state->setToDefaultValues();
@@ -1239,8 +1275,8 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 ////    ROS_INFO_STREAM("Base wrt World Rotation: \n" << affine_base_wrt_world.rotation());
 
 
-//    seed.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
-//    fk_values.resize(ik_plugin_test.kinematicsSolver->getJointNames().size(), 0.0);
+//    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+//    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
 
 //    kinematic_state->setToRandomPositions(joint_model_group);
 //    kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
@@ -1248,7 +1284,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1_psm_base_link");
 //    std::vector<geometry_msgs::Pose> poses_wrt_world;
 //    poses_wrt_world.resize(1);
-//    bool result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, fk_values, poses_wrt_world);
+//    bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, fk_values, poses_wrt_world);
 //    ASSERT_TRUE(result_fk);
 
 //    std::vector<Eigen::Affine3d> affine_poses_wrt_world;
@@ -1268,7 +1304,7 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 //    poses_wrt_base.resize(1);
 //    tf::poseEigenToMsg(affine_poses_wrt_base[0], poses_wrt_base[0]);
 
-//    bool found_result = ik_plugin_test.kinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution, error_code);
+//    bool found_result = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution, error_code);
 
 ////    ROS_INFO("Pose: %f %f %f",poses_wrt_base[0].position.x, poses_wrt_base[0].position.y, poses_wrt_base[0].position.z);
 
@@ -1277,13 +1313,13 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 //    if(found_result)
 //    {
 //      found_success++;
-//      bool result = ik_plugin_test.kinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+//      bool result = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
 
 //      if(result)
 //      {
 //        std::vector<geometry_msgs::Pose> new_poses;
 //        new_poses.resize(1);
-//        result_fk = ik_plugin_test.kinematicsSolver->getPositionFK(fk_names, solution, new_poses);
+//        result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, solution, new_poses);
 //         if (isTwoPoseEqual(poses_wrt_world[0], new_poses[0]))
 //         {
 //          correct_success++;
@@ -1370,10 +1406,10 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 ////    EXPECT_NEAR(poses_wrt_world[0].position.y, new_poses[0].position.y, IK_NEAR_TRANSLATE);
 ////    EXPECT_NEAR(poses_wrt_world[0].position.z, new_poses[0].position.z, IK_NEAR_TRANSLATE);
 
-////    EXPECT_NEAR(poses_wrt_world[0].orientation.x, new_poses[0].orientation.x, IK_NEAR);
-////    EXPECT_NEAR(poses_wrt_world[0].orientation.y, new_poses[0].orientation.y, IK_NEAR);
-////    EXPECT_NEAR(poses_wrt_world[0].orientation.z, new_poses[0].orientation.z, IK_NEAR);
-////    EXPECT_NEAR(poses_wrt_world[0].orientation.w, new_poses[0].orientation.w, IK_NEAR);
+////    EXPECT_NEAR(poses_wrt_world[0].orientation.x, new_poses[0].orientation.x, IK_NEAR_ORIENTATION);
+////    EXPECT_NEAR(poses_wrt_world[0].orientation.y, new_poses[0].orientation.y, IK_NEAR_ORIENTATION);
+////    EXPECT_NEAR(poses_wrt_world[0].orientation.z, new_poses[0].orientation.z, IK_NEAR_ORIENTATION);
+////    EXPECT_NEAR(poses_wrt_world[0].orientation.w, new_poses[0].orientation.w, IK_NEAR_ORIENTATION);
 //  }
 //  output << "There are " << (number_ik_tests-found_success) << " sets of joint values failed to have IK solution." << "\n";
 //  output.close();
@@ -1392,10 +1428,9 @@ TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "test_davinci_moveit_kinematics_plugin");
-  ros::AsyncSpinner spinner(1);
-  ros::Duration(3.0).sleep();
-  spinner.start();
   testing::InitGoogleTest(&argc, argv);
+  ros::init(argc, argv, "test_davinci_moveit_kinematics_plugin");
+  ros::NodeHandle nh;
+  ros::Duration(3.0).sleep();
   return RUN_ALL_TESTS();
 }
