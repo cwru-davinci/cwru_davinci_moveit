@@ -19,3 +19,4 @@ cmake-build-debug
 .user
 .files
 .includes
+.gmon.out

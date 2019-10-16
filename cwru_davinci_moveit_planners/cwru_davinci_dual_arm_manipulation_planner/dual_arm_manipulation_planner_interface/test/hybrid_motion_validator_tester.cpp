@@ -36,6 +36,7 @@
 
 #include <ros/ros.h>
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
+#include <gtest/gtest.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -103,16 +104,19 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
                                                                true,
                                                                max_step,
                                                                jump_threshold);
-    if((path_percent - 1.0) < eps)
-    {
-      cp_start_state->update();
+    first = ((path_percent - 1.0) < eps) ? true : false;
+    EXPECT_TRUE(traj.size() > 2);
+  }
 
-      const Eigen::Affine3d current_tip_pose = cp_start_state->getGlobalLinkTransform(tip_link);
-      bool same_mat = current_tip_pose.isApprox(goal_tool_tip_pose, eps);
-      bool same_tq = samePose(current_tip_pose, goal_tool_tip_pose);
-      if (same_mat || same_tq)
-        first = true;
-    }
+  size_t variable_count = start_state.getVariableCount();
+
+  bool same_count_var = (variable_count == start_state.getVariableNames().size()) ? true : false;
+  EXPECT_TRUE(same_count_var);
+
+  std::vector<double> rstate_home_position(variable_count);
+  for (size_t i = 0; i < variable_count; i++)
+  {
+    rstate_home_position[i] = start_state.getVariablePosition(start_state.getVariableNames()[i]);
   }
 
   bool second = false;
@@ -130,16 +134,16 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
                                                                true,
                                                                0.001,
                                                                0.0);
-    if((path_percent - 1.0) < eps)
-    {
-      cp_start_state->update();
+    second = ((path_percent - 1.0) < eps) ? true : false;
+    EXPECT_TRUE(traj.size() > 2);
+  }
 
-      const Eigen::Affine3d current_tip_pose = cp_start_state->getGlobalLinkTransform(tip_link);
-      bool same_mat = current_tip_pose.isApprox(goal_tool_tip_pose, eps);
-      bool same_tq = samePose(current_tip_pose, goal_tool_tip_pose);
-      if (same_mat || same_tq)
-        second = true;
-    }
+  same_count_var = (variable_count == start_state.getVariableNames().size()) ? true : false;
+  EXPECT_TRUE(same_count_var);
+
+  for (size_t i = 0; i < variable_count; i++)
+  {
+    EXPECT_EQ(rstate_home_position[i], start_state.getVariablePosition(start_state.getVariableNames()[i]));
   }
 
   if (first && second)

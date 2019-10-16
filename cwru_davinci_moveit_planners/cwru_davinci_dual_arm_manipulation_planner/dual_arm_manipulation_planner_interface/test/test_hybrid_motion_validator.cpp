@@ -35,7 +35,6 @@
 /* Author: Su Lu */
 
 #include <ros/ros.h>
-#include <gtest/gtest.h>
 #include "hybrid_motion_validator_tester.cpp"
 
 using namespace dual_arm_manipulation_planner_interface;
@@ -57,7 +56,6 @@ TEST(TestHybridRRT, HybridMotionValidator)
   size_t test_num = 100;
   for (size_t i = 0; i < test_num; i++)
   {
-
     const robot_state::RobotStatePtr pRStateHome(new robot_state::RobotState(tester.getRobotModel()));
     pRStateHome->setToDefaultValues();
     size_t variable_count = pRStateHome->getVariableCount();
@@ -94,7 +92,7 @@ TEST(TestHybridRRT, HybridMotionValidator)
     EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
     for (size_t i = 0; i < variable_count; i++)
     {
-      rstate_random_position[i] = pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]);
+      EXPECT_EQ(rstate_random_position[i], pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]));
     }
   }
 }

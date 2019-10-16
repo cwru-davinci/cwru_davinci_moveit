@@ -61,7 +61,7 @@ public:
                         const std::string &object_name,
                         const ompl::base::SpaceInformationPtr &si);
 
-  virtual ~HybridMotionValidator() {kmodel_.reset();}
+  virtual ~HybridMotionValidator() {}
 
   virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const;
 
