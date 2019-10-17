@@ -43,8 +43,7 @@ namespace dual_arm_manipulation_planner_interface
 class HybridMotionValidatorTester : public HybridMotionValidator
 {
 public:
-  HybridMotionValidatorTester(const ros::NodeHandle &node_handle,
-                              const ros::NodeHandle &node_priv,
+  HybridMotionValidatorTester(const ros::NodeHandle &node_priv,
                               const std::string &robot_name,
                               const std::string &object_name,
                               const ompl::base::SpaceInformationPtr &si);
@@ -62,6 +61,11 @@ public:
     return kmodel_;
   }
 
+  inline int getSucceededNum()
+  {
+    return succeeded_num_;
+  }
+
 private:
   bool samePose(const Eigen::Affine3d &a, const Eigen::Affine3d &b);
 
@@ -69,16 +73,17 @@ private:
   double eps = 1e-5;
 
   std::string planning_group_ = "psm_one";
+
+  int succeeded_num_ = 0;
 };
 
-HybridMotionValidatorTester::HybridMotionValidatorTester(const ros::NodeHandle &node_handle,
-                                                         const ros::NodeHandle &node_priv,
+HybridMotionValidatorTester::HybridMotionValidatorTester(const ros::NodeHandle &node_priv,
                                                          const std::string &robot_name,
                                                          const std::string &object_name,
                                                          const ompl::base::SpaceInformationPtr &si) :
-  HybridMotionValidator(node_handle, node_priv, robot_name, object_name, si)
+  HybridMotionValidator(node_priv, robot_name, object_name, si)
 {
-
+// left blank
 }
 
 bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::RobotState &start_state,
@@ -108,13 +113,13 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
     EXPECT_TRUE(traj.size() > 2);
   }
 
-  size_t variable_count = start_state.getVariableCount();
+  std::size_t variable_count = start_state.getVariableCount();
 
   bool same_count_var = (variable_count == start_state.getVariableNames().size()) ? true : false;
   EXPECT_TRUE(same_count_var);
 
   std::vector<double> rstate_home_position(variable_count);
-  for (size_t i = 0; i < variable_count; i++)
+  for (std::size_t i = 0; i < variable_count; i++)
   {
     rstate_home_position[i] = start_state.getVariablePosition(start_state.getVariableNames()[i]);
   }
@@ -141,13 +146,17 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
   same_count_var = (variable_count == start_state.getVariableNames().size()) ? true : false;
   EXPECT_TRUE(same_count_var);
 
-  for (size_t i = 0; i < variable_count; i++)
+  for (std::size_t i = 0; i < variable_count; i++)
   {
     EXPECT_EQ(rstate_home_position[i], start_state.getVariablePosition(start_state.getVariableNames()[i]));
   }
 
   if (first && second)
+  {
+    succeeded_num_ += 1;
+    ROS_INFO("Times of succeeded %d", succeeded_num_);
     return true;
+  }
 
   return false;
 }

@@ -79,13 +79,11 @@ void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspInd
 
 TEST(TestHybridRRT, HybridObjectStateSpace)
 {
-  ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr pSimpleGrasp(
-        new cwru_davinci_grasp::DavinciSimpleNeedleGrasper(node_handle,
-                                                           node_handle_priv,
-                                                           "psm_one",
-                                                           "needle_r"));
+  cwru_davinci_grasp::DavinciNeedleGrasperBasePtr pSimpleGrasp(
+    new cwru_davinci_grasp::DavinciNeedleGrasperBase(node_handle_priv,
+                                                     "psm_one",
+                                                     "psm_one_gripper"));
 //  EXPECT_TRUE(pSimpleGrasp);
 
   std::vector<cwru_davinci_grasp::GraspInfo> grasp_pose = pSimpleGrasp->getAllPossibleNeedleGrasps();

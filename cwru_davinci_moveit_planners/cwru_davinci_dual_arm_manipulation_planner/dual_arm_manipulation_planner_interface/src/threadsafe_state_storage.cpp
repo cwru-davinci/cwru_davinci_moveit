@@ -36,7 +36,7 @@
 
 #include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 
-dual_arm_manipulation_planner_interface::TSStateStorage::TSStateStorage(const robot_model::RobotModelPtr &kmodel) : start_state_(kmodel)
+dual_arm_manipulation_planner_interface::TSStateStorage::TSStateStorage(const robot_model::RobotModelConstPtr &kmodel) : start_state_(kmodel)
 {
   start_state_.setToDefaultValues();
 }

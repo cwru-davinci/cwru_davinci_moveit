@@ -140,9 +140,9 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(node_handle, robot_name, object_name, si));
+    std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(node_handle, node_handle_priv, robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(node_handle_priv, robot_name, object_name, si));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -290,9 +290,9 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(node_handle, robot_name, object_name, si));
+    std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(node_handle, node_handle_priv, robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(node_handle_priv, robot_name, object_name, si));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -440,9 +440,9 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(node_handle, robot_name, object_name, si));
+    std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(node_handle, node_handle_priv, robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(node_handle_priv, robot_name, object_name, si));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -578,9 +578,9 @@ int main(int argc, char** argv)
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
 
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr simpleGrasp =
-    boost::make_shared<cwru_davinci_grasp::DavinciSimpleNeedleGrasper>(
-      node_handle, node_handle_priv, "psm_one", object_name);
+  cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =
+    boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(
+      node_handle_priv, "psm_one", "psm_one_gripper");
 
   std::vector<double> ss_needle_pose_translation;
   std::vector<double> ss_needle_pose_orientation;

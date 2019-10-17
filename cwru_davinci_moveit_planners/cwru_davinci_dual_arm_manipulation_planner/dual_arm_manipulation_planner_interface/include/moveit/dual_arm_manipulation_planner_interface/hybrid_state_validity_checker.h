@@ -59,12 +59,11 @@ namespace dual_arm_manipulation_planner_interface
 class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
-  HybridStateValidityChecker(const ros::NodeHandle &node_handle,
-                             const std::string &robot_name,
+  HybridStateValidityChecker(const std::string &robot_name,
                              const std::string &object_name,
                              const ompl::base::SpaceInformationPtr &si);
 
-  virtual ~HybridStateValidityChecker() {kmodel_.reset();}
+  virtual ~HybridStateValidityChecker() {}
 
   virtual bool isValid(const ompl::base::State* state) const override;
 
@@ -103,9 +102,7 @@ protected:
 
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
-  ros::Publisher robot_state_publisher_;
-
-  ros::NodeHandle node_handle_;
+//  ros::Publisher robot_state_publisher_;
 
   HybridObjectStateSpace* hyStateSpace_;
 
@@ -115,7 +112,7 @@ protected:
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
-  robot_model::RobotModelPtr kmodel_;
+  robot_model::RobotModelConstPtr kmodel_;
 
   /// @brief Robot state containing the current position of all joints
   robot_state::RobotStatePtr complete_initial_robot_state_;

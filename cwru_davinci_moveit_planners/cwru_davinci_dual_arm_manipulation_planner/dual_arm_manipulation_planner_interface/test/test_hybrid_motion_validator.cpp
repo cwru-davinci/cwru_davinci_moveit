@@ -42,7 +42,6 @@ namespace ob = ompl::base;
 
 TEST(TestHybridRRT, HybridMotionValidator)
 {
-  ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
   std::string robot_name = "robot_description";
   std::string object_name = "needle_r";
@@ -51,18 +50,22 @@ TEST(TestHybridRRT, HybridMotionValidator)
   auto se3SS(std::make_shared<ob::SE3StateSpace>());
   auto si(std::make_shared<ob::SpaceInformation>(se3SS));
 
-  HybridMotionValidatorTester tester(node_handle, node_handle_priv, robot_name, object_name, si);
+  HybridMotionValidatorTester tester(node_handle_priv, robot_name, object_name, si);
 
-  size_t test_num = 100;
-  for (size_t i = 0; i < test_num; i++)
+
+  int test_num = 0;
+  node_handle_priv.getParam("test_num", test_num);
+
+  for (std::size_t i = 0; i < test_num; i++)
   {
     const robot_state::RobotStatePtr pRStateHome(new robot_state::RobotState(tester.getRobotModel()));
     pRStateHome->setToDefaultValues();
-    size_t variable_count = pRStateHome->getVariableCount();
+    pRStateHome->update();
+    std::size_t variable_count = pRStateHome->getVariableCount();
     EXPECT_EQ(variable_count, pRStateHome->getVariableNames().size());
 
     std::vector<double> rstate_home_position(variable_count);
-    for (size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; i++)
     {
       rstate_home_position[i] = pRStateHome->getVariablePosition(pRStateHome->getVariableNames()[i]);
     }
@@ -70,12 +73,12 @@ TEST(TestHybridRRT, HybridMotionValidator)
     const robot_state::RobotStatePtr& pRdmRState = tester.sampleRobotState();
     EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
     std::vector<double> rstate_random_position(variable_count);
-    for (size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; i++)
     {
       rstate_random_position[i] = pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]);
     }
 
-    for (size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; i++)
     {
       EXPECT_EQ(pRdmRState->getVariableNames()[i], pRStateHome->getVariableNames()[i]);
     }
@@ -84,17 +87,21 @@ TEST(TestHybridRRT, HybridMotionValidator)
     EXPECT_TRUE(testResult);
 
     EXPECT_EQ(variable_count, pRStateHome->getVariableNames().size());
-    for (size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; i++)
     {
       EXPECT_EQ(rstate_home_position[i], pRStateHome->getVariablePosition(pRStateHome->getVariableNames()[i]));
     }
 
     EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
-    for (size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; i++)
     {
       EXPECT_EQ(rstate_random_position[i], pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]));
     }
   }
+
+  ROS_INFO("Success Rate: %f", (double) tester.getSucceededNum() / test_num);
+  bool success_count = (tester.getSucceededNum() >= 0.9999 * test_num) ? true : false;
+  EXPECT_TRUE(success_count);
 }
 
 int main(int argc, char **argv)

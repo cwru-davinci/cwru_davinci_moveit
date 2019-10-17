@@ -61,7 +61,7 @@ public:
   }
 
 private:
-  robot_model::RobotModelPtr kmodel_;
+  robot_model::RobotModelConstPtr kmodel_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 

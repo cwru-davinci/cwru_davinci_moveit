@@ -311,30 +311,38 @@ TEST(ArmIKPlugin, TestKDLKinematics)
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   const robot_model::RobotModelConstPtr pKModel = robotModelLoader.getModel();
 
-  int test_num = 100000;
+  ros::NodeHandle nh("~");
+  double time_out = 0;
+  int test_num = 0;
+  nh.getParam("time_out", time_out);
+  nh.getParam("test_num", test_num);
+
   int succeeded_num = 0;
+
+  // fk robot state
+  const robot_state::RobotStatePtr pRStateFK(new robot_state::RobotState(pKModel));
+  const robot_state::JointModelGroup* arm_joint_group_fk = pRStateFK->getJointModelGroup("psm_one");
+  const moveit::core::LinkModel *tip_link = arm_joint_group_fk->getOnlyOneEndEffectorTip();
+  std::vector<double> randomPositionByFK;
+
+  // ik robot state
+  const robot_state::RobotStatePtr pRStateIK(new robot_state::RobotState(pKModel));
+  const robot_state::JointModelGroup* arm_joint_group_ik = pRStateIK->getJointModelGroup("psm_one");
+  std::vector<double> positionByIK;
+
+  ros::WallTime start_time = ros::WallTime::now();
   for(size_t i = 0; i < test_num; i++)
   {
-    const robot_state::RobotStatePtr pRStateFK(new robot_state::RobotState(pKModel));
-    const robot_state::JointModelGroup* arm_joint_group_fk = pRStateFK->getJointModelGroup("psm_one");
     pRStateFK->setToRandomPositions(arm_joint_group_fk);
     pRStateFK->update();
-    std::vector<double> randomPositionByFK;
     pRStateFK->copyJointGroupPositions("psm_one", randomPositionByFK);
-
-    const moveit::core::LinkModel *tip_link = arm_joint_group_fk->getOnlyOneEndEffectorTip();
     const Eigen::Affine3d goal_tool_tip_pose = pRStateFK->getGlobalLinkTransform(tip_link);
 
-    const robot_state::RobotStatePtr pRStateIK(new robot_state::RobotState(pKModel));
-    const robot_state::JointModelGroup* arm_joint_group_ik = pRStateIK->getJointModelGroup("psm_one");
-
-    bool found_ik = pRStateIK->setFromIK(arm_joint_group_ik, goal_tool_tip_pose, 1, 0.5);
+    bool found_ik = pRStateIK->setFromIK(arm_joint_group_ik, goal_tool_tip_pose, 1, time_out);
     pRStateIK->update();
     if(found_ik)
     {
       succeeded_num += 1;
-
-      std::vector<double> positionByIK;
       pRStateFK->copyJointGroupPositions("psm_one", positionByIK);
       EXPECT_EQ(randomPositionByFK.size(), positionByIK.size());
 
@@ -345,8 +353,9 @@ TEST(ArmIKPlugin, TestKDLKinematics)
     }
   }
   ROS_INFO("Success Rate: %f", (double) succeeded_num / test_num);
-  bool success_count = (succeeded_num > 0.99999 * test_num) ? true : false;
+  bool success_count = (succeeded_num >= 0.9999 * test_num) ? true : false;
   EXPECT_TRUE(success_count);
+  ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
 }
 
 //TEST(ArmIKPlugin, TestInitialize)

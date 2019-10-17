@@ -71,6 +71,7 @@ void HybridStateSampler::sampleUniform(State *state)
   std::string planning_group = (hss->armIndex().value == 1) ? "psm_one" : "psm_two";
   const robot_state::JointModelGroup* selected_joint_model_group = robot_sample_state->getJointModelGroup(planning_group);
   robot_sample_state->setToRandomPositions(selected_joint_model_group);
+  robot_sample_state->update();
   std::vector<double> joint_values;
   robot_sample_state->copyJointGroupPositions(selected_joint_model_group, hss->jointVariables().values);
   hss->setJointsComputed(true);

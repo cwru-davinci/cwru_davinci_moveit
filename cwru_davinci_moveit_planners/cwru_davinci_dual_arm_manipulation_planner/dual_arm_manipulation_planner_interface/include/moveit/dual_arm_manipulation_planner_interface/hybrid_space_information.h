@@ -97,7 +97,7 @@ public:
     return states.size();
   }
 
-  robot_model::RobotModelPtr kmodel_;
+  robot_model::RobotModelConstPtr kmodel_;
 private:
 
   robot_model_loader::RobotModelLoader robot_model_loader_;

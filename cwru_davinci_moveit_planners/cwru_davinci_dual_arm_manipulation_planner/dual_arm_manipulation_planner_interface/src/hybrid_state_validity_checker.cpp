@@ -44,11 +44,10 @@
 using namespace dual_arm_manipulation_planner_interface;
 //using namespace davinci_moveit_object_handling;
 
-HybridStateValidityChecker::HybridStateValidityChecker(const ros::NodeHandle &node_handle,
-                                                       const std::string &robot_name,
+HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_name,
                                                        const std::string &object_name,
                                                        const ompl::base::SpaceInformationPtr &si)
-  : node_handle_(node_handle), robot_model_loader_(robot_name), robot_name_(robot_name),object_name_(object_name),
+  : robot_model_loader_(robot_name), robot_name_(robot_name),object_name_(object_name),
     ompl::base::StateValidityChecker(si)
 {
   defaultSettings();
@@ -103,7 +102,6 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
     const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
     if(!kstate)
       return is_valid;
-    kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
     if (!convertObjectToRobotState(kstate, hs, selected_group_name))
@@ -221,7 +219,7 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
 
     const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(selected_group_name);
     std::size_t attempts = 2;
-    double timeout = 1.0;
+    double timeout = 0.1;
     bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
 //  bool found_ik = setFromIK(rstate, selected_joint_model_group, selected_group_name,
@@ -233,10 +231,14 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
       return found_ik;
     }
     const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(true);
+    pRSstate->update();
     pRSstate->copyJointGroupPositions(selected_joint_model_group, pHyState->jointVariables().values);
   }
   else
+  {
+    pRSstate->update();
     pRSstate->setJointGroupPositions(selected_group_name, pHyState->jointVariables().values);
+  }
 
   const std::string rest_group_name = (selected_group_name == "psm_one") ? "psm_two" : "psm_one";
   const robot_state::JointModelGroup *rest_joint_model_group = pRSstate->getJointModelGroup(rest_group_name);
@@ -244,6 +246,7 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
   std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
   const robot_state::JointModelGroup *rest_joint_model_group_eef = pRSstate->getJointModelGroup(rest_group_eef_name);
   pRSstate->setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
+  pRSstate->update();
 
   return true;
 }
@@ -326,19 +329,19 @@ void HybridStateValidityChecker::initializeIKPlugin()
   psm_two_kinematics_solver_->initialize(robot_name_, "psm_two", "PSM2_psm_base_link", "PSM2_tool_tip_link", search_discretization);
 }
 
-void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState& rstate) const
-{
-  moveit_msgs::DisplayRobotState drstate;
-  robot_state_publisher_.publish(drstate);
-  ros::spinOnce();
-  ros::Duration(1.0).sleep();
-
-  moveit::core::robotStateToRobotStateMsg(rstate, drstate.state);
-
-  robot_state_publisher_.publish(drstate);
-  ros::spinOnce();
-  ros::Duration(1.0).sleep();
-}
+//void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState& rstate) const
+//{
+//  moveit_msgs::DisplayRobotState drstate;
+//  robot_state_publisher_.publish(drstate);
+//  ros::spinOnce();
+//  ros::Duration(1.0).sleep();
+//
+//  moveit::core::robotStateToRobotStateMsg(rstate, drstate.state);
+//
+//  robot_state_publisher_.publish(drstate);
+//  ros::spinOnce();
+//  ros::Duration(1.0).sleep();
+//}
 
 bool HybridStateValidityChecker::setFromIK(robot_state::RobotState &rstate,
                                       const robot_state::JointModelGroup *arm_joint_group,

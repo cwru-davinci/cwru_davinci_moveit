@@ -68,7 +68,7 @@ class HybridStateSampler : public ompl::base::StateSampler
 public:
   HybridStateSampler(const HybridObjectStateSpace *space);
 
-  virtual ~HybridStateSampler() {kmodel_.reset();}
+  virtual ~HybridStateSampler() {}
 
   void sampleUniform(ompl::base::State *state) override;
 
@@ -283,7 +283,7 @@ public:
                          const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
                          const std::string &robot_name = "robot_description");
 
-  virtual ~HybridObjectStateSpace() {kmodel_.reset();}
+  virtual ~HybridObjectStateSpace() {}
 
   void setSE3Bounds(const ompl::base::RealVectorBounds &bounds);
 
@@ -414,7 +414,7 @@ protected:
   int grasp_idx_lw_bd_;
   int grasp_idx_up_bd_;
 
-  robot_model::RobotModelPtr kmodel_;
+  robot_model::RobotModelConstPtr kmodel_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
