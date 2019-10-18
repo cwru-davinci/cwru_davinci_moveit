@@ -433,6 +433,9 @@ void HybridObjectStateSpace::interpolate(const State *from,
       components_[0]->copyState(cstate->components[0], hys_from->components[0]);
       interpolateGrasp(hys_from, hys_to, cstate);
       break;
+    default:
+      // should not be there
+      break;
   }
 
   auto finish = std::chrono::high_resolution_clock::now();
@@ -555,6 +558,9 @@ void HybridObjectStateSpace::interpolateGrasp(const StateType *from,
     case 3:
       cstate->armIndex().value = to_arm_index;
       cstate->graspIndex().value = chooseGraspPart(from_part_id, to_part_id);
+      break;
+    default:
+      //  should not be there
       break;
   }
 }

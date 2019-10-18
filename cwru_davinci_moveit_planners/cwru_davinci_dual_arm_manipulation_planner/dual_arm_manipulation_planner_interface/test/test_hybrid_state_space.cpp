@@ -361,6 +361,8 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     handoff_dist = 300;
     total_dist = object_se3_dist + handoff_dist;
     EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    hystsp->interpolate(s1.get(), s2.get(), 0.5, cs.get());
     EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, hystsp->checkStateDiff(s1.get(), cs.get()));
     EXPECT_TRUE(s1->armIndex().value != cs->armIndex().value);
     EXPECT_TRUE(s1->graspIndex().value != cs->graspIndex().value);
@@ -383,6 +385,8 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     handoff_dist = 200;
     total_dist = object_se3_dist + handoff_dist;
     EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    hystsp->interpolate(s1.get(), s2.get(), 0.5, cs.get());
     EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, hystsp->checkStateDiff(s1.get(), cs.get()));
     EXPECT_TRUE(s1->armIndex().value != cs->armIndex().value);
     EXPECT_TRUE(s1->graspIndex().value != cs->graspIndex().value);
@@ -393,6 +397,8 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     EXPECT_TRUE(grasp_pose[s1->graspIndex().value].part_id == grasp_pose[s2->graspIndex().value].part_id);
     EXPECT_EQ(StateDiff::GraspAndPoseDiffArmSame, hystsp->checkStateDiff(s1.get(), s2.get()));
     EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    hystsp->interpolate(s1.get(), s2.get(), 0.5, cs.get());
     EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, hystsp->checkStateDiff(s1.get(), cs.get()));
     EXPECT_TRUE(s1->armIndex().value != cs->armIndex().value);
     EXPECT_TRUE(s1->graspIndex().value != cs->graspIndex().value);
@@ -415,6 +421,8 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     handoff_dist = 100;
     total_dist = object_se3_dist + handoff_dist;
     EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    hystsp->interpolate(s1.get(), s2.get(), 0.5, cs.get());
     EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, hystsp->checkStateDiff(s1.get(), cs.get()));
     EXPECT_TRUE(s1->armIndex().value != cs->armIndex().value);
     EXPECT_TRUE(s1->graspIndex().value != cs->graspIndex().value);
@@ -427,6 +435,8 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     handoff_dist = 300;
     total_dist = object_se3_dist + handoff_dist;
     EXPECT_EQ(total_dist, hystsp->distance(s1.get(), s2.get()));
+
+    hystsp->interpolate(s1.get(), s2.get(), 0.5, cs.get());
     EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, hystsp->checkStateDiff(s1.get(), cs.get()));
     EXPECT_TRUE(s1->armIndex().value != cs->armIndex().value);
     EXPECT_TRUE(s1->graspIndex().value != cs->graspIndex().value);

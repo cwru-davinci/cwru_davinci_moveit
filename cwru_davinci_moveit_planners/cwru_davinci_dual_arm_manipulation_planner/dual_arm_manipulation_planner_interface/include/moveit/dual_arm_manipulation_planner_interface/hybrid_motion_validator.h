@@ -47,6 +47,10 @@
 #include <ompl/base/MotionValidator.h>
 #include <ompl/base/SpaceInformation.h>
 
+// eigen
+#include <Eigen/Core>
+#include <fstream>
+
 //#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_plugin.h>
 
 namespace dual_arm_manipulation_planner_interface
@@ -60,7 +64,7 @@ public:
                         const std::string &object_name,
                         const ompl::base::SpaceInformationPtr &si);
 
-  virtual ~HybridMotionValidator() {}
+  virtual ~HybridMotionValidator() {outFile_.close();}
 
   virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const;
 
@@ -90,12 +94,12 @@ protected:
                                     const robot_state::RobotState &pre_grasp_state,
                                     const std::string &planning_group) const;
 
-  bool planPreGraspStateToGraspedState(robot_state::RobotState &pre_grasp_state,
+  bool planPreGraspStateToGraspedState(moveit::core::RobotStatePtr pre_grasp_state,
                                        const robot_state::RobotState &handoff_state,
                                        const std::string &planning_group) const;
 
   bool planGraspStateToUngraspedState(const robot_state::RobotState &handoff_state,
-                                      robot_state::RobotState &ungrasped_state,
+                                      moveit::core::RobotStatePtr ungrasped_state,
                                       const std::string &planning_group) const;
 
   bool planUngraspedStateToSafeState(const robot_state::RobotState &ungrasped_state,
@@ -151,6 +155,11 @@ protected:
     kinematics_loader_;
 
   ros::Publisher robot_state_publisher_;
+
+  std::ofstream outFile_;
+
+  Eigen::IOFormat CommaInitFmt(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "");
+  std::string sep = "\n---------------------------------------------------------\n";
 };
 }
 
