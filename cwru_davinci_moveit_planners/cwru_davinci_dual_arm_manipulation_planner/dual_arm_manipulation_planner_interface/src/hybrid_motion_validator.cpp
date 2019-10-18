@@ -104,19 +104,20 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     const auto *hs1 = static_cast<const HybridObjectStateSpace::StateType *>(s1);
     const auto *hs2 = static_cast<const HybridObjectStateSpace::StateType *>(s2);
 
-    std::string active_group_s1 = (hs1->armIndex().value == 1) ? "psm_one"
-                                                               : "psm_two";  // active group is the arm supporting the needle
-    std::string active_group_s2 = (hs2->armIndex().value == 1) ? "psm_one" : "psm_two";
-    std::string rest_group_s1 = (active_group_s1 == "psm_one") ? "psm_two" : "psm_one";
-    std::string rest_group_s2 = (active_group_s2 == "psm_one") ? "psm_two" : "psm_one";
+    // active group is the arm supporting the needle
+    const std::string active_group_s1 = (hs1->armIndex().value == 1) ? "psm_one" : "psm_two";
+    const std::string rest_group_s1 = (active_group_s1 == "psm_one") ? "psm_two" : "psm_one";
 
     const robot_state::RobotStatePtr start_state(new robot_state::RobotState(kmodel_));
     start_state->setJointGroupPositions(active_group_s1, hs1->jointVariables().values);
     start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1), rest_group_s1 + "_home");
-    std::string rest_group_s1_eef_name = start_state->getJointModelGroup(
+    const std::string rest_group_s1_eef_name = start_state->getJointModelGroup(
       rest_group_s1)->getAttachedEndEffectorNames()[0];
     start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1_eef_name),
                                     rest_group_s1_eef_name + "_home");
+
+    const std::string active_group_s2 = (hs2->armIndex().value == 1) ? "psm_one" : "psm_two";
+    const std::string rest_group_s2 = (active_group_s2 == "psm_one") ? "psm_two" : "psm_one";
 
     const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(kmodel_));
     goal_state->setJointGroupPositions(active_group_s2, hs2->jointVariables().values);
@@ -126,12 +127,12 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2_eef_name),
                                    rest_group_s2_eef_name + "_home");
 
-    moveit::core::AttachedBody* s2_needle = stateValidityChecker_.createAttachedBody(active_group_s2,
-                                                                                     object_name_,
-                                                                                     hs2->graspIndex().value);
     moveit::core::AttachedBody* s1_needle = stateValidityChecker_.createAttachedBody(active_group_s1,
                                                                                      object_name_,
                                                                                      hs1->graspIndex().value);
+    moveit::core::AttachedBody* s2_needle = stateValidityChecker_.createAttachedBody(active_group_s2,
+                                                                                     object_name_,
+                                                                                     hs2->graspIndex().value);
     start_state->attachBody(s1_needle);
     start_state->update();
     goal_state->attachBody(s2_needle);

@@ -162,9 +162,6 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
     return false;
   }
 
-//  pMonitor_->requestPlanningSceneState();
-//  planning_scene_monitor::LockedPlanningSceneRW ls(pMonitor_);
-//  ls->setCurrentState(*kstate);
   planning_scene_->setCurrentState(*kstate);
   // Calculates cost from a summation of distance to obstacles times the size of the obstacle
   collision_detection::CollisionResult res;
@@ -192,9 +189,7 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
     printf("Invalid State: No IK solution.");
     return false;
   }
-//  pMonitor_->requestPlanningSceneState();
-//  planning_scene_monitor::LockedPlanningSceneRW ls(pMonitor_);
-//  ls->setCurrentState(*kstate);
+
   planning_scene_->setCurrentState(*kstate);
   collision_detection::CollisionResult res;
   planning_scene_->checkCollision(collision_request_with_distance_, res, *kstate);
