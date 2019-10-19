@@ -50,7 +50,6 @@
 // eigen
 #include <Eigen/Core>
 #include <fstream>
-
 //#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_plugin.h>
 
 namespace dual_arm_manipulation_planner_interface
@@ -156,9 +155,10 @@ protected:
 
   ros::Publisher robot_state_publisher_;
 
-  std::ofstream outFile_;
+private:
+  static std::ofstream outFile_;
 
-  Eigen::IOFormat CommaInitFmt(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "");
+  Eigen::IOFormat CommaInitFmt_;
   std::string sep = "\n---------------------------------------------------------\n";
 };
 }

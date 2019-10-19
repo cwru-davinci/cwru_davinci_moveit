@@ -44,10 +44,6 @@
 #include <moveit/collision_detection/collision_tools.h>
 //#include <interactivity/interactive_robot.h>
 
-// eigen
-#include <Eigen/Core>
-#include <fstream>
-
 namespace dual_arm_manipulation_planner_interface
 {
 
@@ -90,11 +86,15 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 
   hyStateSpace_->hand_off_failed_num = 0;
 
-  outFile_.open("home/sulu/failedPoses.txt");
+//  CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "");
+  CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
+
 //  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
 
 //  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
 }
+
+std::ofstream HybridMotionValidator::outFile_ = std::ofstream("/home/sulu/failedPoses.txt");
 
 bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const
 {
@@ -326,9 +326,11 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(moveit::core::RobotS
   Eigen::Vector3d unit_approach_dir(0.0, 0.0, 1.0);  // grasp approach along the +z-axis of tip frame
 
   auto start_ik = std::chrono::high_resolution_clock::now();
-  outFile_.write(sep.c_str(), sep.size());
-  outFile_ << "Pre_grasp_state before call setFromIK" << "\n";
-  outFile_ << pregrasp_tool_tip_pose.matrix()(CommaInitFmt) << "\n";
+  outFile_ << sep;
+  outFile_ << "grasped_tool_tip pose: " << "\n";
+  outFile_ << grasped_tool_tip_pose.matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << "\n" << "Pre_grasp_state before call setFromIK" << "\n";
+  outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
 
   bool found_ik = false;
   double distance = 0.008;
@@ -346,9 +348,9 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(moveit::core::RobotS
   }
   if (!found_ik)
   {
-    outFile_ << "Failed Pre_grasp_state after call setFromIK with pose pre_grasp_tool_tip_pose" << "\n";
-    outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix()(CommaInitFmt) << "\n";
-    outFile_.write(sep.c_str(), sep.size());
+    outFile_ << "\n" << "Failed Pre_grasp_state after call setFromIK with pose pre_grasp_tool_tip_pose" << "\n";
+    outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+    outFile_ << sep;
 
     auto finish_ik = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -357,8 +359,8 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(moveit::core::RobotS
   }
   pre_grasp_state->update();
 
-  outFile_ << "Succeeded Pre_grasp_state after call setFromIK with pose pre_grasp_tool_tip_pose" << "\n";
-  outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix()(CommaInitFmt) << "\n";
+  outFile_ << "\n" << "Succeeded Pre_grasp_state after call setFromIK with pose pre_grasp_tool_tip_pose" << "\n";
+  outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
 
   std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
   std::vector<double> eef_joint_position;
@@ -395,9 +397,9 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(moveit::core::RobotS
   bool clear_path = false;
   if (found_cartesian_path != 1.0)
   {
-    outFile_ << "Failed Pre_grasp_state after call computeCartesianPath" << "\n";
-    outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix()(CommaInitFmt) << "\n";
-    outFile_.write(sep.c_str(), sep.size());
+    outFile_ << "\n" << "Failed Pre_grasp_state after call computeCartesianPath" << "\n";
+    outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+    outFile_ << sep;
     return clear_path;
   }
 
@@ -428,9 +430,9 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(moveit::core::RobotS
   pre_grasp_state = traj[0];
   pre_grasp_state->update();
 
-  outFile_ << "Succeeded Pre_grasp_state after call computeCartesianPath" << "\n";
-  outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix()(CommaInitFmt) << "\n";
-  outFile_.write(sep.c_str(), sep.size());
+  outFile_ << "\n" << "Succeeded Pre_grasp_state after call computeCartesianPath" << "\n";
+  outFile_ << pre_grasp_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << sep;
 
 //  publishRobotState(pre_grasp_state);
   clear_path = true;
@@ -450,11 +452,11 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d pre_grasp_tool_tip_pose = pre_grasp_state.getGlobalLinkTransform(tip_link);
 
-  outFile_.write(sep.c_str(), sep.size());
-  outFile_ << "Pregrasp tool tip pose: " << "\n";
-  outFile_ << pre_grasp_tool_tip_pose.matrix()(CommaInitFmt) << "\n";
-  outFile_ << "cp_start_state before call computeCartesianPath with pose pre_grasp_tool_tip_pose" << "\n";
-  outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix()(CommaInitFmt) << "\n";
+  outFile_ << sep;
+  outFile_ << "\n" << "Pregrasp tool tip pose: " << "\n";
+  outFile_ << pre_grasp_tool_tip_pose.matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << "\n" << "cp_start_state before call computeCartesianPath with pose pre_grasp_tool_tip_pose" << "\n";
+  outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
 
   std::vector<robot_state::RobotStatePtr> traj;
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
@@ -476,15 +478,15 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
   bool clear_path = false;
   if (found_cartesian_path != 1.0)
   {
-    outFile_ << "Failed cp_start_state tool tip pose" << "\n";
-    outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix()(CommaInitFmt) << "\n";
-    outFile_.write(sep.c_str(), sep.size());
+    outFile_ << "\n" << "Failed cp_start_state tool tip pose" << "\n";
+    outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+    outFile_ << sep;
     return clear_path;
   }
 
-  outFile_ << "Succeeded cp_start_state tool tip pose" << "\n";
-  outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix()(CommaInitFmt) << "\n";
-  outFile_.write(sep.c_str(), sep.size());
+  outFile_ << "\n" << "Succeeded cp_start_state tool tip pose" << "\n";
+  outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << sep;
 
   for (int i = 0; i < traj.size(); ++i)
   {
