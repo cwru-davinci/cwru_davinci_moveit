@@ -613,6 +613,7 @@ int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) co
   int stop_it_num = grasp_idx_up_bd_ + 1;
   while(invalid_grasp_list.size() < stop_it_num)
   {
+    cs_grasp_id = randNumGenerator.uniformInt(grasp_idx_lw_bd_, grasp_idx_up_bd_);
     if(invalid_grasp_list.find(cs_grasp_id) == invalid_grasp_list.end())  // element is not in the container
     {
       int cs_grasp_part = possible_grasps_[cs_grasp_id].part_id;
@@ -622,8 +623,7 @@ int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) co
       }
       else
       {
-        invalid_grasp_list.insert(cs_grasp_id);
-        cs_grasp_id = randNumGenerator.uniformInt(grasp_idx_lw_bd_, grasp_idx_up_bd_);
+        invalid_grasp_list.insert(cs_grasp_id);    
       }
     }
   }

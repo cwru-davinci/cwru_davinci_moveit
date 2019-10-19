@@ -93,12 +93,12 @@ protected:
                                     const robot_state::RobotState &pre_grasp_state,
                                     const std::string &planning_group) const;
 
-  bool planPreGraspStateToGraspedState(moveit::core::RobotStatePtr pre_grasp_state,
+  bool planPreGraspStateToGraspedState(robot_state::RobotStatePtr& pre_grasp_state,
                                        const robot_state::RobotState &handoff_state,
                                        const std::string &planning_group) const;
 
   bool planGraspStateToUngraspedState(const robot_state::RobotState &handoff_state,
-                                      moveit::core::RobotStatePtr ungrasped_state,
+                                      robot_state::RobotStatePtr& ungrasped_state,
                                       const std::string &planning_group) const;
 
   bool planUngraspedStateToSafeState(const robot_state::RobotState &ungrasped_state,

@@ -295,6 +295,10 @@ bool HybridMotionValidator::planNeedleGrasping(const robot_state::RobotState &st
 // pre_grasp_state->clearAttachedBody(object_name_);
   if (!planPreGraspStateToGraspedState(pre_grasp_state, handoff_state, gs_active_group))
     return false;
+  std::string tool_tip = (gs_active_group == "psm_one") ? "PSM1_tool_tip_link" : "PSM2_tool_tip_link";
+  outFile_ << "\n After call Pregrasp plan, going to call Safe to Pregrasp \n";
+  outFile_ << "pregrasp tool tip pose: \n";
+  outFile_ << pre_grasp_state->getGlobalLinkTransform(tool_tip).matrix().format(CommaInitFmt_);
   if (!planSafeStateToPreGraspState(start_state, *pre_grasp_state, gs_active_group))
     return false;
   return true;
@@ -312,7 +316,7 @@ bool HybridMotionValidator::planNeedleReleasing(const robot_state::RobotState &h
   return true;
 }
 
-bool HybridMotionValidator::planPreGraspStateToGraspedState(moveit::core::RobotStatePtr pre_grasp_state,
+bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotStatePtr& pre_grasp_state,
                                                             const robot_state::RobotState &handoff_state,
                                                             const std::string &planning_group) const
 {
@@ -427,7 +431,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(moveit::core::RobotS
     if (!noCollision(*traj[i]))  // check intermediate states
       return clear_path;
   }
-  pre_grasp_state = traj[0];
+  pre_grasp_state.reset(new robot_state::RobotState(*traj[0]));
   pre_grasp_state->update();
 
   outFile_ << "\n" << "Succeeded Pre_grasp_state after call computeCartesianPath" << "\n";
@@ -502,7 +506,7 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
 }
 
 bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::RobotState &handoff_state,
-                                                           moveit::core::RobotStatePtr ungrasped_state,
+                                                           robot_state::RobotStatePtr& ungrasped_state,
                                                            const std::string &planning_group) const
 {
   // make a ungrasped_state
