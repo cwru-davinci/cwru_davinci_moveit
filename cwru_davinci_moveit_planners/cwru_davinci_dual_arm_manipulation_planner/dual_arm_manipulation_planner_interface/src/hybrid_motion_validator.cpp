@@ -85,7 +85,7 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 //  CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "");
   CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
 
-  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("base_frame","/moveit_visual_markers"));
+  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
 //  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
 }
 
@@ -224,6 +224,7 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     hyStateSpace_->hand_off_duration_ += elapsed;
+    publishRobotState(*handoff_state);
     return able_to_handoff;
   }
 
@@ -381,7 +382,10 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   {
     traj[i]->update();
     if (!noCollision(*traj[i]))  // check intermediate states
+    {
+      publishRobotState(*traj[i]);
       return clear_path;
+    }
   }
   pre_grasp_state.reset(new robot_state::RobotState(*traj[0]));
   pre_grasp_state->update();
@@ -447,7 +451,7 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
     traj[i]->update();
     if (!noCollision(*traj[i]))
     {
-//      publishRobotState(*traj[i]);
+      publishRobotState(*traj[i]);
       return clear_path;
     }
   }
@@ -508,7 +512,7 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   ungrasped_state->update();
   if (!noCollision(*ungrasped_state))
   {
-//    publishRobotState(ungrasped_state);
+    publishRobotState(*ungrasped_state);
     return false;
   }
 
@@ -562,6 +566,7 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
     outFile_ << sep;
     if (!noCollision(*traj[i]))  // check intermediate states
     {
+      publishRobotState(*traj[i]);
       if(traj[i - 1])
       {
         ungrasped_state.reset(new robot_state::RobotState(*traj[i - 1]));
@@ -633,7 +638,7 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
     traj[i]->update();
     if (!noCollision(*traj[i]))
     {
-//      publishRobotState(*traj[i]);
+      publishRobotState(*traj[i]);
       return clear_path;
     }
   }
@@ -676,6 +681,7 @@ bool HybridMotionValidator::planObjectTransit(const robot_state::RobotState &sta
     traj[i]->update();
     if (!noCollision(*traj[i]))
     {
+      publishRobotState(*traj[i]);
       return clear_path;
     }
   }
@@ -688,6 +694,7 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
 
+//  (std::const_pointer_cast<planning_scene::PlanningScene>(planning_scene_)).reset(new planning_scene::PlanningScene(kmodel_));
   planning_scene_->setCurrentState(rstate);
   collision_detection::CollisionRequest collision_request;
   collision_request.contacts = true;
@@ -699,15 +706,15 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->collision_checking_duration_ += elapsed;
 
-//  if(collision_result.collision)
-//  {
-//    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-//    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-//    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
-//    {
-//      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-//    }
-//  }
+  if(collision_result.collision)
+  {
+    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
+    {
+      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
   return no_collision;
 }
 
@@ -720,16 +727,9 @@ void HybridMotionValidator::defaultSettings()
 
 void HybridMotionValidator::publishRobotState(const robot_state::RobotState& rstate) const
 {
-  moveit_msgs::DisplayRobotState drstate;
-  robot_state_publisher_.publish(drstate);
+  visual_tools_->publishRobotState(rstate);
   ros::spinOnce();
-  ros::Duration(1.0).sleep();
-
-  moveit::core::robotStateToRobotStateMsg(rstate, drstate.state);
-
-  robot_state_publisher_.publish(drstate);
-  ros::spinOnce();
-  ros::Duration(1.0).sleep();
+  ros::Duration(3.0).sleep();
 }
 
 }  // namespace

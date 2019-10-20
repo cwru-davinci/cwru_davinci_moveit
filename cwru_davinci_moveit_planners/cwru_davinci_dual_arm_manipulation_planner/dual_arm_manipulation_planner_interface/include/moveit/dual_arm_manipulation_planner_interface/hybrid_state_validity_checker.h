@@ -85,13 +85,6 @@ protected:
 
   void loadNeedleModel();
 
-
-  bool setFromIK(robot_state::RobotState &rstate,
-                 const robot_state::JointModelGroup *arm_joint_group,
-                 const std::string &planning_group,
-                 const std::string &tip_frame,
-                 const Eigen::Affine3d &tip_pose_wrt_world) const;
-
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
   HybridObjectStateSpace* hyStateSpace_;

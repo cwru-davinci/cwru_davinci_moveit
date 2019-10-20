@@ -68,7 +68,7 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
 
   hyStateSpace_->validty_check_num = 0;
 
-  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("base_frame","/moveit_visual_markers"));
+  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
 
   loadNeedleModel();
 
@@ -106,6 +106,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
       kstate->update();
 
       // TODO check feasibility
+//      (std::const_pointer_cast<planning_scene::PlanningScene>(planning_scene_)).reset(new planning_scene::PlanningScene(kmodel_));
       planning_scene_->setCurrentState(*kstate);
       // check collision avoidance
       collision_detection::CollisionResult res;
@@ -118,7 +119,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
         {
           ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
         }
-//        publishRobotState(*kstate);
+        publishRobotState(*kstate);
       }
 
       kstate->clearAttachedBodies();
@@ -293,4 +294,11 @@ void HybridStateValidityChecker::loadNeedleModel()
   {
     std::cerr << "Error: " << exception << '\n';
   }
+}
+
+void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState& rstate) const
+{
+  visual_tools_->publishRobotState(rstate);
+  ros::spinOnce();
+  ros::Duration(1.0).sleep();
 }
