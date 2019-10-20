@@ -41,8 +41,12 @@
 
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <moveit/planning_interface/planning_interface.h>
 
+// moveit
+#include <moveit/planning_interface/planning_interface.h>
+#include <moveit_visual_tools/moveit_visual_tools.h>
+
+// ompl
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/MotionValidator.h>
 #include <ompl/base/SpaceInformation.h>
@@ -50,7 +54,6 @@
 // eigen
 #include <Eigen/Core>
 #include <fstream>
-//#include <cwru_davinci_moveit_kinematics_plugin/davinci_moveit_kinematics_plugin.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -131,11 +134,10 @@ protected:
 
   std::string object_name_;
 
-  boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
-  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase> >
-    kinematics_loader_;
-
   ros::Publisher robot_state_publisher_;
+
+  // For visualizing things in rviz
+  moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
 
 private:
   static std::ofstream outFile_;
@@ -143,6 +145,7 @@ private:
   Eigen::IOFormat CommaInitFmt_;
   std::string sep = "\n---------------------------------------------------------\n";
 };
+
 }
 
 #endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H

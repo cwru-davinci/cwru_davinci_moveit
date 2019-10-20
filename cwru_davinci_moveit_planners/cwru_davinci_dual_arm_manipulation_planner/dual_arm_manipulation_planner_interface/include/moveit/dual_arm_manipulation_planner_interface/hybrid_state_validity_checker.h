@@ -39,13 +39,15 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
 
-//#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
+// moveit
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-//#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/collision_detection/collision_common.h>
+#include <moveit_visual_tools/moveit_visual_tools.h>
+
+// ompl
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/SpaceInformation.h>
 
@@ -53,8 +55,6 @@
 
 namespace dual_arm_manipulation_planner_interface
 {
-
-//static std::chrono::duration<double> validity_checking_duration_;
 
 class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
@@ -82,17 +82,9 @@ public:
 protected:
 
   void defaultSettings();
-  /**
-   * @brief Has certain arm group /@param group_name hold object /param object_name
-   * @param group_name
-   * @param object_name
-   * @return
-   */
-  bool hasAttachedObject(const std::string& group_name, const std::string& object_name) const;
 
   void loadNeedleModel();
 
-  void initializeIKPlugin();
 
   bool setFromIK(robot_state::RobotState &rstate,
                  const robot_state::JointModelGroup *arm_joint_group,
@@ -102,13 +94,10 @@ protected:
 
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
-//  ros::Publisher robot_state_publisher_;
-
   HybridObjectStateSpace* hyStateSpace_;
 
   planning_scene::PlanningScenePtr planning_scene_;
 
-//  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
@@ -116,8 +105,6 @@ protected:
 
   /// @brief Robot state containing the current position of all joints
   robot_state::RobotStatePtr complete_initial_robot_state_;
-
-//  TSStateStoragePtr tss_;
 
   collision_detection::CollisionRequest collision_request_simple_;
 
@@ -130,10 +117,10 @@ protected:
 
   std::vector<shapes::ShapeConstPtr> needleShapes_;
 
-  boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
-  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;
-  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase>> kinematics_loader_;
+  // For visualizing things in rviz
+  moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
 };
+
 }
 
 #endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H

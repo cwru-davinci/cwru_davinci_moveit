@@ -42,7 +42,6 @@
 
 
 using namespace dual_arm_manipulation_planner_interface;
-//using namespace davinci_moveit_object_handling;
 
 HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_name,
                                                        const std::string &object_name,
@@ -52,17 +51,11 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
 {
   defaultSettings();
 
-//  initializeIKPlugin();
-
   kmodel_ = robot_model_loader_.getModel();
 
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
-//  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
-
   complete_initial_robot_state_.reset(new robot_state::RobotState(kmodel_));
-
-//  tss_.reset(new TSStateStorage(*complete_initial_robot_state_));
 
   collision_request_with_distance_.distance = true;
 
@@ -75,12 +68,12 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
 
   hyStateSpace_->validty_check_num = 0;
 
-//  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("collision_check_robot_state", 1);
+  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("base_frame","/moveit_visual_markers"));
 
   loadNeedleModel();
-}
 
-// std::chrono::duration<double> HybridStateValidityChecker::validity_checking_duration_ = std::chrono::duration<double>::zero();
+  //  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("collision_check_robot_state", 1);
+}
 
 bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 {
@@ -98,7 +91,6 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   else
   {
     // convert ompl state to moveit robot state
-//    robot_state::RobotState *kstate = tss_->getStateStorage();
     const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
     if(!kstate)
       return is_valid;
@@ -148,7 +140,6 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 {
   double cost = 0.0;
 
-//  robot_state::RobotState *kstate = tss_->getStateStorage();
   const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
   if(!kstate)
     return false;
@@ -176,7 +167,6 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
-//  robot_state::RobotState *kstate = tss_->getStateStorage();
   const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
   if(!kstate)
     return false;
@@ -206,7 +196,6 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
     // convert object pose to robot tip pose
     // this is the gripper tool tip link frame wrt /base_link
     Eigen::Affine3d object_pose;  // object pose w/rt base frame
-//  si_->getStateSpace()->as<HybridObjectStateSpace>()->printState(hs, std::cout);
     hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
 
     Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[pHyState->graspIndex().value].grasp_pose;
@@ -217,8 +206,6 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
     double timeout = 0.1;
     bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
-//  bool found_ik = setFromIK(rstate, selected_joint_model_group, selected_group_name,
-//                            selected_joint_model_group->getOnlyOneEndEffectorTip()->getName(), tool_tip_pose);
     if(!found_ik)
     {
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(false);
@@ -306,76 +293,4 @@ void HybridStateValidityChecker::loadNeedleModel()
   {
     std::cerr << "Error: " << exception << '\n';
   }
-}
-
-void HybridStateValidityChecker::initializeIKPlugin()
-{
-  psm_one_kinematics_solver_ = NULL;
-  psm_two_kinematics_solver_ = NULL;
-  kinematics_loader_.reset(
-    new pluginlib::ClassLoader<kinematics::KinematicsBase>("moveit_core", "kinematics::KinematicsBase"));
-  std::string plugin_name = "davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin";
-
-  psm_one_kinematics_solver_ = kinematics_loader_->createInstance(plugin_name);
-  psm_two_kinematics_solver_ = kinematics_loader_->createInstance(plugin_name);
-
-  double search_discretization = 0.025;
-  psm_one_kinematics_solver_->initialize(robot_name_, "psm_one", "PSM1_psm_base_link", "PSM1_tool_tip_link", search_discretization);
-  psm_two_kinematics_solver_->initialize(robot_name_, "psm_two", "PSM2_psm_base_link", "PSM2_tool_tip_link", search_discretization);
-}
-
-//void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState& rstate) const
-//{
-//  moveit_msgs::DisplayRobotState drstate;
-//  robot_state_publisher_.publish(drstate);
-//  ros::spinOnce();
-//  ros::Duration(1.0).sleep();
-//
-//  moveit::core::robotStateToRobotStateMsg(rstate, drstate.state);
-//
-//  robot_state_publisher_.publish(drstate);
-//  ros::spinOnce();
-//  ros::Duration(1.0).sleep();
-//}
-
-bool HybridStateValidityChecker::setFromIK(robot_state::RobotState &rstate,
-                                      const robot_state::JointModelGroup *arm_joint_group,
-                                      const std::string &planning_group,
-                                      const std::string &tip_frame,
-                                      const Eigen::Affine3d &tip_pose_wrt_world) const
-{
-  bool found_ik = false;
-  std::string base_frame = (planning_group == "psm_one") ? "PSM1_psm_base_link" : "PSM2_psm_base_link";
-
-  boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
-  if(planning_group == "psm_one")
-  {
-    kinematics_solver_ = psm_one_kinematics_solver_;
-    if (kinematics_solver_->getGroupName() != planning_group)
-      return found_ik;
-  }
-  else
-  {
-    kinematics_solver_ = psm_two_kinematics_solver_;
-    if (kinematics_solver_->getGroupName() != planning_group)
-      return found_ik;
-  }
-
-  std::vector<double> seed(kinematics_solver_->getJointNames().size(), 0.0);
-  std::vector<double> solution(kinematics_solver_->getJointNames().size(), 0.0);
-  double timeout = 2.0;
-  Eigen::Affine3d affine_base_wrt_world = rstate.getFrameTransform(base_frame);
-  Eigen::Affine3d affine_tip_pose_wrt_base = affine_base_wrt_world.inverse() * tip_pose_wrt_world;
-  geometry_msgs::Pose tip_pose_wrt_base;
-  tf::poseEigenToMsg(affine_tip_pose_wrt_base, tip_pose_wrt_base);
-  moveit_msgs::MoveItErrorCodes error_code;
-
-  found_ik = kinematics_solver_->searchPositionIK(tip_pose_wrt_base, seed, timeout, solution, error_code);
-
-  if (found_ik)
-  {
-    rstate.setJointGroupPositions(arm_joint_group, solution);
-    rstate.update();
-  }
-  return found_ik;
 }

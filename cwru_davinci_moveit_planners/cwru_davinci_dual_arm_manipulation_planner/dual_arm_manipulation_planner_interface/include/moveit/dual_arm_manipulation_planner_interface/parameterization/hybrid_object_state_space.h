@@ -269,11 +269,7 @@ public:
       delete[] rstate->values;
       delete rstate;
     }
-//    double *values;
-//    int tag;
     int flags;
-
-//    double distance;
   };
 
   HybridObjectStateSpace(int arm_idx_lw_bd,
@@ -319,7 +315,6 @@ public:
                            ompl::base::State *state) const override;
 
   virtual void copyToReals(std::vector<double> &reals, const ompl::base::State *source) const override;
-//  virtual double getMaximumExtent() const;
 
   virtual ompl::base::StateSamplerPtr allocDefaultStateSampler() const override;
 
@@ -333,18 +328,6 @@ public:
    */
   virtual unsigned int validSegmentCount(const ompl::base::State *state1, const ompl::base::State *state2) const;
 
-//  bool computeStateK(ompl::base::State *state) const;
-
-//  bool discreteGeodesic(const State *from, const State *to, bool interpolate,
-//  bool computeStateFK(ompl::base::State *state) const;
-//
-//  bool computeStateIK(ompl::base::State *state) const;
-//
-//  virtual void sanityChecks() const;
-//
-//  virtual void copyToOMPLState(ompl::base::State *state, const robot_state::RobotState &rstate) const;
-//
-//  virtual void setPlanningVolume(double minX, double maxX, double minY, double maxY, double minZ, double maxZ);
   void se3ToEigen3d(const StateType *state, Eigen::Affine3d &affine3d) const;
 
   void eigen3dToSE3(StateType *state, const Eigen::Affine3d &affine3d) const;
@@ -399,15 +382,6 @@ protected:
    */
   int chooseGraspPart(int from_part_id, int to_part_id) const;
 
-
-  void initializeIKPlugin();
-
-  bool setFromIK(robot_state::RobotState &rstate,
-                 const robot_state::JointModelGroup *arm_joint_group,
-                 const std::string &planning_group,
-                 const std::string &tip_frame,
-                 const Eigen::Affine3d &tip_pose_wrt_world) const;
-
 protected:
   int arm_idx_lw_bd_;
   int arm_idx_up_bd_;
@@ -420,12 +394,8 @@ protected:
 
   std::string robot_name_;
 
-  boost::shared_ptr<kinematics::KinematicsBase> psm_one_kinematics_solver_;
-  boost::shared_ptr<kinematics::KinematicsBase> psm_two_kinematics_solver_;
-  boost::shared_ptr<pluginlib::ClassLoader<kinematics::KinematicsBase> >
-    kinematics_loader_;
-
 };
+
 }
 
 #endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_STATE_SPACE_H
