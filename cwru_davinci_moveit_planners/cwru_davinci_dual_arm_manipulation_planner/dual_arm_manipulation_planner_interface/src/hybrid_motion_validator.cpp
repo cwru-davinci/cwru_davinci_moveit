@@ -525,7 +525,6 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   std::size_t attempts = 1;
   double timeout = 0.1;
   bool found_ik = ungrasped_state->setFromIK(arm_joint_group, grasped_tool_tip_pose, attempts, timeout);
-//  bool found_ik = setFromIK(ungrasped_state, arm_joint_group, planning_group, tip_link->getName(), grasped_tool_tip_pose);
 
   if (!found_ik)
   {
@@ -546,7 +545,6 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   }
   ungrasped_state->setJointGroupPositions(eef_group_name, eef_joint_position);
   ungrasped_state->update();
-//  publishRobotState(ungrasped_state);
   if (!noCollision(*ungrasped_state))
   {
 //    publishRobotState(ungrasped_state);
