@@ -87,8 +87,6 @@ public:
                            const std::string &ss_active_group) const;
 
 protected:
-  void initializePlannerPlugin();
-
   bool planSafeStateToPreGraspState(const robot_state::RobotState &start_state,
                                     const robot_state::RobotState &pre_grasp_state,
                                     const std::string &planning_group) const;
@@ -111,19 +109,7 @@ protected:
 
   bool noCollision(const robot_state::RobotState& rstate) const;
 
-  bool planPathFromTwoStates(const robot_state::RobotState &start_state,
-                             const robot_state::RobotState &goal_state,
-                             const std::string &planning_group) const;
-
   void defaultSettings();
-
-  void initializeIKPlugin();
-
-  bool setFromIK(robot_state::RobotState &rstate,
-                 const robot_state::JointModelGroup *arm_joint_group,
-                 const std::string &planning_group,
-                 const std::string &tip_frame,
-                 const Eigen::Affine3d& tip_pose_wrt_world) const;
 
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
@@ -135,11 +121,7 @@ protected:
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
-  planning_interface::PlannerManagerPtr planner_instance_;
-
   planning_scene::PlanningScenePtr planning_scene_;
-
-//  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor_;
 
   ros::NodeHandle node_handle_;
 

@@ -62,10 +62,6 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 
   kmodel_ = robot_model_loader_.getModel();
 
-//  initializePlannerPlugin();
-
-//  initializeIKPlugin();
-
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
   hyStateSpace_->object_transit_planning_duration_ = std::chrono::duration<double>::zero();
@@ -88,8 +84,6 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 
 //  CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "");
   CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
-
-//  pMonitor_.reset(new planning_scene_monitor::PlanningSceneMonitor(robot_name_));
 
 //  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
 }
@@ -185,46 +179,6 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
   return result;
 }
 
-void HybridMotionValidator::initializePlannerPlugin()
-{
-  // We will now construct a loader to load a planner, by name.
-  // Note that we are using the ROS pluginlib library here.
-  boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> planner_plugin_loader;
-
-  std::string planner_plugin_name;
-
-  // We will get the name of planning plugin we want to load
-  // from the ROS parameter server, and then load the planner
-  // making sure to catch all exceptions.
-  if (!node_priv_.getParam("planning_plugin", planner_plugin_name))
-    ROS_FATAL_STREAM("Could not find planner plugin name");
-  try
-  {
-    planner_plugin_loader.reset(new pluginlib::ClassLoader<planning_interface::PlannerManager>(
-      "moveit_core", "planning_interface::PlannerManager"));
-  }
-  catch (pluginlib::PluginlibException &ex)
-  {
-    ROS_FATAL_STREAM("Exception while creating planning plugin loader " << ex.what());
-  }
-  try
-  {
-    planner_instance_.reset(planner_plugin_loader->createUnmanagedInstance(planner_plugin_name));
-    if (!planner_instance_->initialize(kmodel_, node_priv_.getNamespace()))
-      ROS_FATAL_STREAM("Could not initialize planner instance");
-    ROS_INFO_STREAM("Using planning interface '" << planner_instance_->getDescription() << "'");
-  }
-  catch (pluginlib::PluginlibException &ex)
-  {
-    const std::vector<std::string> &classes = planner_plugin_loader->getDeclaredClasses();
-    std::stringstream ss;
-    for (std::size_t i = 0; i < classes.size(); ++i)
-      ss << classes[i] << " ";
-    ROS_ERROR_STREAM("Exception while loading planner '" << planner_plugin_name << "': " << ex.what() << std::endl
-                                                         << "Available plugins: " << ss.str());
-  }
-}
-
 bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_state,
                                         const robot_state::RobotState &goal_state,
                                         const std::string &ss_active_group,
@@ -311,6 +265,10 @@ bool HybridMotionValidator::planNeedleReleasing(const robot_state::RobotState &h
   robot_state::RobotStatePtr ungrasped_state(new robot_state::RobotState(goal_state));
 
   planGraspStateToUngraspedState(handoff_state, ungrasped_state, ss_active_group);
+  std::string tool_tip = (ss_active_group == "psm_one") ? "PSM1_tool_tip_link" : "PSM2_tool_tip_link";
+  outFile_ << "\n After call ungrasp plan, going to call ungrasp to safe \n";
+  outFile_ << "pregrasp tool tip pose: \n";
+  outFile_ << ungrasped_state->getGlobalLinkTransform(tool_tip).matrix().format(CommaInitFmt_);
   if (!planUngraspedStateToSafeState(*ungrasped_state, goal_state, ss_active_group))
     return false;
   return true;
@@ -345,7 +303,6 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
     std::size_t attempts = 1;
     double timeout = 0.1;
     found_ik = pre_grasp_state->setFromIK(arm_joint_group, pregrasp_tool_tip_pose, attempts, timeout);
-//    found_ik = setFromIK(pre_grasp_state, arm_joint_group, planning_group, tip_link->getName(), pregrasp_tool_tip_pose);
     if (found_ik)
       break;
     distance += 0.001;
@@ -395,9 +352,6 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
-//  const Eigen::Affine3d current_tip_pose = pre_grasp_state.getGlobalLinkTransform(tip_link);
-//  bool is_same = current_tip_pose.isApprox(grasped_tool_tip_pose, 0.0001);
-
   bool clear_path = false;
   if (found_cartesian_path != 1.0)
   {
@@ -421,9 +375,6 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   }
   traj.back()->setJointGroupPositions(eef_group_name,eef_joint_position);
   traj.back()->update();
-
-//  if (!planPathFromTwoStates(*traj.back(), handoff_state, planning_group + "_gripper"))  // // check last two states
-//    return false;
 
   for (int i = 0; i < traj.size(); i++)
   {
@@ -472,8 +423,6 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
                                                                      0.0);
   cp_start_state->update();
 //  publishRobotState(cp_start_state);
-//  const Eigen::Affine3d current_tip_pose = cp_start_state.getGlobalLinkTransform(tip_link);
-//  bool is_same = current_tip_pose.isApprox(pre_grasp_tool_tip_pose, 0.0001);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -521,6 +470,11 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   ungrasped_tool_tip_pose.translation() += retreat_dir;
 
   auto start_ik = std::chrono::high_resolution_clock::now();
+  outFile_ << sep;
+  outFile_ << "grasped_tool_tip pose: " << "\n";
+  outFile_ << grasped_tool_tip_pose.matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << "\n" << "ungrasped_state before call setFromIK" << "\n";
+  outFile_ << ungrasped_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
 
   std::size_t attempts = 1;
   double timeout = 0.1;
@@ -528,6 +482,9 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
 
   if (!found_ik)
   {
+    outFile_ << "\n" << "Failed ungrasped_state after call setFromIK with pose grasped_tool_tip_pose" << "\n";
+    outFile_ << ungrasped_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+    outFile_ << sep;
     auto finish_ik = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish_ik - start_ik;
     hyStateSpace_->ik_solving_duration_ += elapsed;
@@ -535,6 +492,9 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   }
 
   ungrasped_state->update();
+  outFile_ << "\n" << "Succeeded ungrasped_state after call setFromIK with pose grasped_tool_tip_pose" << "\n";
+  outFile_ << ungrasped_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+
   std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
   std::vector<double> eef_joint_position;
   ungrasped_state->copyJointGroupPositions(eef_group_name, eef_joint_position);
@@ -565,8 +525,6 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
                                                                       jump_threshold);
 
   ungrasped_state->update();
-//  const Eigen::Affine3d current_tip_pose = ungrasped_state.getGlobalLinkTransform(tip_link);
-//  bool is_same = current_tip_pose.isApprox(ungrasped_tool_tip_pose, 0.0001);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -574,19 +532,49 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
 
   bool clear_path = false;
   if (found_cartesian_path != 1.0)
+  {
+    outFile_ << "\n" << "Failed ungrasped_state after call computeCartesianPath" << "\n";
+    outFile_ << ungrasped_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+    outFile_ << sep;
     return clear_path;
+  }
 
   ungrasped_state->setToDefaultValues(ungrasped_state->getJointModelGroup(eef_group_name), eef_group_name + "_home");
   ungrasped_state->update();
   traj.back() = ungrasped_state;
 
+  outFile_ << "\n" << "Succeeded ungrasped_state after call computeCartesianPath" << "\n";
+  outFile_ << ungrasped_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << sep;
+
   for (int i = 0; i < traj.size(); i++)
   {
     traj[i]->update();
-    if (!noCollision(*traj[i]))  // check intermediate states
-      return clear_path;
+    std::vector<double> eef_joint_position;
+    traj[i]->copyJointGroupPositions(eef_group_name, eef_joint_position);
 
+    outFile_ << "\n" << "checking retreating collision" << "\n";
+    for(int j = 0; j < eef_joint_position.size(); j++)
+    {
+      outFile_ << eef_joint_position[j] << "\n";
+    }
+    outFile_ << sep;
+    if (!noCollision(*traj[i]))  // check intermediate states
+    {
+      if(traj[i - 1])
+      {
+        ungrasped_state.reset(new robot_state::RobotState(*traj[i - 1]));
+        ungrasped_state->update();
+      }
+      else
+      {
+        ungrasped_state.reset(new robot_state::RobotState(*traj[0]));
+        ungrasped_state->update();
+      }
+      return clear_path;
+    }
   }
+
   clear_path = true;
   return clear_path;
 }
@@ -603,6 +591,14 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
+  outFile_ << sep;
+  outFile_ << "\n" << "goal tool_tip_pose: " << "\n";
+  outFile_ << tool_tip_pose.matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << "\n" << "ungrasped tool tip pose: " << "\n";
+  outFile_ << ungrasped_state.getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << "\n" << "cp_start_state before call computeCartesianPath with pose tool_tip_pose" << "\n";
+  outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+
   std::vector<robot_state::RobotStatePtr> traj;
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
@@ -617,12 +613,19 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
 
   cp_start_state->update();
 // publishRobotState(cp_start_state);
-//  const Eigen::Affine3d current_tip_pose = cp_start_state.getGlobalLinkTransform(tip_link);
-//  bool is_same = current_tip_pose.isApprox(tool_tip_pose, 0.0001);
 
   bool clear_path = false;
   if (found_cartesian_path != 1.0)
+  {
+    outFile_ << "\n" << "Failed cp_start_state tool tip pose" << "\n";
+    outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+    outFile_ << sep;
     return clear_path;
+  }
+
+  outFile_ << "\n" << "Succeeded cp_start_state tool tip pose" << "\n";
+  outFile_ << cp_start_state->getGlobalLinkTransform(tip_link).matrix().format(CommaInitFmt_) << "\n";
+  outFile_ << sep;
 
   for (int i = 0; i < traj.size(); ++i)
   {
@@ -635,8 +638,6 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
   }
   clear_path = true;
   return clear_path;
-
-//  return planPathFromTwoStates(ungrasped_state, goal_state, planning_group);
 }
 
 bool HybridMotionValidator::planObjectTransit(const robot_state::RobotState &start_state,
@@ -665,8 +666,6 @@ bool HybridMotionValidator::planObjectTransit(const robot_state::RobotState &sta
 
   cp_start_state->update();
 //  publishRobotState(cp_start_state);
-//  const Eigen::Affine3d current_tip_pose = cp_start_state.getGlobalLinkTransform(tip_link);
-//  bool is_same = current_tip_pose.isApprox(tool_tip_pose, 0.0001);
   bool clear_path = false;
   if (found_cartesian_path != 1.0)
     return clear_path;
@@ -711,53 +710,6 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
   return no_collision;
 }
 
-bool HybridMotionValidator::planPathFromTwoStates(const robot_state::RobotState &start_state,
-                                                  const robot_state::RobotState &goal_state,
-                                                  const std::string &planning_group) const
-{
-  auto start = std::chrono::high_resolution_clock::now();
-
-  planning_scene_->setCurrentState(start_state);
-
-  const robot_state::JointModelGroup *joint_model_group = goal_state.getJointModelGroup(planning_group);
-  moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, joint_model_group);
-
-  // create a motion plan request
-  planning_interface::MotionPlanRequest req;
-  planning_interface::MotionPlanResponse res;
-
-  moveit_msgs::RobotState start_state_msg;
-  moveit::core::robotStateToRobotStateMsg(start_state, start_state_msg);
-
-  req.start_state = start_state_msg;
-  req.group_name = planning_group;
-  req.goal_constraints.clear();
-  req.goal_constraints.push_back(joint_goal);
-
-  planning_interface::PlanningContextPtr context = planner_instance_->getPlanningContext(planning_scene_,
-                                                                                         req,
-                                                                                         res.error_code_);
-  if (context->solve(res))
-  {
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    hyStateSpace_->object_transit_planning_duration_ += elapsed;
-    return true;
-  }
-  else
-  {
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    hyStateSpace_->object_transit_planning_duration_ += elapsed;
-
-    if (res.error_code_.val != res.error_code_.SUCCESS)
-    {
-      ROS_ERROR("Could not compute plan successfully, the error code is %d", res.error_code_.val);
-      return false;
-    }
-  }
-}
-
 void HybridMotionValidator::defaultSettings()
 {
   hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();
@@ -778,69 +730,5 @@ void HybridMotionValidator::publishRobotState(const robot_state::RobotState& rst
   ros::spinOnce();
   ros::Duration(1.0).sleep();
 }
-
-void HybridMotionValidator::initializeIKPlugin()
-{
-  psm_one_kinematics_solver_ = NULL;
-  psm_two_kinematics_solver_ = NULL;
-  kinematics_loader_.reset(
-    new pluginlib::ClassLoader<kinematics::KinematicsBase>("moveit_core", "kinematics::KinematicsBase"));
-  std::string plugin_name = "davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin";
-
-  psm_one_kinematics_solver_ = kinematics_loader_->createInstance(plugin_name);
-  psm_two_kinematics_solver_ = kinematics_loader_->createInstance(plugin_name);
-
-  double search_discretization = 0.025;
-  psm_one_kinematics_solver_->initialize(robot_name_, "psm_one", "PSM1_psm_base_link", "PSM1_tool_tip_link", search_discretization);
-  psm_two_kinematics_solver_->initialize(robot_name_, "psm_two", "PSM2_psm_base_link", "PSM2_tool_tip_link", search_discretization);
-}
-
-bool HybridMotionValidator::setFromIK(robot_state::RobotState &rstate,
-                                      const robot_state::JointModelGroup *arm_joint_group,
-                                      const std::string &planning_group,
-                                      const std::string &tip_frame,
-                                      const Eigen::Affine3d &tip_pose_wrt_world) const
-{
-  bool found_ik = false;
-  std::string base_frame = (planning_group == "psm_one") ? "PSM1_psm_base_link" : "PSM2_psm_base_link";
-
-  boost::shared_ptr<kinematics::KinematicsBase> kinematics_solver_;
-  if (planning_group == "psm_one")
-  {
-    kinematics_solver_ = psm_one_kinematics_solver_;
-    if (kinematics_solver_->getGroupName() != planning_group)
-      return found_ik;
-  }
-  else
-  {
-    kinematics_solver_ = psm_two_kinematics_solver_;
-    if (kinematics_solver_->getGroupName() != planning_group)
-      return found_ik;
-  }
-
-  std::vector<double> seed(kinematics_solver_->getJointNames().size(), 0.0);
-  std::vector<double> solution(kinematics_solver_->getJointNames().size(), 0.0);
-  double timeout = 2.0;
-  Eigen::Affine3d affine_base_wrt_world = rstate.getFrameTransform(base_frame);
-  Eigen::Affine3d affine_tip_pose_wrt_base = affine_base_wrt_world.inverse() * tip_pose_wrt_world;
-  geometry_msgs::Pose tip_pose_wrt_base;
-  tf::poseEigenToMsg(affine_tip_pose_wrt_base, tip_pose_wrt_base);
-  moveit_msgs::MoveItErrorCodes error_code;
-
-  found_ik = kinematics_solver_->searchPositionIK(tip_pose_wrt_base, seed, timeout, solution, error_code);
-
-  if (found_ik)
-  {
-    rstate.setJointGroupPositions(arm_joint_group, solution);
-    rstate.update();
-  }
-  else
-  {
-    ROS_INFO("No IK solution in CheckMotion");
-  }
-
-  return found_ik;
-}
-
 
 }  // namespace
