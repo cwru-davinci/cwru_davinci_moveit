@@ -1,6 +1,40 @@
-//
-// Created by sulu on 6/10/19.
-//
+/*********************************************************************
+ * Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2019, Case Western Reserve University
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of SRI International nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *********************************************************************/
+
+/* Author: Su Lu <sxl924@case.edu>
+ * Description: handoff performance test main function
+ */
 
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
@@ -15,11 +49,6 @@
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_valid_state_sampler.h>
-#include <moveit/dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution.h>
-
-//moveit
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 // Grasp generation and visualization
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
@@ -107,15 +136,6 @@ void getPerformanceStats(const std::vector<double>& running_time, PerformanceSta
   stats.stdev = sqrt(accum / (running_time.size()-1));
 }
 
-// return an sampler
-ob::ValidStateSamplerPtr allocHybridValidStateSampler(const ob::SpaceInformation *si)
-{
-
-  // we can perform any additional setup / configuration of a sampler here,
-  // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
-  return std::make_shared<HybridValidStateSampler>("robot_description", si);
-}
-
 PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
                             const ros::NodeHandle &node_handle_priv,
                             const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
@@ -197,7 +217,6 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
     // set the start and goal states
     pdef->setStartAndGoalStates(start, goal);
 
-//    si->setValidStateSamplerAllocator(allocHybridValidStateSampler);
     // create a planner for the defined space
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
@@ -347,7 +366,6 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
     // set the start and goal states
     pdef->setStartAndGoalStates(start, goal);
 
-//    si->setValidStateSamplerAllocator(allocHybridValidStateSampler);
     // create a planner for the defined space
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
@@ -497,7 +515,6 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
     // set the start and goal states
     pdef->setStartAndGoalStates(start, goal);
 
-//    si->setValidStateSamplerAllocator(allocHybridValidStateSampler);
     // create a planner for the defined space
     auto planner(std::make_shared<og::RRTConnect>(si));
     // set the problem we are trying to solve for the planner
@@ -568,131 +585,26 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "handoff_main");
-  ros::AsyncSpinner spinner(1);
-  ros::Duration(3.0).sleep();
-  spinner.start();
+  ros::init(argc, argv, "handoff_performance_test_main");
 
   ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
+  ros::Duration(3.0).sleep();
 
   cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =
     boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(
       node_handle_priv, "psm_one", "psm_one_gripper");
 
-  std::vector<double> ss_needle_pose_translation;
-  std::vector<double> ss_needle_pose_orientation;
-  std::vector<double> gs_needle_pose_translation;
-  std::vector<double> gs_needle_pose_orientation;
-  std::vector<double> ss_joint_values;
-  std::vector<double> gs_joint_values;
-  int ss_arm_index;
-  int ss_grasp_pose_index;
-  int gs_arm_index;
-  int gs_grasp_pose_index;
+  int test_num = 0;
+  node_handle_priv.getParam("test", test_num);
 
-  if (node_handle_priv.hasParam("ss_needle_pose_translation"))
-  {
-    XmlRpc::XmlRpcValue needle_pose_list;
-    node_handle_priv.getParam("ss_needle_pose_translation", needle_pose_list);
+  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
 
-    ROS_ASSERT(needle_pose_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < needle_pose_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_pose_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      ss_needle_pose_translation.push_back(static_cast<double>(needle_pose_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("ss_needle_pose_orientation"))
-  {
-    XmlRpc::XmlRpcValue needle_ori_list;
-    node_handle_priv.getParam("ss_needle_pose_orientation", needle_ori_list);
-
-    ROS_ASSERT(needle_ori_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < needle_ori_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_ori_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      ss_needle_pose_orientation.push_back(static_cast<double>(needle_ori_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("gs_needle_pose_translation"))
-  {
-    XmlRpc::XmlRpcValue needle_pose_list;
-    node_handle_priv.getParam("gs_needle_pose_translation", needle_pose_list);
-
-    ROS_ASSERT(needle_pose_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < needle_pose_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_pose_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      gs_needle_pose_translation.push_back(static_cast<double>(needle_pose_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("gs_needle_pose_orientation"))
-  {
-    XmlRpc::XmlRpcValue needle_ori_list;
-    node_handle_priv.getParam("gs_needle_pose_orientation", needle_ori_list);
-
-    ROS_ASSERT(needle_ori_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < needle_ori_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_ori_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      gs_needle_pose_orientation.push_back(static_cast<double>(needle_ori_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("ss_joint_values"))
-  {
-    XmlRpc::XmlRpcValue joint_value_list;
-    node_handle_priv.getParam("ss_joint_values", joint_value_list);
-
-    ROS_ASSERT(joint_value_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < joint_value_list.size(); ++i)
-    {
-      ROS_ASSERT(joint_value_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      ss_joint_values.push_back(static_cast<double>(joint_value_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("gs_joint_values"))
-  {
-    XmlRpc::XmlRpcValue joint_value_list;
-    node_handle_priv.getParam("gs_joint_values", joint_value_list);
-
-    ROS_ASSERT(joint_value_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < joint_value_list.size(); ++i)
-    {
-      ROS_ASSERT(joint_value_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      gs_joint_values.push_back(static_cast<double>(joint_value_list[i]));
-    }
-  }
-
-  node_handle_priv.getParam("ss_arm_index", ss_arm_index);
-  node_handle_priv.getParam("ss_grasp_pose_index", ss_grasp_pose_index);
-  node_handle_priv.getParam("gs_arm_index", gs_arm_index);
-  node_handle_priv.getParam("gs_grasp_pose_index", gs_grasp_pose_index);
-
-  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(true);
-
-  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, 10);
-  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, 10);
-  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, 10);
+  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
+  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
+  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
 
   printPerformanceStats(oneHfStats, "One Handoff");
   printPerformanceStats(twoHfStats, "Two Handoff");

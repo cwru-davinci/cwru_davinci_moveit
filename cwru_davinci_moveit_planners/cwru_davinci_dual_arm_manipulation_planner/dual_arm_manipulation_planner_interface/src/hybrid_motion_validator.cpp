@@ -82,11 +82,7 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 
   hyStateSpace_->hand_off_failed_num = 0;
 
-//  CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "");
-  CommaInitFmt_ = Eigen::IOFormat(Eigen::FullPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
-
   visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
-//  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("interactive_robot_state", 1);
 }
 
 std::ofstream HybridMotionValidator::outFile_ = std::ofstream("/home/sulu/failedPoses.txt");

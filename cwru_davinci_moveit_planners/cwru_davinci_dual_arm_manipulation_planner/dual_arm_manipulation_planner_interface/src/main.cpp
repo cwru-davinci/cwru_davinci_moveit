@@ -33,7 +33,7 @@
  *********************************************************************/
 
 /* Author: Su Lu <sxl924@case.edu>
- * Description:
+ * Description: handoff main function
  */
 
 #include <ompl/base/SpaceInformation.h>
@@ -48,11 +48,6 @@
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_valid_state_sampler.h>
-#include <moveit/dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution.h>
-
-//moveit
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 // Grasp generation and visualization
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
@@ -62,27 +57,8 @@ namespace ob = ompl::base;
 namespace og = ompl::geometric;
 using namespace dual_arm_manipulation_planner_interface;
 
-// return an sampler
-ob::ValidStateSamplerPtr allocHybridValidStateSampler(const ob::SpaceInformation *si)
-{
-
-  // we can perform any additional setup / configuration of a sampler here,
-  // but there is nothing to tweak in case of the ObstacleBasedValidStateSampler.
-  return std::make_shared<HybridValidStateSampler>("robot_description", si);
-}
-
 void plan(const ros::NodeHandle &node_handle,
           const ros::NodeHandle &node_handle_priv,
-          const std::vector<double> ss_needle_pose_translation,
-          const std::vector<double> ss_needle_pose_orientation,
-          const std::vector<double> gs_needle_pose_translation,
-          const std::vector<double> gs_needle_pose_orientation,
-          const std::vector<double> ss_joint_values,
-          const std::vector<double> gs_joint_values,
-          int ss_arm_index,
-          int gs_arm_index,
-          int ss_grasp_pose_index,
-          int gs_grasp_pose_index,
           std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses)
 {
   std::string object_name = "needle_r";
@@ -151,7 +127,6 @@ void plan(const ros::NodeHandle &node_handle,
   // set the start and goal states
   pdef->setStartAndGoalStates(start, goal);
 
-//    si->setValidStateSamplerAllocator(allocHybridValidStateSampler);
   // create a planner for the defined space
   auto planner(std::make_shared<og::RRTConnect>(si));
   // set the problem we are trying to solve for the planner
@@ -211,139 +186,23 @@ void plan(const ros::NodeHandle &node_handle,
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "handoff_main");
-  ros::AsyncSpinner spinner(1);
-  ros::Duration(3.0).sleep();
-  spinner.start();
 
   ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
   std::string object_name = "needle_r";
   std::string robot_name = "robot_description";
+  ros::Duration(3.0).sleep();
 
   cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =
     boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(node_handle_priv,
                                                                      "psm_one",
                                                                      "psm_one_gripper");
 
-  std::vector<double> ss_needle_pose_translation;
-  std::vector<double> ss_needle_pose_orientation;
-  std::vector<double> gs_needle_pose_translation;
-  std::vector<double> gs_needle_pose_orientation;
-  std::vector<double> ss_joint_values;
-  std::vector<double> gs_joint_values;
-  int ss_arm_index;
-  int ss_grasp_pose_index;
-  int gs_arm_index;
-  int gs_grasp_pose_index;
 
-  if (node_handle_priv.hasParam("ss_needle_pose_translation"))
-  {
-    XmlRpc::XmlRpcValue needle_pose_list;
-    node_handle_priv.getParam("ss_needle_pose_translation", needle_pose_list);
 
-    ROS_ASSERT(needle_pose_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
 
-    for (int32_t i = 0; i < needle_pose_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_pose_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      ss_needle_pose_translation.push_back(static_cast<double>(needle_pose_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("ss_needle_pose_orientation"))
-  {
-    XmlRpc::XmlRpcValue needle_ori_list;
-    node_handle_priv.getParam("ss_needle_pose_orientation", needle_ori_list);
-
-    ROS_ASSERT(needle_ori_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < needle_ori_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_ori_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      ss_needle_pose_orientation.push_back(static_cast<double>(needle_ori_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("gs_needle_pose_translation"))
-  {
-    XmlRpc::XmlRpcValue needle_pose_list;
-    node_handle_priv.getParam("gs_needle_pose_translation", needle_pose_list);
-
-    ROS_ASSERT(needle_pose_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < needle_pose_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_pose_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      gs_needle_pose_translation.push_back(static_cast<double>(needle_pose_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("gs_needle_pose_orientation"))
-  {
-    XmlRpc::XmlRpcValue needle_ori_list;
-    node_handle_priv.getParam("gs_needle_pose_orientation", needle_ori_list);
-
-    ROS_ASSERT(needle_ori_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < needle_ori_list.size(); ++i)
-    {
-      ROS_ASSERT(needle_ori_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      gs_needle_pose_orientation.push_back(static_cast<double>(needle_ori_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("ss_joint_values"))
-  {
-    XmlRpc::XmlRpcValue joint_value_list;
-    node_handle_priv.getParam("ss_joint_values", joint_value_list);
-
-    ROS_ASSERT(joint_value_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < joint_value_list.size(); ++i)
-    {
-      ROS_ASSERT(joint_value_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      ss_joint_values.push_back(static_cast<double>(joint_value_list[i]));
-    }
-  }
-
-  if (node_handle_priv.hasParam("gs_joint_values"))
-  {
-    XmlRpc::XmlRpcValue joint_value_list;
-    node_handle_priv.getParam("gs_joint_values", joint_value_list);
-
-    ROS_ASSERT(joint_value_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-    for (int32_t i = 0; i < joint_value_list.size(); ++i)
-    {
-      ROS_ASSERT(joint_value_list[i].getType() ==
-                 XmlRpc::XmlRpcValue::TypeDouble);
-      gs_joint_values.push_back(static_cast<double>(joint_value_list[i]));
-    }
-  }
-
-  node_handle_priv.getParam("ss_arm_index", ss_arm_index);
-  node_handle_priv.getParam("ss_grasp_pose_index", ss_grasp_pose_index);
-  node_handle_priv.getParam("gs_arm_index", gs_arm_index);
-  node_handle_priv.getParam("gs_grasp_pose_index", gs_grasp_pose_index);
-
-  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(true);
-
-  plan(node_handle, node_handle_priv,
-       ss_needle_pose_translation,
-       ss_needle_pose_orientation,
-       gs_needle_pose_translation,
-       gs_needle_pose_orientation,
-       ss_joint_values,
-       gs_joint_values,
-       ss_arm_index,
-       gs_arm_index,
-       ss_grasp_pose_index,
-       gs_grasp_pose_index, grasp_poses);
+  plan(node_handle, node_handle_priv, grasp_poses);
 
   return 0;
 }
