@@ -70,6 +70,8 @@ TEST(TestHybridRRT, HybridMotionValidator)
       rstate_home_position[i] = pRStateHome->getVariablePosition(pRStateHome->getVariableNames()[i]);
     }
 
+    tester.publishRobotState(*pRStateHome);
+
     const robot_state::RobotStatePtr& pRdmRState = tester.sampleRobotState();
     EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
     std::vector<double> rstate_random_position(variable_count);
@@ -82,6 +84,8 @@ TEST(TestHybridRRT, HybridMotionValidator)
     {
       EXPECT_EQ(pRdmRState->getVariableNames()[i], pRStateHome->getVariableNames()[i]);
     }
+
+    tester.publishRobotState(*pRdmRState);
 
     bool testResult = tester.testComputeCartesianPath(*pRStateHome, *pRdmRState);
     EXPECT_TRUE(testResult);

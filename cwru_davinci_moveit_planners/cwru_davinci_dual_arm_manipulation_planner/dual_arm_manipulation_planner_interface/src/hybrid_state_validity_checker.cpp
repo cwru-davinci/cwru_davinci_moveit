@@ -94,6 +94,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
     const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
     if(!kstate)
       return is_valid;
+    kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
     if (!convertObjectToRobotState(kstate, hs, selected_group_name))

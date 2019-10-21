@@ -66,6 +66,8 @@ public:
     return succeeded_num_;
   }
 
+  using HybridMotionValidator::publishRobotState;
+
 private:
   bool samePose(const Eigen::Affine3d &a, const Eigen::Affine3d &b);
 
@@ -164,6 +166,7 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
 const robot_state::RobotStatePtr& HybridMotionValidatorTester::sampleRobotState()
 {
   static robot_state::RobotStatePtr pRState(new robot_state::RobotState(kmodel_));
+  pRState->setToDefaultValues();
   const robot_state::JointModelGroup* selected_joint_model_group = pRState->getJointModelGroup(planning_group_);
   pRState->setToRandomPositions(selected_joint_model_group);
   pRState->update();

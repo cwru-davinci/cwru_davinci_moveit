@@ -321,21 +321,37 @@ TEST(ArmIKPlugin, TestKDLKinematics)
 
   // fk robot state
   const robot_state::RobotStatePtr pRStateFK(new robot_state::RobotState(pKModel));
+  pRStateFK->setToDefaultValues();
   const robot_state::JointModelGroup* arm_joint_group_fk = pRStateFK->getJointModelGroup("psm_one");
   const moveit::core::LinkModel *tip_link = arm_joint_group_fk->getOnlyOneEndEffectorTip();
   std::vector<double> randomPositionByFK;
 
   // ik robot state
   const robot_state::RobotStatePtr pRStateIK(new robot_state::RobotState(pKModel));
+  pRStateIK->setToDefaultValues();
   const robot_state::JointModelGroup* arm_joint_group_ik = pRStateIK->getJointModelGroup("psm_one");
   std::vector<double> positionByIK;
-
+  int active_joint_num = 6;
+  int all_joints_num = 28;
   ros::WallTime start_time = ros::WallTime::now();
   for(size_t i = 0; i < test_num; i++)
   {
     pRStateFK->setToRandomPositions(arm_joint_group_fk);
     pRStateFK->update();
     pRStateFK->copyJointGroupPositions("psm_one", randomPositionByFK);
+    EXPECT_EQ(active_joint_num, randomPositionByFK.size());
+    EXPECT_EQ(all_joints_num, pRStateFK->getVariableCount());
+    const double * fk_array = pRStateFK->getVariablePositions();
+    std::vector<double> jointVariableByFK(fk_array, fk_array + all_joints_num);
+    EXPECT_EQ(all_joints_num, jointVariableByFK.size());
+    for(size_t ii = 0; ii < jointVariableByFK.size(); ++ii)
+    {
+      EXPECT_NEAR(jointVariableByFK[ii], pRStateFK->getVariablePosition(pRStateFK->getVariableNames()[ii]), 1e-11);
+      if(!((jointVariableByFK[ii] - pRStateFK->getVariablePosition(pRStateFK->getVariableNames()[ii])) < 1e-11))
+      {
+        ROS_INFO("\n FK error joint angle in joint %s \n", pRStateFK->getVariableNames()[ii].c_str());
+      }
+    }
     const Eigen::Affine3d goal_tool_tip_pose = pRStateFK->getGlobalLinkTransform(tip_link);
 
     bool found_ik = pRStateIK->setFromIK(arm_joint_group_ik, goal_tool_tip_pose, 1, time_out);
@@ -345,6 +361,30 @@ TEST(ArmIKPlugin, TestKDLKinematics)
       succeeded_num += 1;
       pRStateFK->copyJointGroupPositions("psm_one", positionByIK);
       EXPECT_EQ(randomPositionByFK.size(), positionByIK.size());
+      EXPECT_EQ(active_joint_num, positionByIK.size());
+      EXPECT_EQ(all_joints_num, pRStateIK->getVariableCount());
+
+      const double * ik_array = pRStateIK->getVariablePositions();
+      std::vector<double> jointVariableByIK(ik_array, ik_array + all_joints_num);
+      EXPECT_EQ(all_joints_num, jointVariableByIK.size());
+      for(size_t ii = 0; ii < jointVariableByIK.size(); ++ii)
+      {
+        EXPECT_NEAR(jointVariableByIK[ii], pRStateIK->getVariablePosition(pRStateIK->getVariableNames()[ii]), 1e-11);
+        if(!((jointVariableByIK[ii] - pRStateIK->getVariablePosition(pRStateIK->getVariableNames()[ii])) < 1e-11))
+        {
+          ROS_INFO("\n IK error joint angle in joint %s \n", pRStateIK->getVariableNames()[ii].c_str());
+        }
+      }
+
+      for(size_t jj = 0; jj < jointVariableByIK.size(); ++jj)
+      {
+        EXPECT_NEAR(jointVariableByIK[jj], jointVariableByFK[jj], 1e-5);
+        ROS_INFO("\n IK and FK joint: %s, %f \n", pRStateIK->getVariableNames()[jj].c_str(), jointVariableByFK[jj]);
+        if(!(fabs(jointVariableByIK[jj] - jointVariableByFK[jj]) < 1e-5))
+        {
+          ROS_INFO("\n IK and FK error joint angle in joint %s \n", pRStateIK->getVariableNames()[jj].c_str());
+        }
+      }
 
       for(size_t j = 0; j < randomPositionByFK.size(); j++)
       {

@@ -83,6 +83,7 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
   hyStateSpace_->hand_off_failed_num = 0;
 
   visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
+  visual_tools_->loadRobotStatePub();
 }
 
 bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const
@@ -633,8 +634,7 @@ void HybridMotionValidator::defaultSettings()
 void HybridMotionValidator::publishRobotState(const robot_state::RobotState& rstate) const
 {
   visual_tools_->publishRobotState(rstate);
-  ros::spinOnce();
-  ros::Duration(3.0).sleep();
+  ros::Duration(1.0).sleep();
 }
 
 }  // namespace
