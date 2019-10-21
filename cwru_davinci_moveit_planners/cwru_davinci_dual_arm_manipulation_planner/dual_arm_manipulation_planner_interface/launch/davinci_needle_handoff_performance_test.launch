@@ -3,7 +3,7 @@
         <arg name="load_robot_description" value="true"/>
     </include>
 
-    <node name="davinci_needle_handoff_performance_test" pkg="cwru_davinci_dual_arm_manipulation_planner" type="davinci_needle_handoff_performance_test" args="$(arg which_arm) $(arg needle_name) $(arg movement)" respawn="false" output="screen">
+    <node name="davinci_needle_handoff_performance_test" pkg="cwru_davinci_dual_arm_manipulation_planner" type="davinci_needle_handoff_performance_test" respawn="false" output="screen">
         <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
         <param name="test_num" value="10"/>
     </node>

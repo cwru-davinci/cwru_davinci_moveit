@@ -66,7 +66,7 @@ public:
                         const std::string &object_name,
                         const ompl::base::SpaceInformationPtr &si);
 
-  virtual ~HybridMotionValidator() {outFile_.close();}
+  virtual ~HybridMotionValidator() {}
 
   virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const;
 
@@ -134,16 +134,8 @@ protected:
 
   std::string object_name_;
 
-  ros::Publisher robot_state_publisher_;
-
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
-
-private:
-  static std::ofstream outFile_;
-
-  Eigen::IOFormat CommaInitFmt_;
-  std::string sep = "\n---------------------------------------------------------\n";
 };
 
 }
