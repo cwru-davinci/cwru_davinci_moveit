@@ -306,6 +306,49 @@ public:
 
 DavinciMoveitKinematicsPluginTest ik_plugin_test;
 
+TEST(ArmIKPlugin, TestMimicJoints)
+{
+  rdf_loader::RDFLoader rdf_loader;
+  const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
+  const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
+  const robot_model::RobotModelPtr pRModelUrdfSrdf(new robot_model::RobotModel(urdf_model, srdf));
+  const robot_state::RobotStatePtr pRStateUrdfSrdf(new robot_state::RobotState(pRModelUrdfSrdf));
+
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
+  const robot_model::RobotModelConstPtr pKModelRobotDes = robotModelLoader.getModel();
+  const robot_state::RobotStatePtr pRState(new robot_state::RobotState(pKModelRobotDes));
+
+  int psm_base_active_joint_num = 6;
+  int psm_base_mimic_joint_num = 5;
+  int psm_base_all_joint_num = 11;
+  const robot_state::JointModelGroup* psm_one_base_with_mimic = pRStateUrdfSrdf->getJointModelGroup("psm_one");
+  std::vector<std::string> psm_one_base_all_joints_name = psm_one_base_with_mimic->getJointModelNames();
+//  EXPECT_EQ(psm_base_all_joint_num, psm_one_base_all_joints_name.size());
+
+//  EXPECT_EQ(psm_one_base_all_joints_name[0], "PSM1_outer_yaw");
+//  EXPECT_EQ(psm_one_base_all_joints_name[1], "PSM1_outer_pitch");
+//  EXPECT_EQ(psm_one_base_all_joints_name[2], "PSM1_outer_insertion");
+//  EXPECT_EQ(psm_one_base_all_joints_name[3], "PSM1_outer_roll");
+//  EXPECT_EQ(psm_one_base_all_joints_name[4], "PSM1_outer_wrist_pitch");
+//  EXPECT_EQ(psm_one_base_all_joints_name[5], "PSM1_outer_wrist_yaw");
+//  EXPECT_EQ(psm_one_base_all_joints_name[6], "PSM1_outer_pitch_1");
+//  EXPECT_EQ(psm_one_base_all_joints_name[7], "PSM1_outer_pitch_3");
+//  EXPECT_EQ(psm_one_base_all_joints_name[8], "PSM1_outer_pitch_5");
+//  EXPECT_EQ(psm_one_base_all_joints_name[9], "PSM1_outer_pitch_4");
+//  EXPECT_EQ(psm_one_base_all_joints_name[10],"PSM1_outer_pitch_2");
+
+  const robot_state::JointModelGroup* psm_one_base_no_mimic = pRState->getJointModelGroup("psm_one");
+  std::vector<std::string> psm_one_base_active_joints_name= psm_one_base_no_mimic->getJointModelNames();
+  EXPECT_EQ(psm_base_active_joint_num, psm_one_base_active_joints_name.size());
+
+  EXPECT_EQ(psm_one_base_active_joints_name[0], "PSM1_outer_yaw");
+  EXPECT_EQ(psm_one_base_active_joints_name[1], "PSM1_outer_pitch");
+  EXPECT_EQ(psm_one_base_active_joints_name[2], "PSM1_outer_insertion");
+  EXPECT_EQ(psm_one_base_active_joints_name[3], "PSM1_outer_roll");
+  EXPECT_EQ(psm_one_base_active_joints_name[4], "PSM1_outer_wrist_pitch");
+  EXPECT_EQ(psm_one_base_active_joints_name[5], "PSM1_outer_wrist_yaw");
+}
+
 TEST(ArmIKPlugin, TestKDLKinematics)
 {
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");

@@ -116,6 +116,8 @@ protected:
 
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
+  void setMimicJointPositions(const robot_state::RobotStatePtr& rstate,
+                              const std::string& planning_group) const;
 protected:
   HybridObjectStateSpace                    *hyStateSpace_;
 
@@ -123,7 +125,7 @@ protected:
 
   robot_model::RobotModelConstPtr           kmodel_;
 
-  TSStateStoragePtr                         tss_;
+//  TSStateStoragePtr                         tss_;
 
   robot_model_loader::RobotModelLoader      robot_model_loader_;
 

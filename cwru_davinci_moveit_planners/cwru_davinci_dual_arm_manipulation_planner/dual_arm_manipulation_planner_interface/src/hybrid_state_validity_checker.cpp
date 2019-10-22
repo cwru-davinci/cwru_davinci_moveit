@@ -56,7 +56,7 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
 //  complete_initial_robot_state_.reset(new robot_state::RobotState(kmodel_));
-  tss_.reset(new TSStateStorage(kmodel_));
+//  tss_.reset(new TSStateStorage(kmodel_));
 
   collision_request_with_distance_.distance = true;
 
@@ -90,19 +90,24 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   else
   {
     // convert ompl state to moveit robot state
-    const robot_state::RobotStatePtr kstate(tss_->getStateStorage());
+    const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
     if(!kstate)
       return is_valid;
+    kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
     if (!convertObjectToRobotState(kstate, hs, selected_group_name))
       printf("Invalid State: No IK solution.");
+
+    publishRobotState(*kstate);
 
     if(hs->jointsComputed())
     {
       moveit::core::AttachedBody* needle_model = createAttachedBody(selected_group_name, object_name_, hs->graspIndex().value);
       kstate->attachBody(needle_model);
       kstate->update();
+
+      publishRobotState(*kstate);
 
       // TODO check feasibility
 //      (std::const_pointer_cast<planning_scene::PlanningScene>(planning_scene_)).reset(new planning_scene::PlanningScene(kmodel_));
@@ -140,7 +145,7 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 {
   double cost = 0.0;
 
-  const robot_state::RobotStatePtr kstate(tss_->getStateStorage());
+  const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
   if(!kstate)
     return false;
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
@@ -166,7 +171,7 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
-  const robot_state::RobotStatePtr kstate(tss_->getStateStorage());
+  const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
   if(!kstate)
     return false;
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
@@ -226,6 +231,7 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
   std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
   const robot_state::JointModelGroup *rest_joint_model_group_eef = pRSstate->getJointModelGroup(rest_group_eef_name);
   pRSstate->setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
+  setMimicJointPositions(pRSstate, selected_group_name);
   pRSstate->update();
 
   return true;
@@ -298,4 +304,13 @@ void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState
   visual_tools_->publishRobotState(rstate);
   ros::spinOnce();
   ros::Duration(1.0).sleep();
+}
+
+void HybridStateValidityChecker::setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
+                                                        const std::string &planning_group) const
+{
+  const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
+  const double *joint_val = rstate->getJointPositions(outer_pitch_joint);
+  if(joint_val)
+    rstate->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
 }

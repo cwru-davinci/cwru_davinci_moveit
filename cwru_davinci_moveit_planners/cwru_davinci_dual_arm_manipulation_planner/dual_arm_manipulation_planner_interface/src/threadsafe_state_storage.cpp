@@ -35,17 +35,18 @@
 /* Author: Su Lu <sxl924@case.edu> */
 
 #include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
+using namespace dual_arm_manipulation_planner_interface;
 
-dual_arm_manipulation_planner_interface::TSStateStorage::TSStateStorage(const robot_model::RobotModelConstPtr &kmodel) : start_state_(kmodel)
+TSStateStorage::TSStateStorage(const robot_model::RobotModelConstPtr &kmodel) : start_state_(kmodel)
 {
   start_state_.setToDefaultValues();
 }
 
-dual_arm_manipulation_planner_interface::TSStateStorage::TSStateStorage(const robot_state::RobotState &start_state) : start_state_(start_state)
+TSStateStorage::TSStateStorage(const robot_state::RobotState &start_state) : start_state_(start_state)
 {
 }
 
-dual_arm_manipulation_planner_interface::TSStateStorage::~TSStateStorage()
+TSStateStorage::~TSStateStorage()
 {
   for (std::map<boost::thread::id, robot_state::RobotState*>::iterator it = thread_states_.begin() ; it != thread_states_.end() ; ++it)
   {
@@ -53,18 +54,19 @@ dual_arm_manipulation_planner_interface::TSStateStorage::~TSStateStorage()
   }
 }
 
-robot_state::RobotState* dual_arm_manipulation_planner_interface::TSStateStorage::getStateStorage() const
+robot_state::RobotState* TSStateStorage::getStateStorage() const
 {
-  robot_state::RobotState *st = NULL;
+  robot_state::RobotState *pRState = nullptr;
   boost::mutex::scoped_lock slock(lock_);/// \todo use Thread Local Storage?
-  std::map<boost::thread::id, robot_state::RobotState*>::const_iterator it = thread_states_.find(boost::this_thread::get_id());
+  std::map<boost::thread::id, robot_state::RobotState*>::const_iterator it =
+    thread_states_.find(boost::this_thread::get_id());
   if (it == thread_states_.end())
   {
-    st = new robot_state::RobotState(start_state_);
-    thread_states_[boost::this_thread::get_id()] = st;
+    pRState = new robot_state::RobotState(start_state_);
+    thread_states_[boost::this_thread::get_id()] = pRState;
   }
   else
-    st = it->second;
-  return st;
+    pRState = it->second;
+  return pRState;
 }
 

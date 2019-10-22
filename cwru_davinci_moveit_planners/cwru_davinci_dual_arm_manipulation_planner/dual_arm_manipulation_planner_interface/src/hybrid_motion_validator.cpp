@@ -44,8 +44,7 @@
 #include <moveit/collision_detection/collision_tools.h>
 //#include <interactivity/interactive_robot.h>
 
-namespace dual_arm_manipulation_planner_interface
-{
+using namespace dual_arm_manipulation_planner_interface;
 
 HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
                                              const std::string &robot_name,
@@ -62,7 +61,7 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 
   kmodel_ = robot_model_loader_.getModel();
 
-  tss_.reset(new TSStateStorage(kmodel_));
+//  tss_.reset(new TSStateStorage(kmodel_));
 
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
@@ -105,19 +104,25 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     const std::string active_group_s1 = (hs1->armIndex().value == 1) ? "psm_one" : "psm_two";
     const std::string rest_group_s1 = (active_group_s1 == "psm_one") ? "psm_two" : "psm_one";
 
-    const robot_state::RobotStatePtr start_state(tss_->getStateStorage());
+    const robot_state::RobotStatePtr start_state(new robot_state::RobotState(kmodel_));
+    start_state->setToDefaultValues();
     start_state->setJointGroupPositions(active_group_s1, hs1->jointVariables().values);
+    setMimicJointPositions(start_state, active_group_s1);
     start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1), rest_group_s1 + "_home");
     const std::string rest_group_s1_eef_name = start_state->getJointModelGroup(
       rest_group_s1)->getAttachedEndEffectorNames()[0];
     start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1_eef_name),
                                     rest_group_s1_eef_name + "_home");
 
+    publishRobotState(*start_state);
+
     const std::string active_group_s2 = (hs2->armIndex().value == 1) ? "psm_one" : "psm_two";
     const std::string rest_group_s2 = (active_group_s2 == "psm_one") ? "psm_two" : "psm_one";
 
-    const robot_state::RobotStatePtr goal_state(tss_->getStateStorage());
+    const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(kmodel_));
+    goal_state->setToDefaultValues();
     goal_state->setJointGroupPositions(active_group_s2, hs2->jointVariables().values);
+    setMimicJointPositions(goal_state, active_group_s2);
     goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2), rest_group_s2 + "_home");
     std::string rest_group_s2_eef_name = goal_state->getJointModelGroup(
       rest_group_s2)->getAttachedEndEffectorNames()[0];
@@ -134,6 +139,9 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     start_state->update();
     goal_state->attachBody(s2_needle);
     goal_state->update();
+
+    publishRobotState(*start_state);
+    publishRobotState(*goal_state);
 
     if (!start_state->hasAttachedBody(object_name_) || !goal_state->hasAttachedBody(object_name_))
     {
@@ -195,7 +203,7 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
   std::vector<double> gs_jt_position;
   goal_state.copyJointGroupPositions(gs_active_group, gs_jt_position);
   handoff_state->setJointGroupPositions(gs_active_group, gs_jt_position);
-
+  setMimicJointPositions(handoff_state, gs_active_group);
   const moveit::core::AttachedBody *ss_needle_body = start_state.getAttachedBody(object_name_);
   const moveit::core::AttachedBody *gs_needle_body = goal_state.getAttachedBody(object_name_);
   std::set<std::string> touch_links = ss_needle_body->getTouchLinks();
@@ -216,6 +224,7 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
                             gs_needle_body->getFixedTransforms(), touch_links,
                             gs_needle_body->getAttachedLinkName(), gs_needle_body->getDetachPosture());
   handoff_state->update();
+  publishRobotState(*handoff_state);
   if (!noCollision(*handoff_state))
   {
     auto finish = std::chrono::high_resolution_clock::now();
@@ -298,7 +307,9 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
     hyStateSpace_->ik_solving_duration_ += elapsed;
     return found_ik;
   }
+  setMimicJointPositions(pre_grasp_state, planning_group);
   pre_grasp_state->update();
+  publishRobotState(*pre_grasp_state);
 
   std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
   std::vector<double> eef_joint_position;
@@ -333,9 +344,9 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   {
     return clear_path;
   }
-
+  setMimicJointPositions(pre_grasp_state, planning_group);
   pre_grasp_state->update();
-//  publishRobotState(pre_grasp_state);
+  publishRobotState(*pre_grasp_state);
   const moveit::core::AttachedBody *hdof_needle_body = handoff_state.getAttachedBody(object_name_);
 
   traj.back()->attachBody(hdof_needle_body->getName(), hdof_needle_body->getShapes(),
@@ -351,7 +362,9 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
 
   for (int i = 0; i < traj.size(); i++)
   {
+    setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
+    publishRobotState(*traj[i]);
     if (!noCollision(*traj[i]))  // check intermediate states
     {
       publishRobotState(*traj[i]);
@@ -386,8 +399,9 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
                                                                      true,
                                                                      0.001,
                                                                      0.0);
+  setMimicJointPositions(cp_start_state, planning_group);
   cp_start_state->update();
-
+  publishRobotState(*cp_start_state);
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
@@ -400,7 +414,9 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
 
   for (int i = 0; i < traj.size(); ++i)
   {
+    setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
+    publishRobotState(*traj[i]);
     if (!noCollision(*traj[i]))
     {
       publishRobotState(*traj[i]);
@@ -639,4 +655,11 @@ void HybridMotionValidator::publishRobotState(const robot_state::RobotState& rst
   ros::Duration(1.0).sleep();
 }
 
-}  // namespace
+void HybridMotionValidator::setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
+                                                   const std::string &planning_group) const
+{
+  const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
+  const double *joint_val = rstate->getJointPositions(outer_pitch_joint);
+  if(joint_val)
+    rstate->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
+}
