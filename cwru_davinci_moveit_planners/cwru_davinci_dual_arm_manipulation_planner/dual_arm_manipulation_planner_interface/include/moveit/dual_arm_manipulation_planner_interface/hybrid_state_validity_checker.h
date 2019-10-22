@@ -40,7 +40,7 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_STATE_VALIDITY_CHECKER_H
 
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-
+#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 // moveit
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
@@ -80,35 +80,35 @@ public:
                                                  const int grasp_pose_id) const;
 
 protected:
-
   void defaultSettings();
 
   void loadNeedleModel();
 
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
-  HybridObjectStateSpace* hyStateSpace_;
+protected:
+  HybridObjectStateSpace*                   hyStateSpace_;
 
-  planning_scene::PlanningScenePtr planning_scene_;
+  planning_scene::PlanningScenePtr          planning_scene_;
 
+  TSStateStoragePtr                         tss_;
+  robot_model_loader::RobotModelLoader      robot_model_loader_;
 
-  robot_model_loader::RobotModelLoader robot_model_loader_;
-
-  robot_model::RobotModelConstPtr kmodel_;
+  robot_model::RobotModelConstPtr           kmodel_;
 
   /// @brief Robot state containing the current position of all joints
-  robot_state::RobotStatePtr complete_initial_robot_state_;
+  robot_state::RobotStatePtr                complete_initial_robot_state_;
 
-  collision_detection::CollisionRequest collision_request_simple_;
+  collision_detection::CollisionRequest     collision_request_simple_;
 
-  collision_detection::CollisionRequest collision_request_with_cost_;
+  collision_detection::CollisionRequest     collision_request_with_cost_;
 
-  collision_detection::CollisionRequest collision_request_with_distance_;
+  collision_detection::CollisionRequest     collision_request_with_distance_;
 
-  std::string object_name_;
-  std::string robot_name_;
+  std::string                               object_name_;
+  std::string                               robot_name_;
 
-  std::vector<shapes::ShapeConstPtr> needleShapes_;
+  std::vector<shapes::ShapeConstPtr>        needleShapes_;
 
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;

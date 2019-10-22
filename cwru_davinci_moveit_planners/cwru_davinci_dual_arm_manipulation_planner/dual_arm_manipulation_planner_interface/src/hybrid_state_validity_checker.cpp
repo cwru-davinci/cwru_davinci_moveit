@@ -55,7 +55,8 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
 
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
-  complete_initial_robot_state_.reset(new robot_state::RobotState(kmodel_));
+//  complete_initial_robot_state_.reset(new robot_state::RobotState(kmodel_));
+  tss_.reset(new TSStateStorage(kmodel_));
 
   collision_request_with_distance_.distance = true;
 
@@ -71,8 +72,6 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
   visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
 
   loadNeedleModel();
-
-  //  robot_state_publisher_ = node_handle_.advertise<moveit_msgs::DisplayRobotState>("collision_check_robot_state", 1);
 }
 
 bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
@@ -91,10 +90,9 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   else
   {
     // convert ompl state to moveit robot state
-    const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr kstate(tss_->getStateStorage());
     if(!kstate)
       return is_valid;
-    kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
     if (!convertObjectToRobotState(kstate, hs, selected_group_name))
@@ -142,10 +140,9 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 {
   double cost = 0.0;
 
-  const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+  const robot_state::RobotStatePtr kstate(tss_->getStateStorage());
   if(!kstate)
     return false;
-  kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
@@ -169,10 +166,9 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
-  const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+  const robot_state::RobotStatePtr kstate(tss_->getStateStorage());
   if(!kstate)
     return false;
-  kstate->setToDefaultValues();
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 

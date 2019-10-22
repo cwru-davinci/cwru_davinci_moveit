@@ -6,7 +6,7 @@ add_library(${MOVEIT_LIB_NAME}
   src/hybrid_motion_validator.cpp
   src/hybrid_valid_state_sampler.cpp
   src/davinci_needle_handoff_execution.cpp
-#  src/threadsafe_state_storage.cpp
+  src/threadsafe_state_storage.cpp
   #  src/planning_context_manager.cpp
   #  src/constraints_library.cpp
   #  src/model_based_planning_context.cpp

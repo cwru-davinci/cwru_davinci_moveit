@@ -56,7 +56,7 @@ private:
 
   robot_state::RobotState                                       start_state_;
   mutable std::map<boost::thread::id, robot_state::RobotState*> thread_states_;
-  mutable boost::mutex                                                  lock_;
+  mutable boost::mutex                                          lock_;
 };
 
 typedef boost::shared_ptr<TSStateStorage> TSStateStoragePtr;

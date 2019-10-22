@@ -62,6 +62,8 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 
   kmodel_ = robot_model_loader_.getModel();
 
+  tss_.reset(new TSStateStorage(kmodel_));
+
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
   hyStateSpace_->object_transit_planning_duration_ = std::chrono::duration<double>::zero();
@@ -103,7 +105,7 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     const std::string active_group_s1 = (hs1->armIndex().value == 1) ? "psm_one" : "psm_two";
     const std::string rest_group_s1 = (active_group_s1 == "psm_one") ? "psm_two" : "psm_one";
 
-    const robot_state::RobotStatePtr start_state(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr start_state(tss_->getStateStorage());
     start_state->setJointGroupPositions(active_group_s1, hs1->jointVariables().values);
     start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1), rest_group_s1 + "_home");
     const std::string rest_group_s1_eef_name = start_state->getJointModelGroup(
@@ -114,7 +116,7 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     const std::string active_group_s2 = (hs2->armIndex().value == 1) ? "psm_one" : "psm_two";
     const std::string rest_group_s2 = (active_group_s2 == "psm_one") ? "psm_two" : "psm_one";
 
-    const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr goal_state(tss_->getStateStorage());
     goal_state->setJointGroupPositions(active_group_s2, hs2->jointVariables().values);
     goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2), rest_group_s2 + "_home");
     std::string rest_group_s2_eef_name = goal_state->getJointModelGroup(

@@ -335,28 +335,8 @@ public:
   StateDiff checkStateDiff(const StateType *state1, const StateType *state2) const;
 
   std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
-protected:
-
-  /** \brief SpaceInformation associated with this space. Required
-   * for early collision checking in manifold traversal.
-   */
-//  ompl::base::SpaceInformation *si_{nullptr};
-
-  /** \brief Step size when traversing the manifold and collision checking. */
-  double delta_;
-
-  /** \brief Manifold traversal from x to y is stopped if accumulated
-   * distance is greater than d(x,y) times this. Additionally, if d(x,
-   * y) is greater than lambda * delta between two points, search is
-   * discontinued.
-   */
-  double lambda_;
-
-  /** \brief Whether setup() has been called. */
-  bool setup_{false};
 
 protected:
-
   int chooseSupportArm(const int from_arm_index, const int to_arm_index) const;
 
   void interpolateGrasp(const StateType *from,
@@ -383,16 +363,16 @@ protected:
   int chooseGraspPart(int from_part_id, int to_part_id) const;
 
 protected:
-  int arm_idx_lw_bd_;
-  int arm_idx_up_bd_;
-  int grasp_idx_lw_bd_;
-  int grasp_idx_up_bd_;
+  int                                  arm_idx_lw_bd_;
+  int                                  arm_idx_up_bd_;
+  int                                  grasp_idx_lw_bd_;
+  int                                  grasp_idx_up_bd_;
 
-  robot_model::RobotModelConstPtr kmodel_;
+  robot_model::RobotModelConstPtr      kmodel_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 
-  std::string robot_name_;
+  std::string                          robot_name_;
 
 };
 

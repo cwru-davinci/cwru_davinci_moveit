@@ -116,23 +116,24 @@ protected:
 
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
-  HybridObjectStateSpace *hyStateSpace_;
+protected:
+  HybridObjectStateSpace                    *hyStateSpace_;
 
-  HybridStateValidityChecker stateValidityChecker_;
+  HybridStateValidityChecker                stateValidityChecker_;
 
-  robot_model::RobotModelConstPtr kmodel_;
+  robot_model::RobotModelConstPtr           kmodel_;
 
-  robot_model_loader::RobotModelLoader robot_model_loader_;
+  TSStateStoragePtr                         tss_;
 
-  planning_scene::PlanningScenePtr planning_scene_;
+  robot_model_loader::RobotModelLoader      robot_model_loader_;
 
-  ros::NodeHandle node_handle_;
+  planning_scene::PlanningScenePtr          planning_scene_;
 
-  ros::NodeHandle node_priv_;
+  ros::NodeHandle                           node_priv_;
 
-  std::string robot_name_;
+  std::string                               robot_name_;
 
-  std::string object_name_;
+  std::string                               object_name_;
 
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
