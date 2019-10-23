@@ -73,7 +73,7 @@ bool HybridValidStateSampler::sample(ompl::base::State *state)
     selected_joint_model_group->getOnlyOneEndEffectorTip());
   const Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hss->graspIndex().value].grasp_pose;
   const Eigen::Affine3d object_pose = tool_tip_pose * grasp_pose;
-  hyStateSpace_->eigen3dToSE3(hss, object_pose);
+  hyStateSpace_->eigen3dToSE3(object_pose, hss);
 
   return si_->isValid(hss);
 }

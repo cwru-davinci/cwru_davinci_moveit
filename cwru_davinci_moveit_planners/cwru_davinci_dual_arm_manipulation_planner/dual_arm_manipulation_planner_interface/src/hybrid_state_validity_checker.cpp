@@ -108,7 +108,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
       return is_valid;
     }
 
-    publishRobotState(*kstate);
+    // publishRobotState(*kstate);
 
     if(hs->jointsComputed())
     {
@@ -116,7 +116,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
       kstate->attachBody(needle_model);
       kstate->update();
 
-      publishRobotState(*kstate);
+      // publishRobotState(*kstate);
 
       // TODO check feasibility
 //      (std::const_pointer_cast<planning_scene::PlanningScene>(planning_scene_)).reset(new planning_scene::PlanningScene(kmodel_));
@@ -132,7 +132,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
         {
           ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
         }
-        publishRobotState(*kstate);
+        // publishRobotState(*kstate);
       }
 
       kstate->clearAttachedBodies();

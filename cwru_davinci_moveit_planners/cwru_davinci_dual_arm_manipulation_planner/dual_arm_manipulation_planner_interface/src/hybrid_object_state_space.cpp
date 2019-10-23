@@ -85,7 +85,7 @@ void HybridStateSampler::sampleUniform(State *state)
     selected_joint_model_group->getOnlyOneEndEffectorTip());
   const Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hss->graspIndex().value].grasp_pose;
   const Eigen::Affine3d object_pose = tool_tip_pose * grasp_pose;
-  hyStateSpace_->eigen3dToSE3(hss, object_pose);
+  hyStateSpace_->eigen3dToSE3(object_pose, hss);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
@@ -187,6 +187,7 @@ void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool ver
 {
 
   if(verbose)
+  {
     std::cout << "Sampling Elapsed duration and times of called: " << sampling_duration_.count() << "s and "
               << sampling_num << "\n"
               << "Validity Check Elapsed duration and times of called: " << validity_checking_duration_.count()
@@ -205,11 +206,15 @@ void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool ver
               << "IK sovling Elapsed Time in Check Motion: " << ik_solving_duration_.count() << "s\n"
               << "Local Planner Collision Check Elapsed Time: " << collision_checking_duration_.count() << "s\n"
               << "Choose Grasp Function Elapsed Time: " << choose_grasp_duration_.count() << std::endl;
+  }
 
   std::chrono::duration<double> total_time_chro =
     sampling_duration_ + validity_checking_duration_ + interpolation_duration_ + check_motion_duration_;
   if(total_time)
+  {
     *total_time = total_time_chro.count();
+  }
+
   std::cout << "Total Time is: " << total_time_chro.count() << "s" << std::endl;
 }
 
@@ -314,8 +319,13 @@ bool HybridObjectStateSpace::satisfiesBounds(const State *state) const
 {
   const auto *cstate = static_cast<const StateType *>(state);
   for (unsigned int i = 0; i < componentCount_ - 1; ++i)
+  {
     if (!components_[i]->satisfiesBounds(cstate->components[i]))
+    {
       return false;
+    }
+  }
+
   return true;
 }
 
@@ -332,8 +342,12 @@ bool HybridObjectStateSpace::equalStates(const State *state1, const State *state
   bool is_se3_equal = components_[0]->equalStates(hs1->components[0], hs2->components[0]);
   bool is_armid_equal = components_[1]->equalStates(hs1->components[1], hs2->components[1]);
   bool is_graspid_equal = components_[2]->equalStates(hs1->components[2], hs2->components[2]);
+
   if(is_se3_equal && is_armid_equal && is_graspid_equal)
+  {
     return true;
+  }
+
   return false;
 }
 
@@ -403,6 +417,21 @@ void HybridObjectStateSpace::interpolate(const State *from,
   const auto *hys_from = static_cast<const StateType *>(from);
   const auto *hys_to = static_cast<const StateType *>(to);
 
+  ompl::RNG randNum;
+  double random_num = randNum.gaussian01();
+  bool bound = 0.40;
+  bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
+  bool do_transit = within_1Sd ? true : false;
+
+  if(do_transit)
+  {
+    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
+    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
+    return;
+  }
+
   switch (checkStateDiff(hys_from, hys_to))
   {
     case StateDiff::AllSame:
@@ -461,35 +490,21 @@ void HybridObjectStateSpace::se3ToEigen3d(const StateType *state, Eigen::Affine3
 {
   affine3d.translation() << state->se3State().getX(), state->se3State().getY(), state->se3State().getZ();
 
-  Eigen::Matrix3d Re(Eigen::Quaterniond(state->se3State().rotation().w,
-                                        state->se3State().rotation().x,
-                                        state->se3State().rotation().y,
-                                        state->se3State().rotation().z));
-  affine3d.linear() = Re;
+  affine3d.linear() =  Eigen::Quaterniond(state->se3State().rotation().w,
+                                          state->se3State().rotation().x,
+                                          state->se3State().rotation().y,
+                                          state->se3State().rotation().z).toRotationMatrix();
 }
 
-void HybridObjectStateSpace::eigen3dToSE3(StateType *state, const Eigen::Affine3d& affine3d) const
+void HybridObjectStateSpace::eigen3dToSE3(const Eigen::Affine3d &affine3d, StateType *state) const
 {
   state->se3State().setXYZ(affine3d.translation().x(), affine3d.translation().y(), affine3d.translation().z());
 
-  Eigen::AngleAxisd angle_ax(affine3d.linear());
-  Eigen::Vector3d axis = angle_ax.axis();
-  axis.normalize();
-
-  state->se3State().rotation().setAxisAngle(axis(0),
-                                            axis(1),
-                                            axis(2),
-                                            angle_ax.angle());
-//  printState(state, std::cout);
-
-//  geometry_msgs::Quaternion m;
-//  tf::quaternionEigenToMsg(Eigen::Quaterniond(affine3d.linear()), m);
-//  state->se3State().rotation().x = m.x;
-//  state->se3State().rotation().y = m.y;
-//  state->se3State().rotation().z = m.z;
-//  state->se3State().rotation().w = m.w;
-
-//  printState(state, std::cout);
+  Eigen::Quaterniond qua(affine3d.linear());
+  state->se3State().rotation().w = qua.w();
+  state->se3State().rotation().x = qua.x();
+  state->se3State().rotation().y = qua.y();
+  state->se3State().rotation().z = qua.z();
 }
 
 StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const StateType *state2) const
@@ -687,8 +702,14 @@ bool HybridObjectStateSpace::computeStateIK(StateType *hystate) const
 {
 
   auto start = std::chrono::high_resolution_clock::now();
-  robot_state::RobotStatePtr rstate;
-  rstate.reset(new robot_state::RobotState(kmodel_));
+  const robot_state::RobotStatePtr rstate(new robot_state::RobotState(kmodel_));
+
+  if(!rstate)
+  {
+    return false;
+  }
+
+  rstate->setToDefaultValues();
 
   Eigen::Affine3d object_pose;  // object pose w/rt base frame
   this->se3ToEigen3d(hystate, object_pose);
@@ -702,8 +723,6 @@ bool HybridObjectStateSpace::computeStateIK(StateType *hystate) const
   double timeout = 0.1;
 
   bool found_ik = rstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
-//  bool found_ik = setFromIK(*rstate, selected_joint_model_group, planning_group,
-//                            selected_joint_model_group->getOnlyOneEndEffectorTip()->getName(), tool_tip_pose);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;

@@ -43,6 +43,7 @@
 #include <cwru_davinci_grasp/davinci_needle_grasper_base.h>
 
 #include <gtest/gtest.h>
+#include <math.h>
 
 namespace ob =  ompl::base;
 using namespace dual_arm_manipulation_planner_interface;
@@ -448,12 +449,79 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     ob::ScopedState<HybridObjectStateSpace> s1(hystsp);
     s1->se3State().setX(1.0); s1->se3State().setY(0.0); s1->se3State().setZ(0.0);
     s1->se3State().rotation().setAxisAngle(1.0, 0.0, 0.0, 0.0);
-    s1->armIndex().value = 1;
+    s1->armIndex().value = 2;
     s1->graspIndex().value = 10;
 
     std::vector<double> s1Vec;
     hystsp->copyToReals(s1Vec, s1.get());
+    EXPECT_EQ(9, s1Vec.size());
+
+    // test SO3 part
+    EXPECT_EQ(0.0, s1Vec[3]);
+    EXPECT_EQ(0.0, s1Vec[4]);
+    EXPECT_EQ(0.0, s1Vec[5]);
     EXPECT_EQ(1.0, s1Vec[6]);
+
+    // test arm index and grasp index
+    EXPECT_EQ(2.0, s1Vec[7]);
+    EXPECT_EQ(10.0, s1Vec[8]);
+  }
+
+  // test se3ToEigen3d, eigen3dToSE3
+  {
+    ob::ScopedState<HybridObjectStateSpace> rdmHYSE3(hystsp);
+    rdmHYSE3.random();
+    Eigen::Affine3d eigenSE3;
+    hystsp->se3ToEigen3d(rdmHYSE3.get(), eigenSE3);
+
+    ob::ScopedState<HybridObjectStateSpace> copyHYSE3(hystsp);
+    hystsp->eigen3dToSE3(eigenSE3, copyHYSE3.get());
+
+    // test equalStates
+    EXPECT_TRUE(hystsp->getSubspace(0)->equalStates(&rdmHYSE3->se3State(), &copyHYSE3->se3State()));
+    EXPECT_EQ(rdmHYSE3->se3State().getX(), copyHYSE3->se3State().getX());
+    EXPECT_EQ(rdmHYSE3->se3State().getY(), copyHYSE3->se3State().getY());
+    EXPECT_EQ(rdmHYSE3->se3State().getZ(), copyHYSE3->se3State().getZ());
+    EXPECT_NEAR(rdmHYSE3->se3State().rotation().w, copyHYSE3->se3State().rotation().w, 1e-6);
+    EXPECT_NEAR(rdmHYSE3->se3State().rotation().x, copyHYSE3->se3State().rotation().x, 1e-6);
+    EXPECT_NEAR(rdmHYSE3->se3State().rotation().y, copyHYSE3->se3State().rotation().y, 1e-6);
+    EXPECT_NEAR(rdmHYSE3->se3State().rotation().z, copyHYSE3->se3State().rotation().z, 1e-6);
+
+    Eigen::Affine3d indentityEigenSE3(Eigen::Affine3d::Identity());
+    ob::ScopedState<HybridObjectStateSpace> indentityHYSE3(hystsp);
+    hystsp->eigen3dToSE3(indentityEigenSE3, indentityHYSE3.get());
+
+    EXPECT_EQ(0.0, indentityHYSE3->se3State().getX());
+    EXPECT_EQ(0.0, indentityHYSE3->se3State().getY());
+    EXPECT_EQ(0.0, indentityHYSE3->se3State().getZ());
+    EXPECT_EQ(1.0, indentityHYSE3->se3State().rotation().w);
+    EXPECT_EQ(0.0, indentityHYSE3->se3State().rotation().x);
+    EXPECT_EQ(0.0, indentityHYSE3->se3State().rotation().y);
+    EXPECT_EQ(0.0, indentityHYSE3->se3State().rotation().z);
+
+    const double u1 = Eigen::internal::random<double>(0, 1),
+                 u2 = Eigen::internal::random<double>(0, 2*EIGEN_PI),
+                 u3 = Eigen::internal::random<double>(0, 2*EIGEN_PI);
+    const double a = sqrt(double(1) - u1),
+                 b = sqrt(u1);
+    Eigen::Quaterniond rdmQua(a * sin(u2), a * cos(u2), b * sin(u3), b * cos(u3));
+
+    Eigen::Affine3d rdmAffine3d;
+    rdmAffine3d.translation() << 1.0, 1.2, 1.1;
+    rdmAffine3d.linear() = rdmQua.toRotationMatrix();
+
+    hystsp->eigen3dToSE3(rdmAffine3d, rdmHYSE3.get());
+    EXPECT_EQ(rdmHYSE3->se3State().getX(), 1.0);
+    EXPECT_EQ(rdmHYSE3->se3State().getY(), 1.2);
+    EXPECT_EQ(rdmHYSE3->se3State().getZ(), 1.1);
+    EXPECT_NEAR(fabs(rdmHYSE3->se3State().rotation().w), fabs(rdmQua.w()), 1e-6);
+    EXPECT_NEAR(fabs(rdmHYSE3->se3State().rotation().x), fabs(rdmQua.x()), 1e-6);
+    EXPECT_NEAR(fabs(rdmHYSE3->se3State().rotation().y), fabs(rdmQua.y()), 1e-6);
+    EXPECT_NEAR(fabs(rdmHYSE3->se3State().rotation().z), fabs(rdmQua.z()), 1e-6);
+
+    Eigen::Affine3d copyAffine3d;
+    hystsp->se3ToEigen3d(rdmHYSE3.get(), copyAffine3d);
+    EXPECT_TRUE(copyAffine3d.isApprox(rdmAffine3d, 1e-6));
   }
 
   // test interpolate

@@ -330,7 +330,7 @@ public:
 
   void se3ToEigen3d(const StateType *state, Eigen::Affine3d &affine3d) const;
 
-  void eigen3dToSE3(StateType *state, const Eigen::Affine3d &affine3d) const;
+  void eigen3dToSE3(const Eigen::Affine3d &affine3d, StateType *state) const;
 
   StateDiff checkStateDiff(const StateType *state1, const StateType *state2) const;
 

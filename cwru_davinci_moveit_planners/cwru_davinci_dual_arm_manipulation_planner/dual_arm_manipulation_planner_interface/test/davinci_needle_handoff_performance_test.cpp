@@ -69,6 +69,16 @@ struct PerformanceStats
   double min;
   int failed_num;
   int succeeded_num;
+  PerformanceStats()
+  {
+    mean = 0.0;
+    stdev = 0.0;
+    mid = 0.0;
+    max = 0.0;
+    min = 0.0;
+    failed_num = 0;
+    succeeded_num = 0;
+  }
 };
 
 void printPerformanceStats(const PerformanceStats& pStats, const std::string& testCase)
@@ -598,7 +608,7 @@ int main(int argc, char** argv)
       node_handle_priv, "psm_one", "psm_one_gripper");
 
   int test_num = 0;
-  node_handle_priv.getParam("test", test_num);
+  node_handle_priv.getParam("test_num", test_num);
 
   std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
 

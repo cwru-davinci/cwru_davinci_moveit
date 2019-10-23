@@ -52,6 +52,8 @@
 // Grasp generation and visualization
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
+// c++
+#include <fstream>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -141,7 +143,7 @@ void plan(const ros::NodeHandle &node_handle,
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
   si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-  ob::PlannerStatus solved = planner->ob::Planner::solve(1000.0);
+  ob::PlannerStatus solved = planner->ob::Planner::solve(500.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> planning_time = finish - start_ts;
@@ -156,7 +158,9 @@ void plan(const ros::NodeHandle &node_handle,
       delete total_time;
     }
     else
+    {
       std::cout << "Do not have exact solution" << std::endl;
+    }
 
     og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
     // print the path to screen
@@ -164,7 +168,12 @@ void plan(const ros::NodeHandle &node_handle,
     std::cout << "Found solution with " << slnPath.getStateCount()
               << " states and length " << slnPath.length() << std::endl;
     // print the path to screen
-    slnPath.printAsMatrix(std::cout);
+
+    std::string packPath;
+    node_handle_priv.getParam("packPath", packPath);
+    std::ofstream outFile(packPath +"/../../../" + "StatsFound.txt");
+    slnPath.printAsMatrix(outFile);
+    outFile.close();
 
     std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
     ob::PlannerData data(si);
@@ -175,8 +184,8 @@ void plan(const ros::NodeHandle &node_handle,
     std::cout << "Found " << data.numEdges() << " edges " << "\n";
     std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
 
-    ob::PlannerDataStorage dataStorage;
-    dataStorage.store(data, std::cout);
+//    ob::PlannerDataStorage dataStorage;
+//    dataStorage.store(data, std::cout);
   }
   else
     std::cout << "No solution found" << std::endl;

@@ -154,8 +154,8 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     goal_state->attachBody(s2_needle);
     goal_state->update();
 
-    publishRobotState(*start_state);
-    publishRobotState(*goal_state);
+    // publishRobotState(*start_state);
+    // publishRobotState(*goal_state);
 
     if (!start_state->hasAttachedBody(object_name_) || !goal_state->hasAttachedBody(object_name_))
     {
@@ -247,11 +247,11 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     hyStateSpace_->hand_off_duration_ += elapsed;
-    publishRobotState(*handoff_state);
+    // publishRobotState(*handoff_state);
     return able_to_handoff;
   }
 
-  publishRobotState(*handoff_state);
+  // publishRobotState(*handoff_state);
 
   able_to_grasp = planNeedleGrasping(start_state, *handoff_state, gs_active_group);
   if (able_to_grasp)
@@ -339,7 +339,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   setMimicJointPositions(pre_grasp_state, planning_group);
   pre_grasp_state->update();
 
-  publishRobotState(*pre_grasp_state);
+  // publishRobotState(*pre_grasp_state);
 
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
@@ -366,7 +366,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   setMimicJointPositions(pre_grasp_state, planning_group);
   pre_grasp_state->update();
 
-  publishRobotState(*pre_grasp_state);
+  // publishRobotState(*pre_grasp_state);
 
   const moveit::core::AttachedBody *hdof_needle_body = handoff_state.getAttachedBody(object_name_);
 
@@ -385,10 +385,10 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
-    publishRobotState(*traj[i]);
+    // publishRobotState(*traj[i]);
     if (!noCollision(*traj[i]))  // check intermediate states
     {
-      publishRobotState(*traj[i]);
+      // publishRobotState(*traj[i]);
       return clear_path;
     }
   }
@@ -432,16 +432,16 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
   // removable
   setMimicJointPositions(cp_start_state, planning_group);
   cp_start_state->update();
-  publishRobotState(*cp_start_state);
+  // publishRobotState(*cp_start_state);
 
   for (int i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
-    publishRobotState(*traj[i]);
+    // publishRobotState(*traj[i]);
     if (!noCollision(*traj[i]))
     {
-      publishRobotState(*traj[i]);
+      // publishRobotState(*traj[i]);
       return clear_path;
     }
   }
@@ -490,7 +490,7 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   setMimicJointPositions(ungrasped_state, planning_group);
   ungrasped_state->update();
 
-  publishRobotState(*ungrasped_state);
+  // publishRobotState(*ungrasped_state);
 
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
@@ -522,10 +522,10 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
-    publishRobotState(*traj[i]);
+    // publishRobotState(*traj[i]);
     if (!noCollision(*traj[i]))  // check intermediate states
     {
-      publishRobotState(*traj[i]);
+      // publishRobotState(*traj[i]);
       if(traj[i - 1])
       {
         ungrasped_state.reset(new robot_state::RobotState(*traj[i - 1]));
@@ -576,16 +576,16 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
   // removable
   setMimicJointPositions(cp_start_state, planning_group);
   cp_start_state->update();
-  publishRobotState(*cp_start_state);
+  // publishRobotState(*cp_start_state);
 
   for (int i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
-    publishRobotState(*traj[i]);
+    // publishRobotState(*traj[i]);
     if (!noCollision(*traj[i]))
     {
-      publishRobotState(*traj[i]);
+      // publishRobotState(*traj[i]);
       return clear_path;
     }
   }
@@ -626,16 +626,16 @@ bool HybridMotionValidator::planObjectTransit(const robot_state::RobotState &sta
   // removable
   setMimicJointPositions(cp_start_state, planning_group);
   cp_start_state->update();
-  publishRobotState(*cp_start_state);
+  // publishRobotState(*cp_start_state);
 
   for (int i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
-    publishRobotState(*traj[i]);
+    // publishRobotState(*traj[i]);
     if (!noCollision(*traj[i]))
     {
-      publishRobotState(*traj[i]);
+      // publishRobotState(*traj[i]);
       return clear_path;
     }
   }
