@@ -73,7 +73,7 @@ public:
 
   bool convertObjectToRobotState(const robot_state::RobotStatePtr &pRSstate,
                                  const HybridObjectStateSpace::StateType *pHyState,
-                                 const std::string &selected_group_name) const;
+                                 const std::string &planning_group) const;
 
   moveit::core::AttachedBody *createAttachedBody(const std::string &active_group,
                                                  const std::string &object_name,

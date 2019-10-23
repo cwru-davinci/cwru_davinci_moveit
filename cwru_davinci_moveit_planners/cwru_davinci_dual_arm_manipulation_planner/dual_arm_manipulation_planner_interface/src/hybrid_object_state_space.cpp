@@ -66,7 +66,12 @@ void HybridStateSampler::sampleUniform(State *state)
   arm_index_sampler.sampleUniform(&hss->armIndex());
   grasp_index_sampler.sampleUniform(&hss->graspIndex());
 
-  robot_state::RobotStatePtr robot_sample_state(new robot_state::RobotState(kmodel_));
+  const robot_state::RobotStatePtr robot_sample_state(new robot_state::RobotState(kmodel_));
+  if(!robot_sample_state)
+  {
+    return;
+  }
+  robot_sample_state->setToDefaultValues();
 
   std::string planning_group = (hss->armIndex().value == 1) ? "psm_one" : "psm_two";
   const robot_state::JointModelGroup* selected_joint_model_group = robot_sample_state->getJointModelGroup(planning_group);

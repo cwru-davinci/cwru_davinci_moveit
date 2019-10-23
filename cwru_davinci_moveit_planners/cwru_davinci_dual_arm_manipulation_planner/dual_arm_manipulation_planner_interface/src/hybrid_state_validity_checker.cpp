@@ -81,23 +81,32 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   if (hs->isValidityKnown())
+  {
     return hs->isMarkedValid();
+  }
 
   bool is_valid = false;
-  // check bounds
   if (!si_->satisfiesBounds(state))
+  {
     printf("Invalid State: Out of bound.");
+  }
   else
   {
     // convert ompl state to moveit robot state
     const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
     if(!kstate)
+    {
       return is_valid;
+    }
+
     kstate->setToDefaultValues();
     const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
     if (!convertObjectToRobotState(kstate, hs, selected_group_name))
+    {
       printf("Invalid State: No IK solution.");
+      return is_valid;
+    }
 
     publishRobotState(*kstate);
 
@@ -129,9 +138,13 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
       kstate->clearAttachedBodies();
       is_valid = !res.collision;
       if(res.collision == true)
+      {
         const_cast<HybridObjectStateSpace::StateType*>(hs)->markInvalid();
+      }
       else
+      {
         const_cast<HybridObjectStateSpace::StateType*>(hs)->markValid();
+      }
     }
   }
 
@@ -147,7 +160,9 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
   const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
   if(!kstate)
+  {
     return false;
+  }
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
@@ -163,7 +178,9 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
   planning_scene_->checkCollision(collision_request_with_cost_, res, *kstate);
 
   for (std::set<collision_detection::CostSource>::const_iterator it = res.cost_sources.begin() ; it != res.cost_sources.end() ; ++it)
+  {
     cost += it->cost * it->getVolume();
+  }
 
   return cost;
 }
@@ -173,7 +190,10 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 {
   const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
   if(!kstate)
+  {
     return false;
+  }
+
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
   const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
@@ -192,7 +212,7 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 
 bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::RobotStatePtr &pRSstate,
                                                            const HybridObjectStateSpace::StateType *pHyState,
-                                                           const std::string &selected_group_name) const
+                                                           const std::string &planning_group) const
 {
   if(!pHyState->jointsComputed())
   {
@@ -204,7 +224,7 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
     Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[pHyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
-    const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(selected_group_name);
+    const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(planning_group);
     std::size_t attempts = 2;
     double timeout = 0.1;
     bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
@@ -222,16 +242,18 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
   else
   {
     pRSstate->update();
-    pRSstate->setJointGroupPositions(selected_group_name, pHyState->jointVariables().values);
+    pRSstate->setJointGroupPositions(planning_group, pHyState->jointVariables().values);
   }
 
-  const std::string rest_group_name = (selected_group_name == "psm_one") ? "psm_two" : "psm_one";
+  const std::string rest_group_name = (planning_group == "psm_one") ? "psm_two" : "psm_one";
   const robot_state::JointModelGroup *rest_joint_model_group = pRSstate->getJointModelGroup(rest_group_name);
   pRSstate->setToDefaultValues(rest_joint_model_group, rest_group_name + "_home");
+
   std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
   const robot_state::JointModelGroup *rest_joint_model_group_eef = pRSstate->getJointModelGroup(rest_group_eef_name);
   pRSstate->setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
-  setMimicJointPositions(pRSstate, selected_group_name);
+
+  setMimicJointPositions(pRSstate, planning_group);
   pRSstate->update();
 
   return true;
@@ -301,9 +323,9 @@ void HybridStateValidityChecker::loadNeedleModel()
 
 void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState& rstate) const
 {
-  visual_tools_->publishRobotState(rstate);
-  ros::spinOnce();
-  ros::Duration(1.0).sleep();
+  return;
+//  visual_tools_->publishRobotState(rstate);
+//  ros::Duration(0.1).sleep();
 }
 
 void HybridStateValidityChecker::setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
