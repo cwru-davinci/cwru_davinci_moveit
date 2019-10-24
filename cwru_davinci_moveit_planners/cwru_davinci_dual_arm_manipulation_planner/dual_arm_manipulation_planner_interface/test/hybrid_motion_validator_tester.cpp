@@ -38,7 +38,9 @@
 #include <moveit/dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
 #include <gtest/gtest.h>
 
-namespace dual_arm_manipulation_planner_interface
+using namespace dual_arm_manipulation_planner_interface;
+
+namespace hybrid_planner_test
 {
 class HybridMotionValidatorTester : public HybridMotionValidator
 {

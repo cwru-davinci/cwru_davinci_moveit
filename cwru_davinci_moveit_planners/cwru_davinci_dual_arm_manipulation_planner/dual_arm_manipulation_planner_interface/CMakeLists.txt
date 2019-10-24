@@ -34,6 +34,9 @@ target_link_libraries(${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} $
 add_library(hybrid_motion_validator_tester test/hybrid_motion_validator_tester.cpp)
 target_link_libraries(hybrid_motion_validator_tester ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
+add_library(hybrid_object_state_space_tester test/hybrid_object_state_space_tester.cpp)
+target_link_libraries(hybrid_object_state_space_tester ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
 add_executable(main src/main.cpp)
 target_link_libraries(main ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
@@ -62,8 +65,8 @@ if(CATKIN_ENABLE_TESTING)
 #  find_package(moveit_resources REQUIRED)
 #  include_directories(${moveit_resources_INCLUDE_DIRS})
 
-  add_rostest_gtest(test_hybrid_state_space test/test_hybrid_state_space.test test/test_hybrid_state_space.cpp)
-  target_link_libraries(test_hybrid_state_space ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+  add_rostest_gtest(test_hybrid_object_state_space test/test_hybrid_object_state_space.test test/test_hybrid_object_state_space.cpp)
+  target_link_libraries(test_hybrid_object_state_space hybrid_object_state_space_tester ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 #  set_target_properties(test_state_space PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
   add_rostest_gtest(test_hybrid_motion_validator test/test_hybrid_motion_validator.test test/test_hybrid_motion_validator.cpp)
   target_link_libraries(test_hybrid_motion_validator hybrid_motion_validator_tester ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})

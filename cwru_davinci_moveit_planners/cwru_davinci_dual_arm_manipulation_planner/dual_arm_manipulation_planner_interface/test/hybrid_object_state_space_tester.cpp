@@ -38,7 +38,8 @@
 #include "ompl/base/StateSpace.h"
 #include "ompl/base/ScopedState.h"
 #include "ompl/util/RandomNumbers.h"
-#include "hybrid_object_state_space.h"
+
+#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 #include <gtest/gtest.h>
 #include <thread>
@@ -46,13 +47,15 @@
 #include <chrono>
 #include <limits>
 
-namespace hybrid_state_space_test
+using namespace dual_arm_manipulation_planner_interface;
+
+namespace hybrid_planner_test
 {
 
 /** \brief Encapsulate basic tests for state spaces. This class
     should be used for every state space included with ompl, to
     ensure basic functionality works. */
-class HybridObjectStateSpaceTest : public HybridObjectStateSpace
+class HybridObjectStateSpaceTester : public HybridObjectStateSpace
 {
 public:
 
@@ -60,14 +63,35 @@ public:
       space. When samples need to be taken to ensure certain
       functionality works, \e n samples are to be drawn. For
       distance comparisons, use an error margin of \e eps. */
-  HybridObjectStateSpaceTest(const std::shared_ptr<HybridObjectStateSpace>& pHyStateSpace, int n = 1000,
-                             double eps = std::numeric_limits<double>::epsilon() * 10.0) :
-    pHyStateSpace_(pHyStateSpace), n_(n), eps_(eps)
+  HybridObjectStateSpaceTester(int arm_idx_lw_bd,
+                               int arm_idx_up_bd,
+                               int grasp_idx_lw_bd,
+                               int grasp_idx_up_bd,
+                               const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
+                               const std::shared_ptr<HybridObjectStateSpace> &pHyStateSpace,
+                               double eps = std::numeric_limits<double>::epsilon() * 10.0) :
+    HybridObjectStateSpace(arm_idx_lw_bd,
+                           arm_idx_up_bd,
+                           grasp_idx_lw_bd,
+                           grasp_idx_up_bd,
+                           possible_grasps),
+    pHyStateSpace_(pHyStateSpace), eps_(eps)
+  {
+
+  }
+
+  virtual ~HybridObjectStateSpaceTester()
   {
   }
 
-  virtual ~HybridObjectStateSpaceTest()
+  void testHandoff()
   {
+    EXPECT_EQ(0, handOffsNum(1, 1, 1, 1, 1, 1));
+    EXPECT_EQ(1, handOffsNum(1, 1, 1, 2, 2, 2));
+    EXPECT_EQ(2, handOffsNum(1, 1, 1, 1, 2, 1));
+    EXPECT_EQ(2, handOffsNum(1, 1, 1, 1, 2, 2));
+    EXPECT_EQ(3, handOffsNum(1, 1, 1, 2, 1, 1));
+    EXPECT_EQ(3, handOffsNum(1, 1, 1, 2, 2, 1));
   }
 
   /** \brief Test that interpolation works as expected and also test triangle inequality */
@@ -76,42 +100,19 @@ public:
     ompl::base::ScopedState<HybridObjectStateSpace> from(pHyStateSpace_);
     ompl::base::ScopedState<HybridObjectStateSpace> to(pHyStateSpace_);
     ompl::base::ScopedState<HybridObjectStateSpace> cstate(pHyStateSpace_);
-
-    for (int i = 0 ; i < n_ ; ++i)
-    {
-      s1.random(); s2.random(); s3.random();
-
-//      space_->interpolate(s1.get(), s2.get(), 0.0, s3.get());
-//      BOOST_OMPL_EXPECT_NEAR(s1.distance(s3), 0.0, eps_);
-//
-//      space_->interpolate(s1.get(), s2.get(), 1.0, s3.get());
-//      BOOST_OMPL_EXPECT_NEAR(s2.distance(s3), 0.0, eps_);
-//
-//      space_->interpolate(s1.get(), s2.get(), 0.5, s3.get());
-//      BOOST_OMPL_EXPECT_NEAR(s1.distance(s3) + s3.distance(s2), s1.distance(s2), eps_);
-//
-//      space_->interpolate(s3.get(), s2.get(), 0.5, s3.get());
-//      space_->interpolate(s1.get(), s2.get(), 0.75, s2.get());
-//      BOOST_OMPL_EXPECT_NEAR(s2.distance(s3), 0.0, eps_);
-    }
   }
 
   /** \brief Test that states are correctly cloned*/
   void testCloneState()
   {
-    ompl::base::ScopedState<> source(space_);
+    ompl::base::ScopedState<> source(pHyStateSpace_);
     source.random();
-    const ompl::base::State* clonedState = space_->cloneState(source.get());
-    //Make sure the cloned state is actually a new state in memory.
-//    BOOST_CHECK(clonedState != source.get());
-//    //Make sure the states are the same.
-//    BOOST_CHECK(space_->equalStates(clonedState, source.get()));
+    const ompl::base::State* clonedState = pHyStateSpace_->cloneState(source.get());
   }
 
   /** \brief Call all tests for the state space */
   void test()
   {
-    testDistance();
     testInterpolation();
     testCloneState();
   }

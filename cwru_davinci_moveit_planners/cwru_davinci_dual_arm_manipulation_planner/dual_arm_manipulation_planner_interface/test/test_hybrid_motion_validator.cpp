@@ -38,6 +38,7 @@
 #include "hybrid_motion_validator_tester.cpp"
 
 using namespace dual_arm_manipulation_planner_interface;
+using namespace hybrid_planner_test;
 namespace ob = ompl::base;
 
 TEST(TestHybridRRT, HybridMotionValidator)

@@ -69,7 +69,7 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
 
   hyStateSpace_->validty_check_num = 0;
 
-  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
+//  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
 
   loadNeedleModel();
 }

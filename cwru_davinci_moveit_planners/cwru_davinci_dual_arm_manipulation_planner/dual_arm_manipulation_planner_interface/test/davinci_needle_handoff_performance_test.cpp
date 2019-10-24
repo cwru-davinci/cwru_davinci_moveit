@@ -182,7 +182,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   int succeeded_num = 0;
   std::vector<double> running_time;
 
-  for (int i = 0; i < num_test; i++)
+  for (std::size_t i = 0; i < num_test; i++)
   {
     // create a random start state
     ob::ScopedState<HybridObjectStateSpace> start(hystsp);
@@ -331,7 +331,7 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   int succeeded_num = 0;
   std::vector<double> running_time;
 
-  for (int i = 0; i < num_test; i++)
+  for (std::size_t i = 0; i < num_test; i++)
   {
     // create a random start state
     ob::ScopedState<HybridObjectStateSpace> start(hystsp);
@@ -480,7 +480,7 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   int succeeded_num = 0;
   std::vector<double> running_time;
 
-  for (int i = 0; i < num_test; i++)
+  for (std::size_t i = 0; i < num_test; i++)
   {
     // create a random start state
     ob::ScopedState<HybridObjectStateSpace> start(hystsp);

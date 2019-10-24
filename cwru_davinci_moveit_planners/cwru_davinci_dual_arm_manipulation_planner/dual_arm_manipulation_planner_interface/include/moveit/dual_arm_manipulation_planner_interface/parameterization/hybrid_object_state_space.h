@@ -81,8 +81,6 @@ private:
   robot_model::RobotModelConstPtr kmodel_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
-
-//  std::string robot_name_;
 };
 
 class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
@@ -276,8 +274,7 @@ public:
                          int arm_idx_up_bd,
                          int grasp_idx_lw_bd,
                          int grasp_idx_up_bd,
-                         const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
-                         const std::string &robot_name = "robot_description");
+                         const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps);
 
   virtual ~HybridObjectStateSpace() {}
 
@@ -343,8 +340,6 @@ protected:
                         const StateType *to,
                         StateType *cstate) const;
 
-  bool findValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
-
   int handOffsNum(const int from_arm_index,
                   const int from_grasp_index,
                   const int from_part_id,
@@ -352,7 +347,9 @@ protected:
                   const int to_grasp_index,
                   const int to_part_id) const;
 
-  bool computeStateIK(StateType *hystate) const;
+//  bool findValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
+
+//  bool computeStateIK(StateType *hystate) const;
 
   /**
    * @brief Return the first grasp_id which its part_id different than @param from_part_id and @param @to_part_id
@@ -367,13 +364,6 @@ protected:
   int                                  arm_idx_up_bd_;
   int                                  grasp_idx_lw_bd_;
   int                                  grasp_idx_up_bd_;
-
-  robot_model::RobotModelConstPtr      kmodel_;
-
-  robot_model_loader::RobotModelLoader robot_model_loader_;
-
-  std::string                          robot_name_;
-
 };
 
 }

@@ -59,7 +59,7 @@ bool DavinciNeedleHandoffExecution::executeNeedleHandoffTrajy()
   }
 
 
-  for (int i = 0; i < handoff_traj_sequence_.size()-1; i++)
+  for (std::size_t i = 0; i < handoff_traj_sequence_.size()-1; i++)
   {
     const std::string ss_active_group = handoff_traj_sequence_[i].support_arm;
     const std::string gs_active_group = handoff_traj_sequence_[i+1].support_arm;

@@ -83,8 +83,8 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
 
   hyStateSpace_->hand_off_failed_num = 0;
 
-  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
-  visual_tools_->loadRobotStatePub();
+//  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
+//  visual_tools_->loadRobotStatePub();
 }
 
 bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const
@@ -331,7 +331,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   std::vector<double> eef_joint_position;
   pre_grasp_state->copyJointGroupPositions(eef_group_name, eef_joint_position);
 
-  for (int i = 0; i < eef_joint_position.size(); i++)
+  for (std::size_t i = 0; i < eef_joint_position.size(); i++)
   {
     eef_joint_position[i] = 0.5;
   }
@@ -374,14 +374,14 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
                           hdof_needle_body->getFixedTransforms(), hdof_needle_body->getTouchLinks(),
                           hdof_needle_body->getAttachedLinkName(), hdof_needle_body->getDetachPosture());
 
-  for (int i = 0; i < eef_joint_position.size(); i++)
+  for (std::size_t i = 0; i < eef_joint_position.size(); i++)
   {
     eef_joint_position[i] = 0.0;
   }
   traj.back()->setJointGroupPositions(eef_group_name,eef_joint_position);
   traj.back()->update();
 
-  for (int i = 0; i < traj.size(); i++)
+  for (std::size_t i = 0; i < traj.size(); i++)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
@@ -434,7 +434,7 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
   cp_start_state->update();
   // publishRobotState(*cp_start_state);
 
-  for (int i = 0; i < traj.size(); ++i)
+  for (std::size_t i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
@@ -482,7 +482,7 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   std::vector<double> eef_joint_position;
   ungrasped_state->copyJointGroupPositions(eef_group_name, eef_joint_position);
 
-  for (int i = 0; i < eef_joint_position.size(); i++)
+  for (std::size_t i = 0; i < eef_joint_position.size(); i++)
   {
     eef_joint_position[i] = 0.5;
   }
@@ -518,7 +518,7 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
 
   ungrasped_state->setToDefaultValues(ungrasped_state->getJointModelGroup(eef_group_name), eef_group_name + "_home");
 
-  for (int i = 0; i < traj.size(); i++)
+  for (std::size_t i = 0; i < traj.size(); i++)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
@@ -526,15 +526,12 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
     if (!noCollision(*traj[i]))  // check intermediate states
     {
       // publishRobotState(*traj[i]);
-      if(traj[i - 1])
+      if (i > 0)
       {
         ungrasped_state.reset(new robot_state::RobotState(*traj[i - 1]));
         ungrasped_state->update();
-      }
-      else
-      {
-        ungrasped_state.reset(new robot_state::RobotState(*traj[0]));
-        ungrasped_state->update();
+        clear_path = true;
+        return clear_path;
       }
       return clear_path;
     }
@@ -578,7 +575,7 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
   cp_start_state->update();
   // publishRobotState(*cp_start_state);
 
-  for (int i = 0; i < traj.size(); ++i)
+  for (std::size_t i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
@@ -628,7 +625,7 @@ bool HybridMotionValidator::planObjectTransit(const robot_state::RobotState &sta
   cp_start_state->update();
   // publishRobotState(*cp_start_state);
 
-  for (int i = 0; i < traj.size(); ++i)
+  for (std::size_t i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();

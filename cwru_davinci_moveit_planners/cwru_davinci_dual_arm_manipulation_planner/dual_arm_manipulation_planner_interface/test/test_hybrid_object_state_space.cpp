@@ -41,12 +41,14 @@
 
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <cwru_davinci_grasp/davinci_needle_grasper_base.h>
+#include "hybrid_object_state_space_tester.cpp"
 
 #include <gtest/gtest.h>
 #include <math.h>
 
-namespace ob =  ompl::base;
 using namespace dual_arm_manipulation_planner_interface;
+using namespace hybrid_planner_test;
+namespace ob =  ompl::base;
 
 void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspIndex,
                       const int from_grasp_index,
@@ -55,7 +57,7 @@ void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspInd
 {
   if(same_grasp_part)
   {
-    for(std::size_t i = 0; i < graspIndex.size(); ++i)
+    for (std::size_t i = 0; i < graspIndex.size(); ++i)
     {
       if(graspIndex[i].part_id == graspIndex[from_grasp_index].part_id && i != from_grasp_index)
       {
@@ -66,7 +68,7 @@ void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspInd
   }
   else
   {
-    for(std::size_t i = 0; i < graspIndex.size(); ++i)
+    for (std::size_t i = 0; i < graspIndex.size(); ++i)
     {
       if(graspIndex[i].part_id != graspIndex[from_grasp_index].part_id && i != from_grasp_index)
       {
@@ -103,6 +105,8 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
 
   // construct an instance of space information from hybrid object state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
+
+  HybridObjectStateSpaceTester hyStateSpaceTester(1, 2, 0, grasp_pose.size()-1, grasp_pose, hystsp);
 
   // test HybridObjectStateSpace::StateType
   {
@@ -212,6 +216,11 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
     HybridObjectStateSpace::StateType* pHyState = state->as<HybridObjectStateSpace::StateType>();
     EXPECT_TRUE(pHyState);
     EXPECT_EQ(0, pHyState->flags);
+  }
+
+  // test handoffsNum
+  {
+    hyStateSpaceTester.testHandoff();
   }
 
   // test checkStateDiff and distance
@@ -579,7 +588,7 @@ TEST(TestHybridRRT, HybridObjectStateSpace)
 int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "test_hybrid_state_space");
+  ros::init(argc, argv, "test_hybrid_object_state_space");
   ros::NodeHandle nh;
   ros::Duration(3.0).sleep();
   return RUN_ALL_TESTS();
