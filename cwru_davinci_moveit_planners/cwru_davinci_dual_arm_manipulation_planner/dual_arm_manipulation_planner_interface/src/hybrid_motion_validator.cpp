@@ -46,25 +46,12 @@
 
 using namespace dual_arm_manipulation_planner_interface;
 
-HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
-                                             const std::string &robot_name,
+HybridMotionValidator::HybridMotionValidator(const std::string &robot_name,
                                              const std::string &object_name,
                                              const ompl::base::SpaceInformationPtr &si) :
   ompl::base::MotionValidator(si),
-  node_priv_(node_priv),
-  robot_model_loader_(robot_name),
-  robot_name_(robot_name),
-  object_name_(object_name),
-  stateValidityChecker_(robot_name, object_name, si)
+  HybridStateValidityChecker(robot_name, object_name, si)
 {
-  defaultSettings();
-
-  kmodel_ = robot_model_loader_.getModel();
-
-//  tss_.reset(new TSStateStorage(kmodel_));
-
-  planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
-
   hyStateSpace_->object_transit_planning_duration_ = std::chrono::duration<double>::zero();
 
   hyStateSpace_->check_motion_duration_ = std::chrono::duration<double>::zero();
@@ -82,9 +69,6 @@ HybridMotionValidator::HybridMotionValidator(const ros::NodeHandle &node_priv,
   hyStateSpace_->hand_off_planning_num = 0;
 
   hyStateSpace_->hand_off_failed_num = 0;
-
-//  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
-//  visual_tools_->loadRobotStatePub();
 }
 
 bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const
@@ -93,7 +77,7 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
   auto start = std::chrono::high_resolution_clock::now();
 
   bool result = false;
-  if (!si_->isValid(s2))
+  if (!ompl::base::MotionValidator::si_->isValid(s2))
   {
     invalid_++;
   }
@@ -139,12 +123,12 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2_eef_name),
                                    rest_group_s2_eef_name + "_home");
 
-    moveit::core::AttachedBody* s1_needle = stateValidityChecker_.createAttachedBody(active_group_s1,
-                                                                                     object_name_,
-                                                                                     hs1->graspIndex().value);
-    moveit::core::AttachedBody* s2_needle = stateValidityChecker_.createAttachedBody(active_group_s2,
-                                                                                     object_name_,
-                                                                                     hs2->graspIndex().value);
+    moveit::core::AttachedBody *s1_needle = createAttachedBody(active_group_s1,
+                                                               object_name_,
+                                                               hs1->graspIndex().value);
+    moveit::core::AttachedBody *s2_needle = createAttachedBody(active_group_s2,
+                                                               object_name_,
+                                                               hs2->graspIndex().value);
     if(!s1_needle || !s2_needle)
     {
       return result;
@@ -665,20 +649,6 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
     }
   }
   return no_collision;
-}
-
-void HybridMotionValidator::defaultSettings()
-{
-  hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();
-  if (hyStateSpace_ == nullptr)
-    throw ompl::Exception("No state space for motion validator");
-}
-
-void HybridMotionValidator::publishRobotState(const robot_state::RobotState& rstate) const
-{
-  return;
-//  visual_tools_->publishRobotState(rstate);
-//  ros::Duration(0.1).sleep();
 }
 
 void HybridMotionValidator::setMimicJointPositions(const robot_state::RobotStatePtr &rstate,

@@ -51,7 +51,7 @@ TEST(TestHybridRRT, HybridMotionValidator)
   auto se3SS(std::make_shared<ob::SE3StateSpace>());
   auto si(std::make_shared<ob::SpaceInformation>(se3SS));
 
-  HybridMotionValidatorTester tester(node_handle_priv, robot_name, object_name, si);
+  HybridMotionValidatorTester tester(robot_name, object_name, si);
 
 
   int test_num = 0;

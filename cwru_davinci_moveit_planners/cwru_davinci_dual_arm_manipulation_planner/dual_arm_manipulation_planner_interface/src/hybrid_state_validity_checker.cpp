@@ -46,7 +46,7 @@ using namespace dual_arm_manipulation_planner_interface;
 HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_name,
                                                        const std::string &object_name,
                                                        const ompl::base::SpaceInformationPtr &si)
-  : robot_model_loader_(robot_name), robot_name_(robot_name),object_name_(object_name),
+  : robot_model_loader_(robot_name), robot_name_(robot_name), object_name_(object_name),
     ompl::base::StateValidityChecker(si)
 {
   defaultSettings();
@@ -54,9 +54,6 @@ HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_
   kmodel_ = robot_model_loader_.getModel();
 
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
-
-//  complete_initial_robot_state_.reset(new robot_state::RobotState(kmodel_));
-//  tss_.reset(new TSStateStorage(kmodel_));
 
   collision_request_with_distance_.distance = true;
 

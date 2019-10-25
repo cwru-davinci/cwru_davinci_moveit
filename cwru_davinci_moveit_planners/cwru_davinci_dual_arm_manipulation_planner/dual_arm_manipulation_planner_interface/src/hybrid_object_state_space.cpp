@@ -132,8 +132,6 @@ HybridObjectStateSpace::HybridObjectStateSpace(int arm_idx_lw_bd,
   components_.back()->setName(components_.back()->getName() + ":JointVariables");
   components_[3]->as<RealVectorStateSpace>()->setBounds(-7, 7);
 
-//  kmodel_ = robot_model_loader_.getModel();
-
   lock();
 }
 
@@ -361,11 +359,6 @@ StateSamplerPtr HybridObjectStateSpace::allocStateSampler() const
   return std::make_shared<HybridStateSampler>(this);
 }
 
-//ValidStateSamplerPtr HybridObjectStateSpace::allocMyValidStateSampler(const SpaceInformation *si)
-//{
-//  return std::make_shared<HybridValidStateSampler>(si);
-//}
-
 unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, const State *state2) const
 {
   const auto *hs1 = static_cast<const StateType *>(state1);
@@ -412,20 +405,20 @@ void HybridObjectStateSpace::interpolate(const State *from,
   const auto *hys_from = static_cast<const StateType *>(from);
   const auto *hys_to = static_cast<const StateType *>(to);
 
-//  ompl::RNG randNum;
-//  double random_num = randNum.gaussian01();
-//  bool bound = 0.40;
-//  bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
-//  bool do_transit = within_1Sd ? true : false;
+  ompl::RNG randNum;
+  double random_num = randNum.gaussian01();
+  bool bound = 0.40;
+  bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
+  bool do_transit = within_1Sd ? true : false;
 
-//  if(do_transit)
-//  {
-//    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-//    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-//    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-//    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-//    return;
-//  }
+  if(do_transit)
+  {
+    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
+    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
+    return;
+  }
 
   switch (checkStateDiff(hys_from, hys_to))
   {

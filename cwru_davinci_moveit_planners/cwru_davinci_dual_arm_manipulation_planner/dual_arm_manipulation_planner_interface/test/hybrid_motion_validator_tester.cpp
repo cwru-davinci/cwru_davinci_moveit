@@ -45,8 +45,7 @@ namespace hybrid_planner_test
 class HybridMotionValidatorTester : public HybridMotionValidator
 {
 public:
-  HybridMotionValidatorTester(const ros::NodeHandle &node_priv,
-                              const std::string &robot_name,
+  HybridMotionValidatorTester(const std::string &robot_name,
                               const std::string &object_name,
                               const ompl::base::SpaceInformationPtr &si);
 
@@ -81,11 +80,10 @@ private:
   int succeeded_num_ = 0;
 };
 
-HybridMotionValidatorTester::HybridMotionValidatorTester(const ros::NodeHandle &node_priv,
-                                                         const std::string &robot_name,
+HybridMotionValidatorTester::HybridMotionValidatorTester(const std::string &robot_name,
                                                          const std::string &object_name,
                                                          const ompl::base::SpaceInformationPtr &si) :
-  HybridMotionValidator(node_priv, robot_name, object_name, si)
+  HybridMotionValidator(robot_name, object_name, si)
 {
 // left blank
 }

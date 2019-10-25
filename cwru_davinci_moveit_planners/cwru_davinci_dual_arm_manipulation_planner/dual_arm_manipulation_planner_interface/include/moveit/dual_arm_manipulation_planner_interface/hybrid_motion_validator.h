@@ -58,11 +58,10 @@
 namespace dual_arm_manipulation_planner_interface
 {
 
-class HybridMotionValidator : public ompl::base::MotionValidator
+class HybridMotionValidator : public ompl::base::MotionValidator, public HybridStateValidityChecker
 {
 public:
-  HybridMotionValidator(const ros::NodeHandle &node_priv,
-                        const std::string &robot_name,
+  HybridMotionValidator(const std::string &robot_name,
                         const std::string &object_name,
                         const ompl::base::SpaceInformationPtr &si);
 
@@ -112,33 +111,10 @@ protected:
 
   bool noCollision(const robot_state::RobotState& rstate) const;
 
-  void defaultSettings();
-
-  void publishRobotState(const robot_state::RobotState& rstate) const;
-
   void setMimicJointPositions(const robot_state::RobotStatePtr& rstate,
                               const std::string& planning_group) const;
 protected:
-  HybridObjectStateSpace                    *hyStateSpace_;
-
-  HybridStateValidityChecker                stateValidityChecker_;
-
-  robot_model::RobotModelConstPtr           kmodel_;
-
-//  TSStateStoragePtr                         tss_;
-
-  robot_model_loader::RobotModelLoader      robot_model_loader_;
-
-  planning_scene::PlanningScenePtr          planning_scene_;
-
   ros::NodeHandle                           node_priv_;
-
-  std::string                               robot_name_;
-
-  std::string                               object_name_;
-
-  // For visualizing things in rviz
-  moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
 };
 
 }

@@ -93,7 +93,6 @@ protected:
 
   planning_scene::PlanningScenePtr          planning_scene_;
 
-//  TSStateStoragePtr                         tss_;
   robot_model_loader::RobotModelLoader      robot_model_loader_;
 
   robot_model::RobotModelConstPtr           kmodel_;

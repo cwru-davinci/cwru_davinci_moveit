@@ -172,7 +172,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   si->setStateValidityChecker(
     std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(node_handle_priv, robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(robot_name, object_name, si));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -321,7 +321,7 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   si->setStateValidityChecker(
     std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(node_handle_priv, robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(robot_name, object_name, si));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -470,7 +470,7 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   si->setStateValidityChecker(
     std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(node_handle_priv, robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(robot_name, object_name, si));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
