@@ -218,7 +218,7 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
     Eigen::Affine3d object_pose;  // object pose w/rt base frame
     hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
 
-    Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[pHyState->graspIndex().value].grasp_pose;
+    Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
     const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(planning_group);
@@ -264,7 +264,7 @@ HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
   const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(active_group);
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
 
-  EigenSTL::vector_Affine3d attach_trans = {hyStateSpace_->possible_grasps_[grasp_pose_id].grasp_pose};
+  EigenSTL::vector_Affine3d attach_trans = {hyStateSpace_->graspTransformations()[grasp_pose_id].grasp_pose};
 
   const robot_state::JointModelGroup *eef_group = kmodel_->getJointModelGroup(
     arm_joint_group->getAttachedEndEffectorNames()[0]);

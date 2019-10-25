@@ -71,7 +71,7 @@ bool HybridValidStateSampler::sample(ompl::base::State *state)
 
   const Eigen::Affine3d tool_tip_pose = robot_sample_state->getGlobalLinkTransform(
     selected_joint_model_group->getOnlyOneEndEffectorTip());
-  const Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hss->graspIndex().value].grasp_pose;
+  const Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[hss->graspIndex().value].grasp_pose;
   const Eigen::Affine3d object_pose = tool_tip_pose * grasp_pose;
   hyStateSpace_->eigen3dToSE3(object_pose, hss);
 

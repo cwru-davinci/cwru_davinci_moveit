@@ -331,7 +331,10 @@ public:
 
   StateDiff checkStateDiff(const StateType *state1, const StateType *state2) const;
 
-  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
+  inline const std::vector<cwru_davinci_grasp::GraspInfo>& graspTransformations() const
+  {
+    return possible_grasps_;
+  }
 
 protected:
   int chooseSupportArm(const int from_arm_index, const int to_arm_index) const;
@@ -347,10 +350,6 @@ protected:
                   const int to_grasp_index,
                   const int to_part_id) const;
 
-//  bool findValidGrasp(int from_part_id, int to_part_id, StateType *cstate) const;
-
-//  bool computeStateIK(StateType *hystate) const;
-
   /**
    * @brief Return the first grasp_id which its part_id different than @param from_part_id and @param @to_part_id
    * @param from_part_id
@@ -360,10 +359,11 @@ protected:
   int chooseGraspPart(int from_part_id, int to_part_id) const;
 
 protected:
-  int                                  arm_idx_lw_bd_;
-  int                                  arm_idx_up_bd_;
-  int                                  grasp_idx_lw_bd_;
-  int                                  grasp_idx_up_bd_;
+  int                                        arm_idx_lw_bd_;
+  int                                        arm_idx_up_bd_;
+  int                                        grasp_idx_lw_bd_;
+  int                                        grasp_idx_up_bd_;
+  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
 };
 
 }

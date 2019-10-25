@@ -83,7 +83,7 @@ void HybridStateSampler::sampleUniform(State *state)
 
   const Eigen::Affine3d tool_tip_pose = robot_sample_state->getGlobalLinkTransform(
     selected_joint_model_group->getOnlyOneEndEffectorTip());
-  const Eigen::Affine3d grasp_pose = hyStateSpace_->possible_grasps_[hss->graspIndex().value].grasp_pose;
+  const Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[hss->graspIndex().value].grasp_pose;
   const Eigen::Affine3d object_pose = tool_tip_pose * grasp_pose;
   hyStateSpace_->eigen3dToSE3(object_pose, hss);
 
@@ -594,7 +594,7 @@ int HybridObjectStateSpace::chooseSupportArm(const int from_arm_index, const int
 int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) const
 {
   ompl::RNG randNumGenerator;
-  int cs_grasp_id = randNumGenerator.uniformInt(grasp_idx_lw_bd_, grasp_idx_up_bd_);
+  int cs_grasp_id;
 
   std::unordered_set<int> invalid_grasp_list;
 
