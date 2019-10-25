@@ -42,6 +42,10 @@ target_link_libraries(main ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARI
 
 add_executable(davinci_needle_handoff_performance_test test/davinci_needle_handoff_performance_test.cpp)
 target_link_libraries(davinci_needle_handoff_performance_test ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+add_executable(hybrid_planner_planning_data_visualization script/hybrid_planner_planning_data_visualization.cpp)
+target_link_libraries(hybrid_planner_planning_data_visualization ${PYTHON_INCLUDE_DIRS} ${MOVEIT_LIB_NAME} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_include_directories(hybrid_planner_planning_data_visualization PRIVATE ${PYTHON_INCLUDE_DIRS})
 #add_executable(moveit_ompl_planner src/ompl_planner.cpp)
 #target_link_libraries(moveit_ompl_planner ${MOVEIT_LIB_NAME})
 #set_target_properties(moveit_ompl_planner PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")

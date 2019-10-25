@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system serialization)
 find_package(ompl REQUIRED)
+find_package(PythonLibs 2.7)
 add_definitions(${baselib_binding_DEFINITIONS} ${convenience_ros_functions_DEFINITIONS} -std=c++11)
 
 ## Uncomment this if the package has a setup.py. This macro ensures

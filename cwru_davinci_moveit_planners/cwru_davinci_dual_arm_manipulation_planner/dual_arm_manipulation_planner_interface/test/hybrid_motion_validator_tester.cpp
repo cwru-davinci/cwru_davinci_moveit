@@ -70,9 +70,6 @@ public:
   using HybridMotionValidator::publishRobotState;
 
 private:
-  bool samePose(const Eigen::Affine3d &a, const Eigen::Affine3d &b);
-
-//  double eps = std::numeric_limits<double>::epsilon();
   double eps = 1e-5;
 
   std::string planning_group_ = "psm_one";
@@ -171,19 +168,6 @@ const robot_state::RobotStatePtr& HybridMotionValidatorTester::sampleRobotState(
   pRState->setToRandomPositions(selected_joint_model_group);
   pRState->update();
   return pRState;
-}
-
-bool HybridMotionValidatorTester::samePose(const Eigen::Affine3d &a, const Eigen::Affine3d &b)
-{
-  if (!a.translation().isApprox(b.translation(), eps))
-    return false;
-
-  Eigen::Quaterniond qa(a.linear());
-  Eigen::Quaterniond qb(b.linear());
-  if (!qa.isApprox(qb, eps))
-    return false;
-
-  return true;
 }
 
 }

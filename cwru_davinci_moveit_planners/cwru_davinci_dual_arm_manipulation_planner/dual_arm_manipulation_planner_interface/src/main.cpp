@@ -156,39 +156,41 @@ void plan(const ros::NodeHandle &node_handle,
       double *total_time = new double;
       si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
       delete total_time;
+
+      og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
+      // print the path to screen
+      std::cout << "Found solution:\n" << "\n";
+      std::cout << "Found solution with " << slnPath.getStateCount()
+                << " states and length " << slnPath.length() << std::endl;
+      // print the path to screen
+  
+      std::string packPath;
+      node_handle_priv.getParam("packPath", packPath);
+      std::ofstream outFile(packPath +"/../../../" + "PathFound.txt");
+      slnPath.printAsMatrix(outFile);
+      outFile.close();
     }
     else
     {
       std::cout << "Do not have exact solution" << std::endl;
     }
-
-    og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
-    // print the path to screen
-    std::cout << "Found solution:\n" << "\n";
-    std::cout << "Found solution with " << slnPath.getStateCount()
-              << " states and length " << slnPath.length() << std::endl;
-    // print the path to screen
-
-    std::string packPath;
-    node_handle_priv.getParam("packPath", packPath);
-    std::ofstream outFile(packPath +"/../../../" + "StatsFound.txt");
-    slnPath.printAsMatrix(outFile);
-    outFile.close();
-
-    std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
-    ob::PlannerData data(si);
-    planner->getPlannerData(data);
-    data.computeEdgeWeights();
-
-    std::cout << "Found " << data.numVertices() << " vertices " << "\n";
-    std::cout << "Found " << data.numEdges() << " edges " << "\n";
-    std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
-
-//    ob::PlannerDataStorage dataStorage;
-//    dataStorage.store(data, std::cout);
   }
   else
+  {
     std::cout << "No solution found" << std::endl;
+  }
+  std::cout << "Writing PlannerData to file’ HybridRRTPlannerData’" << std::endl;
+  ob::PlannerData data(si);
+  planner->getPlannerData(data);
+  data.computeEdgeWeights();
+
+  std::cout << "Found " << data.numVertices() << " vertices " << "\n";
+  std::cout << "Found " << data.numEdges() << " edges " << "\n";
+  std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
+
+  ob::PlannerDataStorage dataStorage;
+  std::string dataPath = ros::package::getPath("cwru_davinci_dual_arm_manipulation_planner");
+  dataStorage.store(data, (dataPath + "/../../../" + "HybridRRTPlannerData").c_str());
 }
 
 
