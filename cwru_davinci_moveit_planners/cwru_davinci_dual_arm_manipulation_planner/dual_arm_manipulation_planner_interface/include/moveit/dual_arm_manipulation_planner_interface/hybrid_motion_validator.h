@@ -61,9 +61,9 @@ namespace dual_arm_manipulation_planner_interface
 class HybridMotionValidator : public ompl::base::MotionValidator, public HybridStateValidityChecker
 {
 public:
-  HybridMotionValidator(const std::string &robot_name,
-                        const std::string &object_name,
-                        const ompl::base::SpaceInformationPtr &si);
+  HybridMotionValidator(const ompl::base::SpaceInformationPtr &si,
+                        const robot_model::RobotModelConstPtr &pRobotModel,
+                        const std::string &object_name);
 
   virtual ~HybridMotionValidator() {}
 

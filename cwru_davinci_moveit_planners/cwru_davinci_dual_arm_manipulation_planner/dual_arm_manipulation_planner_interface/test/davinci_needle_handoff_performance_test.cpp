@@ -147,12 +147,12 @@ void getPerformanceStats(const std::vector<double>& running_time, PerformanceSta
 }
 
 PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
-                            const ros::NodeHandle &node_handle_priv,
-                            const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-                            int num_test)
+                                const ros::NodeHandle &node_handle_priv,
+                                const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+                                int num_test)
 {
   std::string object_name = "needle_r";
-  std::string robot_name = "robot_description";
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   // create an instance of state space
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
@@ -170,9 +170,9 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
+    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), object_name));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), object_name));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -296,12 +296,12 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
 }
 
 PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
-                               const ros::NodeHandle &node_handle_priv,
-                               const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-                               int num_test)
+                                const ros::NodeHandle &node_handle_priv,
+                                const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+                                int num_test)
 {
   std::string object_name = "needle_r";
-  std::string robot_name = "robot_description";
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   // create an instance of state space
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
@@ -319,9 +319,9 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
+    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), object_name));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), object_name));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -445,13 +445,13 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
 }
 
 PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
-                                 const ros::NodeHandle &node_handle_priv,
-                                 const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-                                 int num_test)
+                                  const ros::NodeHandle &node_handle_priv,
+                                  const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+                                  int num_test)
 {
   std::string object_name = "needle_r";
-  std::string robot_name = "robot_description";
-  // create an instance of state space
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
+  // create an instance of state space  // create an instance of state space
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
   // construct an instance of  space information from this state space
@@ -468,9 +468,9 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
+    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), object_name));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), object_name));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -599,8 +599,6 @@ int main(int argc, char** argv)
 
   ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
-  std::string object_name = "needle_r";
-  std::string robot_name = "robot_description";
   ros::Duration(3.0).sleep();
 
   cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =

@@ -43,15 +43,14 @@
 
 using namespace dual_arm_manipulation_planner_interface;
 
-HybridStateValidityChecker::HybridStateValidityChecker(const std::string &robot_name,
-                                                       const std::string &object_name,
-                                                       const ompl::base::SpaceInformationPtr &si)
-  : robot_model_loader_(robot_name), robot_name_(robot_name), object_name_(object_name),
-    ompl::base::StateValidityChecker(si)
+HybridStateValidityChecker::HybridStateValidityChecker(const ompl::base::SpaceInformationPtr &si,
+                                                       const moveit::core::RobotModelConstPtr &robotModel,
+                                                       const std::string &object_name)
+: ompl::base::StateValidityChecker(si),
+  kmodel_(robotModel),
+  object_name_(object_name)
 {
   defaultSettings();
-
-  kmodel_ = robot_model_loader_.getModel();
 
   planning_scene_.reset(new planning_scene::PlanningScene(kmodel_));
 
@@ -115,8 +114,6 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 
       // publishRobotState(*kstate);
 
-      // TODO check feasibility
-//      (std::const_pointer_cast<planning_scene::PlanningScene>(planning_scene_)).reset(new planning_scene::PlanningScene(kmodel_));
       planning_scene_->setCurrentState(*kstate);
       // check collision avoidance
       collision_detection::CollisionResult res;
@@ -273,14 +270,6 @@ HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
   std::set<std::string> touch_links(touch_links_list.begin(), touch_links_list.end());
 
   trajectory_msgs::JointTrajectory dettach_posture;
-//  dettach_posture.header.stamp = ros::Time::now();
-//  dettach_posture.header.frame_id = kmodel_->getModelFrame().c_str();
-//  dettach_posture.joint_names = eef_group->getVariableNames();
-//  dettach_posture.points.resize(3);
-//  dettach_posture.points[0].positions.push_back(0.5);
-//  dettach_posture.points[1].positions.push_back(0.5);
-//  dettach_posture.points[2].positions.push_back(0.5);
-
   return new moveit::core::AttachedBody(tip_link,
                                         object_name,
                                         needleShapes_,

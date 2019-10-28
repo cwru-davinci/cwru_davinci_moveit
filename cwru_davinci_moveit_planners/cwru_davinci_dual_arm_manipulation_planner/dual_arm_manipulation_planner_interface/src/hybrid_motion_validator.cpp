@@ -46,11 +46,13 @@
 
 using namespace dual_arm_manipulation_planner_interface;
 
-HybridMotionValidator::HybridMotionValidator(const std::string &robot_name,
-                                             const std::string &object_name,
-                                             const ompl::base::SpaceInformationPtr &si) :
+HybridMotionValidator::HybridMotionValidator(const ompl::base::SpaceInformationPtr &si,
+                                             const robot_model::RobotModelConstPtr &pRobotModel,
+                                             const std::string &object_name) :
   ompl::base::MotionValidator(si),
-  HybridStateValidityChecker(robot_name, object_name, si)
+  HybridStateValidityChecker(si,
+                             pRobotModel,
+                             object_name)
 {
   hyStateSpace_->object_transit_planning_duration_ = std::chrono::duration<double>::zero();
 

@@ -45,12 +45,12 @@ namespace hybrid_planner_test
 class HybridMotionValidatorTester : public HybridMotionValidator
 {
 public:
-  HybridMotionValidatorTester(const std::string &robot_name,
-                              const std::string &object_name,
-                              const ompl::base::SpaceInformationPtr &si);
+  HybridMotionValidatorTester(const ompl::base::SpaceInformationPtr &si,
+                              const robot_model::RobotModelConstPtr &pRobotModel,
+                              const std::string &object_name)
+                              : HybridMotionValidator(si, pRobotModel, object_name) {}
 
-  ~HybridMotionValidatorTester()
-  {}
+  ~HybridMotionValidatorTester() {}
 
   const robot_state::RobotStatePtr& sampleRobotState();
 
@@ -76,14 +76,6 @@ private:
 
   int succeeded_num_ = 0;
 };
-
-HybridMotionValidatorTester::HybridMotionValidatorTester(const std::string &robot_name,
-                                                         const std::string &object_name,
-                                                         const ompl::base::SpaceInformationPtr &si) :
-  HybridMotionValidator(robot_name, object_name, si)
-{
-// left blank
-}
 
 bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::RobotState &start_state,
                                                            const robot_state::RobotState &goal_state)

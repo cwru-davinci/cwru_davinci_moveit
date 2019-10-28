@@ -36,23 +36,76 @@
  * Description: A c++ script to do hybrid planner data visualization
  */
 
+#include <ompl/base/SpaceInformation.h>
 #include <ompl/base/PlannerData.h>
 #include <ompl/base/PlannerDataStorage.h>
 #include <ompl/base/PlannerDataGraph.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
-#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/goals/GoalState.h>
 
 #include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <boost/graph/astar_search.hpp>
+#include <boost/graph/depth_first_search.hpp>
 #include <iostream>
 
 #include <ros/package.h>
 #include "matplotlibcpp.h"
+
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
+namespace plt = matplotlibcpp;
 using namespace dual_arm_manipulation_planner_interface;
+
+class TreeDrawingDfsVisitor : public boost::default_dfs_visitor
+{
+
+};
+
+class HyperPlaneDrawing
+{
+public:
+  HyperPlaneDrawing(const double ws_x_min,
+                    const double ws_x_max,
+                    const double ws_y_min,
+                    const double ws_y_max,
+                    const double ws_z_min,
+                    const double ws_z_max,
+                    const int plane_num)
+                    : x_min_(ws_x_min),
+                      x_max_(ws_x_max),
+                      y_min_(ws_y_min),
+                      y_max_(ws_y_max),
+                      z_min_(ws_z_min),
+                      z_max_(ws_z_max),
+                      plane_num_(plane_num)
+  {}
+
+  void drawSubCube();
+protected:
+  double x_min_;
+  double x_max_;
+  double y_min_;
+  double y_max_;
+  double z_min_;
+  double z_max_;
+
+  double spacing_;
+
+  int plane_num_;
+  std::vector<double> hyper_plane_x;
+  std::vector<double> hyper_plane_y;
+
+  std::vector<std::vector<double>> hyper_plane_z;
+};
+
+void HyperPlaneDrawing::drawSubCube()
+{
+  std::vector<std::vector<double>> x {std::vector<double>{x_min_, x_min_, x_min_, x_min_, x_max_, x_max_, x_max_, x_max_}};
+  std::vector<std::vector<double>> y {std::vector<double>{y_min_, y_max_, y_max_, y_min_, y_min_, y_max_, y_max_, y_min_}};
+  std::vector<std::vector<double>> z {std::vector<double>{z_min_, z_min_, z_max_, z_max_, z_min_, z_min_, z_max_, z_max_}};
+  plt::plot_surface(x, y, z);
+  plt::show();
+}
 
 void readPlannerDataStoredToGraphViz()
 {
@@ -83,6 +136,16 @@ void readPlannerData()
   // Recreating the space information from the stored planner data instance
   std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses;
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
+
+  ompl::base::RealVectorBounds se3_xyz_bounds(3);
+  se3_xyz_bounds.setLow(0, -0.101);
+  se3_xyz_bounds.setHigh(0, 0.101);
+  se3_xyz_bounds.setLow(1, -0.06);
+  se3_xyz_bounds.setHigh(1, 0.09);
+  se3_xyz_bounds.setLow(2, 0.266);
+  se3_xyz_bounds.setHigh(2, 0.496);
+  hystsp->setSE3Bounds(se3_xyz_bounds);
+
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ob::PlannerDataStorage dataStorage;
@@ -91,10 +154,20 @@ void readPlannerData()
   std::string dataPath = ros::package::getPath("cwru_davinci_dual_arm_manipulation_planner");
   dataStorage.load((dataPath + "/../../../" + "HybridRRTPlannerData").c_str(), data);
   
-  // Re-extract the shortest path from the loaded planner data
-  bool isStart = data.isStartVertex(0);
-  bool isGoal = data.isGoalVertex(data.numVertices() - 1);
-  
+//  ob::PlannerData::Graph::Vertex start = boost::vertex(data.getStartIndex(0), graph);
+//  boost::depth_first_visit<>
+
+  std::shared_ptr<ob::SE3StateSpace> subSE3SS(hystsp->as<ob::SE3StateSpace>(0));
+  HyperPlaneDrawing hyperPlaneDrawer = HyperPlaneDrawing(subSE3SS->getBounds().low[0],
+                                                         subSE3SS->getBounds().high[0],
+                                                         subSE3SS->getBounds().low[1],
+                                                         subSE3SS->getBounds().high[1],
+                                                         subSE3SS->getBounds().low[2],
+                                                         subSE3SS->getBounds().high[2],
+                                                         2*147);
+
+  hyperPlaneDrawer.drawSubCube();
+  hyperPlaneDrawer.drawSubCube();
 }
 
 int main(int argc, char** argv)

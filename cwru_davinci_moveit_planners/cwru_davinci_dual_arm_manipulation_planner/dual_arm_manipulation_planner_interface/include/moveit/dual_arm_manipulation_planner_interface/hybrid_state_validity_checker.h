@@ -59,9 +59,9 @@ namespace dual_arm_manipulation_planner_interface
 class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
-  HybridStateValidityChecker(const std::string &robot_name,
-                             const std::string &object_name,
-                             const ompl::base::SpaceInformationPtr &si);
+  HybridStateValidityChecker(const ompl::base::SpaceInformationPtr &si,
+                             const moveit::core::RobotModelConstPtr &pRobotModel,
+                             const std::string &object_name);
 
   virtual ~HybridStateValidityChecker() {}
 
@@ -93,12 +93,7 @@ protected:
 
   planning_scene::PlanningScenePtr          planning_scene_;
 
-  robot_model_loader::RobotModelLoader      robot_model_loader_;
-
   robot_model::RobotModelConstPtr           kmodel_;
-
-  /// @brief Robot state containing the current position of all joints
-  robot_state::RobotStatePtr                complete_initial_robot_state_;
 
   collision_detection::CollisionRequest     collision_request_simple_;
 
@@ -107,7 +102,6 @@ protected:
   collision_detection::CollisionRequest     collision_request_with_distance_;
 
   std::string                               object_name_;
-  std::string                               robot_name_;
 
   std::vector<shapes::ShapeConstPtr>        needleShapes_;
 

@@ -64,7 +64,7 @@ void plan(const ros::NodeHandle &node_handle,
           std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses)
 {
   std::string object_name = "needle_r";
-  std::string robot_name = "robot_description";
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   // create an instance of state space
   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
 
@@ -81,11 +81,10 @@ void plan(const ros::NodeHandle &node_handle,
 
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
-
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(robot_name, object_name, si));
+    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), object_name));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(robot_name, object_name, si));
+    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), object_name));
 
   si->setup();
 
@@ -200,8 +199,6 @@ int main(int argc, char** argv)
 
   ros::NodeHandle node_handle;
   ros::NodeHandle node_handle_priv("~");
-  std::string object_name = "needle_r";
-  std::string robot_name = "robot_description";
   ros::Duration(3.0).sleep();
 
   cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =
