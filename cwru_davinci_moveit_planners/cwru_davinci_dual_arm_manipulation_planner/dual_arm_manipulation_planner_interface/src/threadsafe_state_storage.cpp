@@ -34,7 +34,7 @@
 
 /* Author: Su Lu <sxl924@case.edu> */
 
-#include <moveit/dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
+#include <dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 using namespace dual_arm_manipulation_planner_interface;
 
 TSStateStorage::TSStateStorage(const robot_model::RobotModelConstPtr &kmodel) : start_state_(kmodel)

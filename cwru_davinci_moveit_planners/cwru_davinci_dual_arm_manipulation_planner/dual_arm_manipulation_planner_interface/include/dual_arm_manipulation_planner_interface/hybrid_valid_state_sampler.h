@@ -39,8 +39,8 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_VALID_STATE_SAMPLER_H
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
 #include <ompl/base/ValidStateSampler.h>
 #include <ompl/base/StateSampler.h>
 

@@ -47,7 +47,7 @@
 #include "ompl/util/Console.h"
 #include "ompl/util/Exception.h"
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 /** \brief Space information for a constrained state space. Implements
          * more direct for getting motion states. */

@@ -36,7 +36,7 @@
  * Description: This class is used to define what a goal state should be if planner can find it
  */
 
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_goal_state_representation.h>
+#include <dual_arm_manipulation_planner_interface/hybrid_goal_state_representation.h>
 
 namespace dual_arm_manipulation_planner_interface
 {

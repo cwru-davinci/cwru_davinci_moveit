@@ -36,7 +36,7 @@
  * Description: This is the derived valid state sampler inherited from ompl::base::StateValidityChecker
  */
 
-#include <moveit/dual_arm_manipulation_planner_interface//hybrid_valid_state_sampler.h>
+#include <dual_arm_manipulation_planner_interface//hybrid_valid_state_sampler.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 

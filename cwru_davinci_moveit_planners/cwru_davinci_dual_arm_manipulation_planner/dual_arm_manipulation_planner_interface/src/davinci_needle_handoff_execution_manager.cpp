@@ -36,8 +36,8 @@
  * Description: The class to execute the joint trajectory of needle handoff on daVinci surgical robot
  */
 
-#include <moveit/dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution_manager.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 

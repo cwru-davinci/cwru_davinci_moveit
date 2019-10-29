@@ -39,7 +39,7 @@
 #include "ompl/base/ScopedState.h"
 #include "ompl/util/RandomNumbers.h"
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 #include <gtest/gtest.h>
 #include <thread>

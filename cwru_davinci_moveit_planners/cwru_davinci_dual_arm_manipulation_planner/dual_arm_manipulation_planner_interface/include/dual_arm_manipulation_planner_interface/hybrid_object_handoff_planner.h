@@ -40,7 +40,10 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_HANDOFF_PLANNER_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_HANDOFF_PLANNER_H
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <ompl/base/SpaceInformation.h>
+
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -65,9 +68,9 @@ public:
 
   ~HybridObjectHandoffPlanner(){}
 protected:
-  ompl::base::
+  HybridObjectStateSpacePtr m_pHyStateSpace;
 
-
+  ompl::base::SpaceInformationPtr m_pSpaceInform;
 };
 }
 

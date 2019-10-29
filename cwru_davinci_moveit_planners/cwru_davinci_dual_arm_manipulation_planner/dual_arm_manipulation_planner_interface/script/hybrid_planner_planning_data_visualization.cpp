@@ -44,7 +44,7 @@
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/goals/GoalState.h>
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <boost/graph/depth_first_search.hpp>
 #include <iostream>
 

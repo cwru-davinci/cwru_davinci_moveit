@@ -39,8 +39,8 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
 
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 // moveit
 #include <moveit/planning_interface/planning_interface.h>

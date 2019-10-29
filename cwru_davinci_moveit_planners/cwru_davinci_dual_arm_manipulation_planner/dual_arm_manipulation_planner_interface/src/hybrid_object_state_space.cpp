@@ -37,7 +37,7 @@
  * in addition of two discrete state space (Arm index and Grasp index)
  */
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <ompl/base/ValidStateSampler.h>
 #include <unordered_set>
 
@@ -211,7 +211,7 @@ void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool ver
   std::cout << "Total Time is: " << total_time_chro.count() << "s" << std::endl;
 }
 
-void HybridObjectStateSpace::setSE3Bounds(const RealVectorBounds &bounds)
+void HybridObjectStateSpace::setSE3Bounds(RealVectorBounds bounds)
 {
   components_[0]->as<SE3StateSpace>()->setBounds(bounds);
 }

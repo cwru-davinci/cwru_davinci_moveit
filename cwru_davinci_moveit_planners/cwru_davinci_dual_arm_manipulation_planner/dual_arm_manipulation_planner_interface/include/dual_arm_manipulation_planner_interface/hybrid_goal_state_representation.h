@@ -40,7 +40,7 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_GOAL_STATE_REPRESENTATION_H
 
 #include <ompl/base/Goal.h>
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 
 namespace dual_arm_manipulation_planner_interface
 {

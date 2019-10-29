@@ -278,7 +278,7 @@ public:
 
   virtual ~HybridObjectStateSpace() {}
 
-  void setSE3Bounds(const ompl::base::RealVectorBounds &bounds);
+  void setSE3Bounds(ompl::base::RealVectorBounds bounds);
 
   void setArmIndexBounds(int lowerBound, int upperBound);
 
@@ -366,6 +366,8 @@ protected:
   std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
 };
 
+typedef std::shared_ptr<HybridObjectStateSpace> HybridObjectStateSpacePtr;
+typedef std::shared_ptr<const HybridObjectStateSpace> HybridObjectStateSpaceConstPtr;
 }
 
 #endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_STATE_SPACE_H

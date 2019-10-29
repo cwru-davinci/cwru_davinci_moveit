@@ -35,7 +35,7 @@
 /* Author: Su Lu */
 
 #include <ros/ros.h>
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
+#include <dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
 #include <gtest/gtest.h>
 
 using namespace dual_arm_manipulation_planner_interface;

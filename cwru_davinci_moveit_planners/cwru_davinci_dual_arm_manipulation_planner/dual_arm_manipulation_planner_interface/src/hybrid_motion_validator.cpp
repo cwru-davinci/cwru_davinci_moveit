@@ -36,7 +36,7 @@
  * Description: The class to do state motion validity check
  */
 
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
+#include <dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/robot_state/conversions.h>
 

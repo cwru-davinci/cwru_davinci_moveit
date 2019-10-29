@@ -39,7 +39,7 @@
 #include <ompl/base/ScopedState.h>
 #include <ompl/base/SpaceInformation.h>
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <cwru_davinci_grasp/davinci_needle_grasper_base.h>
 #include "hybrid_object_state_space_tester.cpp"
 

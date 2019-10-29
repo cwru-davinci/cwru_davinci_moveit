@@ -45,9 +45,8 @@
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/config.h>
 
-#include <moveit/dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <moveit/dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_valid_state_sampler.h>
+#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
+#include <dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
 
 // Grasp generation and visualization
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>

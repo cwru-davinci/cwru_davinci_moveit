@@ -35,7 +35,7 @@
 /* Author: Su Lu <sxl924@case.edu>
  * Description: The class to do state validity check
  */
-#include <moveit/dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
+#include <dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
 #include <geometric_shapes/shape_operations.h>
 
 #include <moveit/robot_state/conversions.h>
