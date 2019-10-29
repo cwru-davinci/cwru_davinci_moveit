@@ -44,11 +44,11 @@
 using namespace dual_arm_manipulation_planner_interface;
 
 HybridStateValidityChecker::HybridStateValidityChecker(const ompl::base::SpaceInformationPtr &si,
-                                                       const moveit::core::RobotModelConstPtr &robotModel,
-                                                       const std::string &object_name)
+                                                       const robot_model::RobotModelConstPtr &pRobotModel,
+                                                       const std::string &objectName)
 : ompl::base::StateValidityChecker(si),
-  kmodel_(robotModel),
-  object_name_(object_name)
+  kmodel_(pRobotModel),
+  m_ObjectName(objectName)
 {
   defaultSettings();
 
@@ -75,10 +75,15 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   auto start = std::chrono::high_resolution_clock::now();
   hyStateSpace_->validty_check_num += 1;
 
-  const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
-  if (hs->isValidityKnown())
+  const auto *pHybridState = dynamic_cast<const HybridObjectStateSpace::StateType *>(state);
+  if(!pHybridState)
   {
-    return hs->isMarkedValid();
+    return false;
+  }
+
+  if (pHybridState->isValidityKnown())
+  {
+    return pHybridState->isMarkedValid();
   }
 
   bool is_valid = false;
@@ -96,9 +101,9 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
     }
 
     kstate->setToDefaultValues();
-    const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
+    const std::string selected_group_name = (pHybridState->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-    if (!convertObjectToRobotState(kstate, hs, selected_group_name))
+    if (!convertObjectToRobotState(kstate, pHybridState, selected_group_name))
     {
       printf("Invalid State: No IK solution.");
       return is_valid;
@@ -106,9 +111,9 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 
     // publishRobotState(*kstate);
 
-    if(hs->jointsComputed())
+    if(pHybridState->jointsComputed())
     {
-      moveit::core::AttachedBody* needle_model = createAttachedBody(selected_group_name, object_name_, hs->graspIndex().value);
+      moveit::core::AttachedBody* needle_model = createAttachedBody(selected_group_name, m_ObjectName, pHybridState->graspIndex().value);
       kstate->attachBody(needle_model);
       kstate->update();
 
@@ -133,11 +138,11 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
       is_valid = !res.collision;
       if(res.collision == true)
       {
-        const_cast<HybridObjectStateSpace::StateType*>(hs)->markInvalid();
+        const_cast<HybridObjectStateSpace::StateType*>(pHybridState)->markInvalid();
       }
       else
       {
-        const_cast<HybridObjectStateSpace::StateType*>(hs)->markValid();
+        const_cast<HybridObjectStateSpace::StateType*>(pHybridState)->markValid();
       }
     }
   }
@@ -255,7 +260,7 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
 
 moveit::core::AttachedBody*
 HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
-                                               const std::string &object_name,
+                                               const std::string &objectName,
                                                const int grasp_pose_id) const
 {
   const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(active_group);
@@ -271,7 +276,7 @@ HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
 
   trajectory_msgs::JointTrajectory dettach_posture;
   return new moveit::core::AttachedBody(tip_link,
-                                        object_name,
+                                        objectName,
                                         needleShapes_,
                                         attach_trans,
                                         touch_links,

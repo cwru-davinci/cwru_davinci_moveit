@@ -60,8 +60,8 @@ class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
   HybridStateValidityChecker(const ompl::base::SpaceInformationPtr &si,
-                             const moveit::core::RobotModelConstPtr &pRobotModel,
-                             const std::string &object_name);
+                             const robot_model::RobotModelConstPtr &pRobotModel,
+                             const std::string &objectName);
 
   virtual ~HybridStateValidityChecker() {}
 
@@ -76,9 +76,13 @@ public:
                                  const std::string &planning_group) const;
 
   moveit::core::AttachedBody *createAttachedBody(const std::string &active_group,
-                                                 const std::string &object_name,
+                                                 const std::string &objectName,
                                                  const int grasp_pose_id) const;
 
+  inline const robot_model::RobotModelConstPtr& robotModel() const;
+  {
+    return kmodel_;
+  }
 protected:
   void defaultSettings();
 
@@ -101,7 +105,7 @@ protected:
 
   collision_detection::CollisionRequest     collision_request_with_distance_;
 
-  std::string                               object_name_;
+  std::string                               m_ObjectName;
 
   std::vector<shapes::ShapeConstPtr>        needleShapes_;
 

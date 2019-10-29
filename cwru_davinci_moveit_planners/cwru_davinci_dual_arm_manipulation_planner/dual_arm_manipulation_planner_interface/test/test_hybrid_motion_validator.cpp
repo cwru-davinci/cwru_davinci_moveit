@@ -44,14 +44,14 @@ namespace ob = ompl::base;
 TEST(TestHybridRRT, HybridMotionValidator)
 {
   ros::NodeHandle node_handle_priv("~");
-  std::string object_name = "needle_r";
+  std::string objectName = "needle_r";
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
 
   // construct an instance of space information from this state space
   auto se3SS(std::make_shared<ob::SE3StateSpace>());
   auto si(std::make_shared<ob::SpaceInformation>(se3SS));
 
-  HybridMotionValidatorTester tester(si, robotModelLoader.getModel(), object_name);
+  HybridMotionValidatorTester tester(si, robotModelLoader.getModel(), objectName);
 
 
   int test_num = 0;

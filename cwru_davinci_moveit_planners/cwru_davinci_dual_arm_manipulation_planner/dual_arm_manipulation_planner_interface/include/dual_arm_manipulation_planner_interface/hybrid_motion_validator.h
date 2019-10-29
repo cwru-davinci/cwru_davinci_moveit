@@ -63,7 +63,7 @@ class HybridMotionValidator : public ompl::base::MotionValidator, public HybridS
 public:
   HybridMotionValidator(const ompl::base::SpaceInformationPtr &si,
                         const robot_model::RobotModelConstPtr &pRobotModel,
-                        const std::string &object_name);
+                        const std::string &objectName);
 
   virtual ~HybridMotionValidator() {}
 

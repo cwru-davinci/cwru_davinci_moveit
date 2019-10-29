@@ -102,17 +102,17 @@ void HybridStateSampler::sampleGaussian(State *state, const State *mean, double 
   // left blank
 }
 
-HybridObjectStateSpace::HybridObjectStateSpace(int arm_idx_lw_bd,
-                                               int arm_idx_up_bd,
-                                               int grasp_idx_lw_bd,
-                                               int grasp_idx_up_bd,
+HybridObjectStateSpace::HybridObjectStateSpace(const int armIdxLwBd,
+                                               const int armIdxUpBd,
+                                               const int graspIdxLwBd,
+                                               const int graspIdxUpBd,
                                                const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps)
   : CompoundStateSpace(),
-    arm_idx_lw_bd_(arm_idx_lw_bd),
-    arm_idx_up_bd_(arm_idx_up_bd),
-    grasp_idx_lw_bd_(grasp_idx_lw_bd),
-    grasp_idx_up_bd_(grasp_idx_up_bd),
-    possible_grasps_(possible_grasps)
+    m_ArmIdxLwBd(armIdxLwBd),
+    m_ArmIdxUpBd(armIdxUpBd),
+    m_GraspIdxLwBd(graspIdxLwBd),
+    m_GraspIdxUpBd(graspIdxUpBd),
+    m_PossibleGrasps(possible_grasps)
 {
   setName("HybridObject" + getName());
   type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
@@ -120,11 +120,57 @@ HybridObjectStateSpace::HybridObjectStateSpace(int arm_idx_lw_bd,
   addSubspace(std::make_shared<SE3StateSpace>(), 1.0);  // object pose space
   components_.back()->setName(components_.back()->getName() + ":ObjectPose");
 
-  addSubspace(std::make_shared<DiscreteStateSpace>(arm_idx_lw_bd_, arm_idx_up_bd_),
+  addSubspace(std::make_shared<DiscreteStateSpace>(m_ArmIdxLwBd, m_ArmIdxUpBd),
               1.0);  // arm index
   components_.back()->setName(components_.back()->getName() + ":ArmIndex");
 
-  addSubspace(std::make_shared<DiscreteStateSpace>(grasp_idx_lw_bd_, grasp_idx_up_bd_),
+  addSubspace(std::make_shared<DiscreteStateSpace>(m_GraspIdxLwBd, m_GraspIdxUpBd),
+              1.0);  // grasp index
+  components_.back()->setName(components_.back()->getName() + ":GraspIndex");
+
+  addSubspace(std::make_shared<RealVectorStateSpace>(6), 1.0);
+  components_.back()->setName(components_.back()->getName() + ":JointVariables");
+  components_[3]->as<RealVectorStateSpace>()->setBounds(-7, 7);
+
+  lock();
+}
+
+HybridObjectStateSpace::HybridObjectStateSpace(const double se3BoundXAxisMin,
+                                               const double se3BoundXAxisMax,
+                                               const double se3BoundYAxisMin,
+                                               const double se3BoundYAxisMax,
+                                               const double se3BoundZAxisMin,
+                                               const double se3BoundZAxisMax,
+                                               const int armIdxLwBd,
+                                               const int armIdxUpBd,
+                                               const int graspIdxLwBd,
+                                               const int graspIdxUpBd,
+                                               const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps)
+  : CompoundStateSpace(),
+    m_ArmIdxLwBd(armIdxLwBd),
+    m_ArmIdxUpBd(armIdxUpBd),
+    m_GraspIdxLwBd(graspIdxLwBd),
+    m_GraspIdxUpBd(graspIdxUpBd),
+    m_PossibleGrasps(possible_grasps)
+{
+  setName("HybridObject" + getName());
+  type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
+
+  addSubspace(std::make_shared<SE3StateSpace>(), 1.0);  // object pose space
+  components_.back()->setName(components_.back()->getName() + ":ObjectPose");
+
+  setSE3Bounds(se3BoundXAxisMin,
+               se3BoundXAxisMax,
+               se3BoundYAxisMin,
+               se3BoundYAxisMax,
+               se3BoundZAxisMin,
+               se3BoundZAxisMax);
+
+  addSubspace(std::make_shared<DiscreteStateSpace>(m_ArmIdxLwBd, m_ArmIdxUpBd),
+              1.0);  // arm index
+  components_.back()->setName(components_.back()->getName() + ":ArmIndex");
+
+  addSubspace(std::make_shared<DiscreteStateSpace>(m_GraspIdxLwBd, m_GraspIdxUpBd),
               1.0);  // grasp index
   components_.back()->setName(components_.back()->getName() + ":GraspIndex");
 
@@ -211,9 +257,26 @@ void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool ver
   std::cout << "Total Time is: " << total_time_chro.count() << "s" << std::endl;
 }
 
-void HybridObjectStateSpace::setSE3Bounds(RealVectorBounds bounds)
+void HybridObjectStateSpace::setSE3Bounds(const RealVectorBounds &bounds)
 {
   components_[0]->as<SE3StateSpace>()->setBounds(bounds);
+}
+
+void HybridObjectStateSpace::setSE3Bounds(const double se3BoundXAxisMin,
+                                          const double se3BoundXAxisMax,
+                                          const double se3BoundYAxisMin,
+                                          const double se3BoundYAxisMax,
+                                          const double se3BoundZAxisMin,
+                                          const double se3BoundZAxisMax)
+{
+  RealVectorBounds se3XYZBounds(3);
+  se3XYZBounds.setLow(0,  se3BoundXAxisMin);
+  se3XYZBounds.setHigh(0, se3BoundXAxisMax);
+  se3XYZBounds.setLow(1,  se3BoundYAxisMin);
+  se3XYZBounds.setHigh(1, se3BoundYAxisMax);
+  se3XYZBounds.setLow(2,  se3BoundZAxisMin);
+  se3XYZBounds.setHigh(2, se3BoundZAxisMax);
+  setSE3Bounds(se3XYZBounds);
 }
 
 void HybridObjectStateSpace::setArmIndexBounds(int lowerBound, int upperBound)
@@ -268,8 +331,8 @@ double HybridObjectStateSpace::distance(const State *state1, const State *state2
   const int s1_grasp_index = hs1->graspIndex().value;
   const int s2_grasp_index = hs2->graspIndex().value;
 
-  const int s1_part_id = possible_grasps_[s1_grasp_index].part_id;
-  const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
+  const int s1_part_id = m_PossibleGrasps[s1_grasp_index].part_id;
+  const int s2_part_id = m_PossibleGrasps[s2_grasp_index].part_id;
 
   int num_handoff = handOffsNum(s1_arm_index,
                                 s1_grasp_index,
@@ -370,8 +433,8 @@ unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, cons
   const int s1_grasp_index = hs1->graspIndex().value;
   const int s2_grasp_index = hs2->graspIndex().value;
 
-  const int s1_part_id = possible_grasps_[s1_grasp_index].part_id;
-  const int s2_part_id = possible_grasps_[s2_grasp_index].part_id;
+  const int s1_part_id = m_PossibleGrasps[s1_grasp_index].part_id;
+  const int s2_part_id = m_PossibleGrasps[s2_grasp_index].part_id;
 
   unsigned int se3_count = components_[0]->validSegmentCount(hs1->components[0], hs2->components[0]);
 
@@ -536,8 +599,8 @@ void HybridObjectStateSpace::interpolateGrasp(const StateType *from,
   const int from_grasp_index = from->graspIndex().value;
   const int to_grasp_index = to->graspIndex().value;
 
-  const int from_part_id = possible_grasps_[from_grasp_index].part_id;
-  const int to_part_id = possible_grasps_[to_grasp_index].part_id;
+  const int from_part_id = m_PossibleGrasps[from_grasp_index].part_id;
+  const int to_part_id = m_PossibleGrasps[to_grasp_index].part_id;
 
   int num_handoff = handOffsNum(from_arm_index,from_grasp_index, from_part_id, to_arm_index, to_grasp_index, to_part_id);
 
@@ -598,13 +661,13 @@ int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) co
 
   std::unordered_set<int> invalid_grasp_list;
 
-  int stop_it_num = grasp_idx_up_bd_ + 1;
+  int stop_it_num = m_GraspIdxUpBd + 1;
   while(invalid_grasp_list.size() < stop_it_num)
   {
-    cs_grasp_id = randNumGenerator.uniformInt(grasp_idx_lw_bd_, grasp_idx_up_bd_);
+    cs_grasp_id = randNumGenerator.uniformInt(m_GraspIdxLwBd, m_GraspIdxUpBd);
     if(invalid_grasp_list.find(cs_grasp_id) == invalid_grasp_list.end())  // element is not in the container
     {
-      int cs_grasp_part = possible_grasps_[cs_grasp_id].part_id;
+      int cs_grasp_part = m_PossibleGrasps[cs_grasp_id].part_id;
       if((cs_grasp_part != from_part_id) && (cs_grasp_part != to_part_id))  // if failed insert to invalid_grasp_list
       {
         return cs_grasp_id;
@@ -616,6 +679,6 @@ int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) co
     }
   }
 
-  cs_grasp_id = grasp_idx_up_bd_ + 1; // should not be there
+  cs_grasp_id = m_GraspIdxUpBd + 1; // should not be there
   return cs_grasp_id;
 }

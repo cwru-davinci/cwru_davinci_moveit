@@ -41,36 +41,93 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_HANDOFF_PLANNER_H
 
 #include <ompl/base/SpaceInformation.h>
+#include <ompl/base/ProblemDefinition.h>
+
+#include <ompl/geometric/planners/rrt/RRTConnect.h>
 
 #include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
 
 namespace dual_arm_manipulation_planner_interface
 {
+
+typedef std::vector<std::vector<double>> JointTrajectory;
+typedef std::map<std::string, JointTrajectory> PlanningGroupJointTrajectory;
+typedef std::vector<PlanningGroupJointTrajectory> SolutionPathJointTrajectory;
+
 class HybridObjectHandoffPlanner
 {
 public:
   HybridObjectHandoffPlanner
   (
-    const ompl::base::State *start,
-    const ompl::base::State *Goal,
-    const double se3BoundXAxisMin,
-    const double se3BoundXAxisMax,
-    const double se3BoundYAxisMin,
-    const double se3BoundYAxisMax,
-    const double se3BoundZAxisMin,
-    const double se3BoundZAxisMax,
-    const int armIdxLwBd,
-    const int armIdxUpBd,
-    const int graspIdxLwBd,
-    const int graspIdxUpBd
+  const ompl::base::State *start,
+  const ompl::base::State *goal,
+  const double se3BoundXAxisMin,
+  const double se3BoundXAxisMax,
+  const double se3BoundYAxisMin,
+  const double se3BoundYAxisMax,
+  const double se3BoundZAxisMin,
+  const double se3BoundZAxisMax,
+  const int armIdxLwBd,
+  const int armIdxUpBd,
+  const int graspIdxLwBd,
+  const int graspIdxUpBd,
+  const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
+  const robot_model::RobotModelConstPtr& pRobotModel,
+  const std::string &objectName,
+  const double maxDistance,
+  bool verbose = true
   );
 
   ~HybridObjectHandoffPlanner(){}
-protected:
-  HybridObjectStateSpacePtr m_pHyStateSpace;
 
-  ompl::base::SpaceInformationPtr m_pSpaceInform;
+  ompl::base::PlannerStatus::StatusType solve
+  (
+  const double solveTime
+  );
+
+  bool getSolutionPathJointTrajectory
+  (
+  SolutionPathJointTrajectory& wholePathJntTraj
+  );
+
+protected:
+  HybridObjectStateSpacePtr                    m_pHyStateSpace;
+
+  ompl::base::SpaceInformationPtr              m_pSpaceInfor;
+
+  ompl::base::ProblemDefinitionPtr             m_pProblemDef;
+
+  std::shared_ptr<ompl::geometric::RRTConnect> m_pRRTConnectPlanner;
+
+  ompl::base::PlannerStatus                    m_solved;
+
+  bool                                         m_verbose;
+protected:
+  void setupSpaceInformation
+  (
+  const HybridObjectStateSpacePtr& pHyStateSpace,
+  const robot_model::RobotModelConstPtr& pRobotModel,
+  const std::string &objectName
+  );
+
+  void setupProblemDefinition
+  (
+  const ompl::base::State *start,
+  const ompl::base::State *goal
+  );
+
+  void setupPlanner
+  (
+  const double maxDistance
+  );
+
+  bool connectStates
+    (
+    const ompl::base::State *pFromState,
+    const ompl::base::State *pToState,
+    SolutionPathJointTrajectory &jntTrajectoryBtwStates
+    );
 };
 }
 
