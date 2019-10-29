@@ -48,11 +48,11 @@ using namespace dual_arm_manipulation_planner_interface;
 
 HybridMotionValidator::HybridMotionValidator(const ompl::base::SpaceInformationPtr &si,
                                              const robot_model::RobotModelConstPtr &pRobotModel,
-                                             const std::string &object_name) :
+                                             const std::string &objectName) :
   ompl::base::MotionValidator(si),
   HybridStateValidityChecker(si,
                              pRobotModel,
-                             object_name)
+                             objectName)
 {
   hyStateSpace_->object_transit_planning_duration_ = std::chrono::duration<double>::zero();
 
@@ -126,10 +126,10 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
                                    rest_group_s2_eef_name + "_home");
 
     moveit::core::AttachedBody *s1_needle = createAttachedBody(active_group_s1,
-                                                               object_name_,
+                                                               m_ObjectName,
                                                                hs1->graspIndex().value);
     moveit::core::AttachedBody *s2_needle = createAttachedBody(active_group_s2,
-                                                               object_name_,
+                                                               m_ObjectName,
                                                                hs2->graspIndex().value);
     if(!s1_needle || !s2_needle)
     {
@@ -143,7 +143,7 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
     // publishRobotState(*start_state);
     // publishRobotState(*goal_state);
 
-    if (!start_state->hasAttachedBody(object_name_) || !goal_state->hasAttachedBody(object_name_))
+    if (!start_state->hasAttachedBody(m_ObjectName) || !goal_state->hasAttachedBody(m_ObjectName))
     {
       start_state->clearAttachedBodies();
       goal_state->clearAttachedBodies();
@@ -205,8 +205,8 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
   handoff_state->setJointGroupPositions(gs_active_group, gs_jt_position);
   setMimicJointPositions(handoff_state, gs_active_group);
 
-  const moveit::core::AttachedBody *ss_needle_body = start_state.getAttachedBody(object_name_);
-  const moveit::core::AttachedBody *gs_needle_body = goal_state.getAttachedBody(object_name_);
+  const moveit::core::AttachedBody *ss_needle_body = start_state.getAttachedBody(m_ObjectName);
+  const moveit::core::AttachedBody *gs_needle_body = goal_state.getAttachedBody(m_ObjectName);
 
   std::set<std::string> touch_links = ss_needle_body->getTouchLinks();
   touch_links.insert(gs_needle_body->getTouchLinks().begin(), gs_needle_body->getTouchLinks().end());
@@ -354,7 +354,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
 
   // publishRobotState(*pre_grasp_state);
 
-  const moveit::core::AttachedBody *hdof_needle_body = handoff_state.getAttachedBody(object_name_);
+  const moveit::core::AttachedBody *hdof_needle_body = handoff_state.getAttachedBody(m_ObjectName);
 
   traj.back()->attachBody(hdof_needle_body->getName(), hdof_needle_body->getShapes(),
                           hdof_needle_body->getFixedTransforms(), hdof_needle_body->getTouchLinks(),

@@ -270,15 +270,34 @@ public:
     int flags;
   };
 
-  HybridObjectStateSpace(int arm_idx_lw_bd,
-                         int arm_idx_up_bd,
-                         int grasp_idx_lw_bd,
-                         int grasp_idx_up_bd,
+  HybridObjectStateSpace(const int armIdxLwBd,
+                         const int armIdxUpBd,
+                         const int graspIdxLwBd,
+                         const int graspIdxUpBd,
+                         const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps);
+
+  HybridObjectStateSpace(const double se3BoundXAxisMin,
+                         const double se3BoundXAxisMax,
+                         const double se3BoundYAxisMin,
+                         const double se3BoundYAxisMax,
+                         const double se3BoundZAxisMin,
+                         const double se3BoundZAxisMax,
+                         const int armIdxLwBd,
+                         const int armIdxUpBd,
+                         const int graspIdxLwBd,
+                         const int graspIdxUpBd,
                          const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps);
 
   virtual ~HybridObjectStateSpace() {}
 
-  void setSE3Bounds(ompl::base::RealVectorBounds bounds);
+  void setSE3Bounds(const ompl::base::RealVectorBounds &bounds);
+
+  void setSE3Bounds(const double se3BoundXAxisMin,
+                    const double se3BoundXAxisMax,
+                    const double se3BoundYAxisMin,
+                    const double se3BoundYAxisMax,
+                    const double se3BoundZAxisMin,
+                    const double se3BoundZAxisMax);
 
   void setArmIndexBounds(int lowerBound, int upperBound);
 
@@ -333,7 +352,7 @@ public:
 
   inline const std::vector<cwru_davinci_grasp::GraspInfo>& graspTransformations() const
   {
-    return possible_grasps_;
+    return m_PossibleGrasps;
   }
 
 protected:
@@ -359,11 +378,11 @@ protected:
   int chooseGraspPart(int from_part_id, int to_part_id) const;
 
 protected:
-  int                                        arm_idx_lw_bd_;
-  int                                        arm_idx_up_bd_;
-  int                                        grasp_idx_lw_bd_;
-  int                                        grasp_idx_up_bd_;
-  std::vector<cwru_davinci_grasp::GraspInfo> possible_grasps_;
+  int                                        m_ArmIdxLwBd;
+  int                                        m_ArmIdxUpBd;
+  int                                        m_GraspIdxLwBd;
+  int                                        m_GraspIdxUpBd;
+  std::vector<cwru_davinci_grasp::GraspInfo> m_PossibleGrasps;
 };
 
 typedef std::shared_ptr<HybridObjectStateSpace> HybridObjectStateSpacePtr;

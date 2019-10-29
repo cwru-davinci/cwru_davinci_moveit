@@ -41,35 +41,176 @@
 
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
+namespace og = ompl::geometric;
 
 HybridObjectHandoffPlanner::HybridObjectHandoffPlanner
-  (
-    const ob::State *start,
-    const ob::State *Goal,
-    const double se3BoundXAxisMin,
-    const double se3BoundXAxisMax,
-    const double se3BoundYAxisMin,
-    const double se3BoundYAxisMax,
-    const double se3BoundZAxisMin,
-    const double se3BoundZAxisMax,
-    const int armIdxLwBd,
-    const int armIdxUpBd,
-    const int graspIdxLwBd,
-    const int graspIdxUpBd
-  )
+(
+const ob::State *start,
+const ob::State *goal,
+const double se3BoundXAxisMin,
+const double se3BoundXAxisMax,
+const double se3BoundYAxisMin,
+const double se3BoundYAxisMax,
+const double se3BoundZAxisMin,
+const double se3BoundZAxisMax,
+const int armIdxLwBd,
+const int armIdxUpBd,
+const int graspIdxLwBd,
+const int graspIdxUpBd,
+const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
+const robot_model::RobotModelConstPtr& pRobotModel,
+const std::string &objectName,
+const double maxDistance,
+bool verbose
+)
+: m_verbose(verbose)
 {
-  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>(armIdxLwBd, armIdxLwBd, graspIdxLwBd, graspIdxUpBd);
-  m_pHyStateSpace->setSE3Bounds([&]() -> ob::RealVectorBounds
-                                  {
-                                    ob::RealVectorBounds se3XYZBounds(3);
-                                    se3XYZBounds.setLow(0, se3BoundXAxisMin);
-                                    se3XYZBounds.setHigh(0, se3BoundXAxisMax);
-                                    se3XYZBounds.setLow(1, se3BoundYAxisMin);
-                                    se3XYZBounds.setHigh(1, se3BoundYAxisMax);
-                                    se3XYZBounds.setLow(2, se3BoundZAxisMin);
-                                    se3XYZBounds.setHigh(2, se3BoundZAxisMax);
-                                    return se3XYZBounds;
-                                  });
+  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>(se3BoundXAxisMin,
+                                                             se3BoundXAxisMax,
+                                                             se3BoundYAxisMin,
+                                                             se3BoundYAxisMax,
+                                                             se3BoundZAxisMin,
+                                                             se3BoundZAxisMax,
+                                                             armIdxLwBd,
+                                                             armIdxUpBd,
+                                                             graspIdxLwBd,
+                                                             graspIdxUpBd,
+                                                             possible_grasps);
+  if(!m_pHyStateSpace)
+  {
+    m_pSpaceInfor = nullptr;
+    m_pProblemDef = nullptr;
+    m_pRRTConnectPlanner = nullptr;
+    printf("HybridObjectHandoffPlanner: Failed to initialize hybrid object state space");
+  }
+  else
+  {
+    setupSpaceInformation(m_pHyStateSpace, pRobotModel, objectName);
+    if(m_pSpaceInfor)
+    {
+      setupProblemDefinition(start, goal);
+      if(m_pProblemDef)
+      {
+        setupPlanner(maxDistance);
+        if(m_verbose)
+        {
+          m_pSpaceInfor->printSettings(std::cout);
+          m_pProblemDef->print(std::cout);
+        }
+      }
+    }
+  }
+}
 
+ob::PlannerStatus::StatusType HybridObjectHandoffPlanner::solve
+(
+const double solveTime
+)
+{
+  if(m_pRRTConnectPlanner && m_pRRTConnectPlanner->isSetup())
+  {
+    m_solved = m_pRRTConnectPlanner->ob::Planner::solve(solveTime);
+    return m_solved;
+  }
 
+  m_solved = ob::PlannerStatus::ABORT;
+  return m_solved;
+}
+
+bool HybridObjectHandoffPlanner::getSolutionPathJointTrajectory
+(
+SolutionPathJointTrajectory& wholePathJntTraj
+)
+{
+  if (!m_solved || !m_pProblemDef->hasExactSolution())
+  {
+    return false;
+  }
+
+  wholePathJntTraj.clear();
+  og::PathGeometric *slnPath = m_pProblemDef->getSolutionPath()->as<og::PathGeometric>();
+  const std::vector<ob::State*>& constSlnStates = slnPath->getStates();
+  const size_t segments = slnPath->getStateCount()-1;
+
+  for(size_t i = 0; i < segments; ++i)
+  {
+    SolutionPathJointTrajectory jntTrajectoryBtwStates;
+    if(!connectStates(constSlnStates[i], constSlnStates[i + 1], jntTrajectoryBtwStates))
+    {
+      return false;
+    }
+  }
+}
+
+void HybridObjectHandoffPlanner::setupSpaceInformation
+(
+const HybridObjectStateSpacePtr& pHyStateSpace,
+const robot_model::RobotModelConstPtr& pRobotModel,
+const std::string &objectName
+)
+{
+  m_pSpaceInfor = std::make_shared<ob::SpaceInformation>(m_pHyStateSpace);
+  if(!m_pSpaceInfor)
+  {
+    m_pProblemDef = nullptr;
+    m_pRRTConnectPlanner = nullptr;
+    printf("HybridObjectHandoffPlanner: Failed to initialize space information");
+    return;
+  }
+  m_pSpaceInfor->setStateValidityChecker(
+    std::make_shared<HybridStateValidityChecker>(m_pSpaceInfor, pRobotModel, objectName));
+  m_pSpaceInfor->setMotionValidator(
+    std::make_shared<HybridMotionValidator>(m_pSpaceInfor, pRobotModel, objectName));
+
+  m_pSpaceInfor->setup();
+}
+
+void HybridObjectHandoffPlanner::setupProblemDefinition
+(
+const ompl::base::State *start,
+const ompl::base::State *goal
+)
+{
+  if(!m_pSpaceInfor->isValid(start) || !m_pSpaceInfor->isValid(goal))
+  {
+    m_pRRTConnectPlanner = nullptr;
+    printf("HybridObjectHandoffPlanner: Either start or goal state is not valid");
+    return;
+  }
+
+  m_pProblemDef = std::make_shared<ob::ProblemDefinition>(m_pSpaceInfor);
+  if(!m_pProblemDef)
+  {
+    m_pRRTConnectPlanner = nullptr;
+    printf("HybridObjectHandoffPlanner: Failed to initialize problem definition");
+    return;
+  }
+  m_pProblemDef->setStartAndGoalStates(start, goal);
+}
+
+void HybridObjectHandoffPlanner::setupPlanner
+(
+const double maxDistance
+)
+{
+  m_pRRTConnectPlanner = std::make_shared<og::RRTConnect>(m_pSpaceInfor);
+  if(!m_pRRTConnectPlanner)
+  {
+    printf("HybridObjectHandoffPlanner: Failed to initialize RRTConnect planner");
+    return;
+  }
+  m_pRRTConnectPlanner->setProblemDefinition(m_pProblemDef);
+  m_pRRTConnectPlanner->setRange(maxDistance);
+  m_pRRTConnectPlanner->setup();
+}
+
+bool HybridObjectHandoffPlanner::connectStates
+(
+const ompl::base::State* fromState,
+const ompl::base::State* toState,
+SolutionPathJointTrajectory& jntTrajectoryBtwStates
+)
+{
+  bool goodPath = false;
+  return goodPath;
 }

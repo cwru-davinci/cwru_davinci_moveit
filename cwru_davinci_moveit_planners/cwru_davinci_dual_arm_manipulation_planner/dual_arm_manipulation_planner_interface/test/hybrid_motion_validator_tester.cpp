@@ -47,8 +47,8 @@ class HybridMotionValidatorTester : public HybridMotionValidator
 public:
   HybridMotionValidatorTester(const ompl::base::SpaceInformationPtr &si,
                               const robot_model::RobotModelConstPtr &pRobotModel,
-                              const std::string &object_name)
-                              : HybridMotionValidator(si, pRobotModel, object_name) {}
+                              const std::string &objectName)
+                              : HybridMotionValidator(si, pRobotModel, objectName) {}
 
   ~HybridMotionValidatorTester() {}
 
