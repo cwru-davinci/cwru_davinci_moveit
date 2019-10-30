@@ -42,7 +42,6 @@
 
 // collision
 #include <moveit/collision_detection/collision_tools.h>
-//#include <interactivity/interactive_robot.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 
@@ -85,60 +84,25 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
   }
   else
   {
-    const auto *hs1 = static_cast<const HybridObjectStateSpace::StateType *>(s1);
-    const auto *hs2 = static_cast<const HybridObjectStateSpace::StateType *>(s2);
+    const HybridObjectStateSpace::StateType *pHyState1 = dynamic_cast<const HybridObjectStateSpace::StateType *>(s1);
+    const HybridObjectStateSpace::StateType *pHyState2 = dynamic_cast<const HybridObjectStateSpace::StateType *>(s2);
 
-    // active group is the arm supporting the needle
-    const std::string active_group_s1 = (hs1->armIndex().value == 1) ? "psm_one" : "psm_two";
-    const std::string rest_group_s1 = (active_group_s1 == "psm_one") ? "psm_two" : "psm_one";
+    if(!pHyState1 || !pHyState2)
+    {
+      printf("HybridMotionValidator: Invalid states to be connected");
+      return false;
+    }
 
     const robot_state::RobotStatePtr start_state(new robot_state::RobotState(kmodel_));
-    if(!start_state)
+    if(!start_state || !hybridStateToRobotState(pHyState1, start_state))
     {
       return result;
     }
-
-    start_state->setToDefaultValues();
-    start_state->setJointGroupPositions(active_group_s1, hs1->jointVariables().values);
-    setMimicJointPositions(start_state, active_group_s1);
-    start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1), rest_group_s1 + "_home");
-    const std::string rest_group_s1_eef_name = start_state->getJointModelGroup(
-      rest_group_s1)->getAttachedEndEffectorNames()[0];
-    start_state->setToDefaultValues(start_state->getJointModelGroup(rest_group_s1_eef_name),
-                                    rest_group_s1_eef_name + "_home");
-
-    const std::string active_group_s2 = (hs2->armIndex().value == 1) ? "psm_one" : "psm_two";
-    const std::string rest_group_s2 = (active_group_s2 == "psm_one") ? "psm_two" : "psm_one";
-
     const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(kmodel_));
-    if(!goal_state)
+    if(!goal_state || !hybridStateToRobotState(pHyState2, goal_state))
     {
       return result;
     }
-
-    goal_state->setToDefaultValues();
-    goal_state->setJointGroupPositions(active_group_s2, hs2->jointVariables().values);
-    setMimicJointPositions(goal_state, active_group_s2);
-    goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2), rest_group_s2 + "_home");
-    std::string rest_group_s2_eef_name = goal_state->getJointModelGroup(
-      rest_group_s2)->getAttachedEndEffectorNames()[0];
-    goal_state->setToDefaultValues(goal_state->getJointModelGroup(rest_group_s2_eef_name),
-                                   rest_group_s2_eef_name + "_home");
-
-    moveit::core::AttachedBody *s1_needle = createAttachedBody(active_group_s1,
-                                                               m_ObjectName,
-                                                               hs1->graspIndex().value);
-    moveit::core::AttachedBody *s2_needle = createAttachedBody(active_group_s2,
-                                                               m_ObjectName,
-                                                               hs2->graspIndex().value);
-    if(!s1_needle || !s2_needle)
-    {
-      return result;
-    }
-    start_state->attachBody(s1_needle);
-    start_state->update();
-    goal_state->attachBody(s2_needle);
-    goal_state->update();
 
     // publishRobotState(*start_state);
     // publishRobotState(*goal_state);
@@ -150,21 +114,25 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
       return result;
     }
 
-    switch (hyStateSpace_->checkStateDiff(hs1, hs2))
+    // active group is the arm supporting the needle
+    const std::string supportGroupS1 = (pHyState1->armIndex().value == 1) ? "psm_one" : "psm_two";
+    const std::string supportGroupS2 = (pHyState2->armIndex().value == 1) ? "psm_one" : "psm_two";
+
+    switch (hyStateSpace_->checkStateDiff(pHyState1, pHyState2))
     {
       case StateDiff::AllSame:
         result = true;
         break;
       case StateDiff::PoseDiffArmAndGraspSame:
       {
-        result = planObjectTransit(*start_state, *goal_state, active_group_s1);
+        result = planObjectTransit(*start_state, *goal_state, supportGroupS1);
         auto finish = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = finish - start;
         hyStateSpace_->object_transit_planning_duration_ += elapsed;
         break;
       }
       case StateDiff::ArmAndGraspDiffPoseSame:
-        result = planHandoff(*start_state, *goal_state, active_group_s1, active_group_s2);
+        result = planHandoff(*start_state, *goal_state, supportGroupS1, supportGroupS2);
         if(!result)
           hyStateSpace_->hand_off_failed_num += 1;
         break;

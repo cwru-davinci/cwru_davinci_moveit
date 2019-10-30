@@ -94,15 +94,20 @@ public:
 protected:
   HybridObjectStateSpacePtr                    m_pHyStateSpace;
 
+  std::shared_ptr<HybridStateValidityChecker>  m_pHyStateValidator;
+
   ompl::base::SpaceInformationPtr              m_pSpaceInfor;
 
   ompl::base::ProblemDefinitionPtr             m_pProblemDef;
 
   std::shared_ptr<ompl::geometric::RRTConnect> m_pRRTConnectPlanner;
 
-  ompl::base::PlannerStatus                    m_solved;
+  ompl::base::PlannerStatus                    m_Solved;
 
-  bool                                         m_verbose;
+  bool                                         m_Verbose;
+
+  std::string                                  m_ObjectName;
+
 protected:
   void setupSpaceInformation
   (
@@ -124,9 +129,23 @@ protected:
 
   bool connectStates
   (
-  const ompl::base::State* fromState,
-  const ompl::base::State* toState,
-  SolutionPathJointTrajectory& jntTrajectoryBtwStates
+  const ompl::base::State *pFromState,
+  const ompl::base::State *pToState,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planObjectTransit
+  (
+  const HybridObjectStateSpace::StateType* pHyFromState,
+  const HybridObjectStateSpace::StateType* pHyToState,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planHandoff
+  (
+  const HybridObjectStateSpace::StateType* pHyFromState,
+  const HybridObjectStateSpace::StateType* pHyToState,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
   );
 };
 }

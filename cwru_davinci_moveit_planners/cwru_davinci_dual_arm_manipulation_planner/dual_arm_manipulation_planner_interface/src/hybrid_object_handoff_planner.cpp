@@ -63,7 +63,7 @@ const std::string &objectName,
 const double maxDistance,
 bool verbose
 )
-: m_verbose(verbose)
+: m_Verbose(verbose), m_ObjectName(objectName)
 {
   m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>(se3BoundXAxisMin,
                                                              se3BoundXAxisMax,
@@ -92,7 +92,7 @@ bool verbose
       if(m_pProblemDef)
       {
         setupPlanner(maxDistance);
-        if(m_verbose)
+        if(m_Verbose)
         {
           m_pSpaceInfor->printSettings(std::cout);
           m_pProblemDef->print(std::cout);
@@ -109,12 +109,12 @@ const double solveTime
 {
   if(m_pRRTConnectPlanner && m_pRRTConnectPlanner->isSetup())
   {
-    m_solved = m_pRRTConnectPlanner->ob::Planner::solve(solveTime);
-    return m_solved;
+    m_Solved = m_pRRTConnectPlanner->ob::Planner::solve(solveTime);
+    return m_Solved;
   }
 
-  m_solved = ob::PlannerStatus::ABORT;
-  return m_solved;
+  m_Solved = ob::PlannerStatus::ABORT;
+  return m_Solved;
 }
 
 bool HybridObjectHandoffPlanner::getSolutionPathJointTrajectory
@@ -122,7 +122,7 @@ bool HybridObjectHandoffPlanner::getSolutionPathJointTrajectory
 SolutionPathJointTrajectory& wholePathJntTraj
 )
 {
-  if (!m_solved || !m_pProblemDef->hasExactSolution())
+  if (!m_Solved || !m_pProblemDef->hasExactSolution())
   {
     return false;
   }
@@ -163,6 +163,8 @@ const std::string &objectName
     std::make_shared<HybridMotionValidator>(m_pSpaceInfor, pRobotModel, objectName));
 
   m_pSpaceInfor->setup();
+
+  m_pHyStateValidator = std::dynamic_pointer_cast<HybridStateValidityChecker>(m_pSpaceInfor->getStateValidityChecker());
 }
 
 void HybridObjectHandoffPlanner::setupProblemDefinition
@@ -205,12 +207,163 @@ const double maxDistance
 }
 
 bool HybridObjectHandoffPlanner::connectStates
+  (
+  const ompl::base::State *pFromState,
+  const ompl::base::State *pToState,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  )
+{
+  const HybridObjectStateSpace::StateType* pHyFromState = dynamic_cast<const HybridObjectStateSpace::StateType*>(pFromState);
+  const HybridObjectStateSpace::StateType* pHyToState = dynamic_cast<const HybridObjectStateSpace::StateType*>(pToState);
+
+  if(!pHyFromState || !pHyToState)
+  {
+    printf("HybridObjectHandoffPlanner: Invalid states to be connected");
+    return false;
+  }
+
+  bool goodPath = false;
+  switch(m_pHyStateSpace->checkStateDiff(pHyFromState, pHyToState))
+  {
+    case StateDiff::AllSame:
+      goodPath = true;
+      break;
+    case StateDiff::PoseDiffArmAndGraspSame:
+    {
+      goodPath = planObjectTransit(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
+      break;
+    }
+    case StateDiff::ArmAndGraspDiffPoseSame:
+      goodPath = planHandoff(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
+      break;
+    default:
+      // should not be there
+      break;
+  }
+  return goodPath;
+}
+
+bool HybridObjectHandoffPlanner::planObjectTransit
 (
-const ompl::base::State* fromState,
-const ompl::base::State* toState,
-SolutionPathJointTrajectory& jntTrajectoryBtwStates
+const HybridObjectStateSpace::StateType* pHyFromState,
+const HybridObjectStateSpace::StateType* pHyToState,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
 )
 {
-  bool goodPath = false;
-  return goodPath;
+  if(!m_pHyStateValidator)
+  {
+    printf("HybridObjectHandoffPlanner: Failed to connect states");
+    return false;
+  }
+
+  const robot_state::RobotStatePtr pRobotFromState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
+  if(!pRobotFromState || !m_pHyStateValidator->hybridStateToRobotState(pHyFromState, pRobotFromState))
+  {
+    printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
+    return false;
+  }
+  const robot_state::RobotStatePtr pRobotToState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
+  if(!pRobotToState || !m_pHyStateValidator->hybridStateToRobotState(pHyToState, pRobotToState))
+  {
+    printf("HybridObjectHandoffPlanner: Invalid ToState to be connected");
+    return false;
+  }
+
+  const std::string supportGroup = (pHyFromState->armIndex().value == 1) ? "psm_one" : "psm_two";
+  const robot_state::JointModelGroup *pSupportJntGroup = pRobotToState->getJointModelGroup(supportGroup);
+  const moveit::core::LinkModel *pTipLink = pSupportJntGroup->getOnlyOneEndEffectorTip();
+  const Eigen::Affine3d toolTipPose = pRobotToState->getGlobalLinkTransform(pTipLink);
+
+  std::vector<robot_state::RobotStatePtr> traj;
+  double foundCartesianPath = pRobotFromState->computeCartesianPath(pRobotFromState->getJointModelGroup(supportGroup),
+                                                                    traj,
+                                                                    pTipLink,
+                                                                    toolTipPose,
+                                                                    true,
+                                                                    0.001,
+                                                                    0.0);
+
+  if (foundCartesianPath != 1.0)
+  {
+    return false;
+  }
+
+  // removable
+  m_pHyStateValidator->setMimicJointPositions(pRobotFromState, supportGroup);
+  pRobotFromState->update();
+  // publishRobotState(*cp_start_state);
+
+  JointTrajectory supportGroupJntTraj;
+  supportGroupJntTraj.resize(traj.size());
+  pRobotToState->copyJointGroupPositions(supportGroup, supportGroupJntTraj[traj.size() - 1]);
+
+  for (std::size_t i = 0; i < traj.size() - 1; ++i)
+  {
+    traj[i]->update();
+    traj[i]->copyJointGroupPositions(supportGroup, supportGroupJntTraj[i]);
+  }
+
+  PlanningGroupJointTrajectory supportGroupObjectTransitJntTraj = {{supportGroup, supportGroupJntTraj}};
+  jntTrajectoryBtwStates[0] = supportGroupObjectTransitJntTraj;
+  return true;
+}
+
+bool HybridObjectHandoffPlanner::planHandoff
+(
+const HybridObjectStateSpace::StateType* pHyFromState,
+const HybridObjectStateSpace::StateType* pHyToState,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
+)
+{
+  if(!m_pHyStateValidator)
+  {
+    printf("HybridObjectHandoffPlanner: Failed to connect states");
+    return false;
+  }
+
+  const robot_state::RobotStatePtr pRobotFromState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
+  if(!pRobotFromState || !m_pHyStateValidator->hybridStateToRobotState(pHyFromState, pRobotFromState))
+  {
+    printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
+    return false;
+  }
+  const robot_state::RobotStatePtr pRobotToState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
+  if(!pRobotToState || !m_pHyStateValidator->hybridStateToRobotState(pHyToState, pRobotToState))
+  {
+    printf("HybridObjectHandoffPlanner: Invalid ToState to be connected");
+    return false;
+  }
+
+  // an intermediate state when needle is supporting by two grippers
+  const robot_state::RobotStatePtr pHandoffRobotState(new robot_state::RobotState(*pRobotFromState));
+
+  const std::string toSupportGroup = (pHyToState->armIndex().value == 1) ? "psm_one" : "psm_two";
+  std::vector<double> toSupportGroupJntPosition;
+  pRobotToState->copyJointGroupPositions(toSupportGroup, toSupportGroupJntPosition);
+  pHandoffRobotState->setJointGroupPositions(toSupportGroup, toSupportGroupJntPosition);
+  m_pHyStateValidator->setMimicJointPositions(pHandoffRobotState, toSupportGroup);
+
+  const moveit::core::AttachedBody *ss_needle_body = pRobotFromState->getAttachedBody(m_ObjectName);
+  const moveit::core::AttachedBody *gs_needle_body = pRobotToState->getAttachedBody(m_ObjectName);
+
+  std::set<std::string> touch_links = ss_needle_body->getTouchLinks();
+  touch_links.insert(gs_needle_body->getTouchLinks().begin(), gs_needle_body->getTouchLinks().end());
+
+  trajectory_msgs::JointTrajectory dettach_posture = ss_needle_body->getDetachPosture();
+  trajectory_msgs::JointTrajectory gs_dettach_posture = gs_needle_body->getDetachPosture();
+
+  dettach_posture.joint_names.insert(dettach_posture.joint_names.end(),
+                                     gs_dettach_posture.joint_names.begin(),
+                                     gs_dettach_posture.joint_names.end());
+
+  dettach_posture.points.insert(dettach_posture.points.end(),
+                                gs_dettach_posture.points.begin(),
+                                gs_dettach_posture.points.end());
+
+
+  pHandoffRobotState->attachBody(gs_needle_body->getName(), gs_needle_body->getShapes(),
+                            gs_needle_body->getFixedTransforms(), touch_links,
+                            gs_needle_body->getAttachedLinkName(), gs_needle_body->getDetachPosture());
+  pHandoffRobotState->update();
+
 }

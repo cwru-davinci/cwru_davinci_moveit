@@ -75,11 +75,14 @@ private:
   std::string planning_group_ = "psm_one";
 
   int succeeded_num_ = 0;
+  int test_num_ = 0;
 };
 
 bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::RobotState &start_state,
                                                            const robot_state::RobotState &goal_state)
 {
+  test_num_ += 1;
+  ROS_INFO("This is %dth test", test_num_);
   bool first = false;
   {
     const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(start_state));
@@ -100,7 +103,7 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
                                                                true,
                                                                max_step,
                                                                jump_threshold);
-    first = ((path_percent - 1.0) < eps) ? true : false;
+    first = (fabs(path_percent - 1.0) < eps) ? true : false;
     EXPECT_TRUE(traj.size() > 2);
   }
 
@@ -130,8 +133,34 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
                                                                true,
                                                                0.001,
                                                                0.0);
-    second = ((path_percent - 1.0) < eps) ? true : false;
+    second = (fabs(path_percent - 1.0) < eps) ? true : false;
     EXPECT_TRUE(traj.size() > 2);
+    std::vector<double> start_state_jnt_value;
+    start_state.copyJointGroupPositions(planning_group_, start_state_jnt_value);
+
+    std::vector<double> first_traj_jnt_value;
+    traj[0]->copyJointGroupPositions(planning_group_, first_traj_jnt_value);
+
+    for(std::size_t j = 0; j < start_state_jnt_value.size(); ++j)
+    {
+      EXPECT_EQ(start_state_jnt_value[j], first_traj_jnt_value[j]);
+    }
+
+    std::vector<double> goal_state_jnt_value;
+    goal_state.copyJointGroupPositions(planning_group_, goal_state_jnt_value);
+
+    if(second)
+    {
+      std::vector<double> last_traj_jnt_value;
+      traj.back()->copyJointGroupPositions(planning_group_, last_traj_jnt_value);
+      for(std::size_t j = 0; j < start_state_jnt_value.size(); ++j)
+      {
+        EXPECT_NEAR(goal_state_jnt_value[j], last_traj_jnt_value[j], 1e-4);
+      }
+
+      traj.back()->update();
+      EXPECT_TRUE(goal_tool_tip_pose.isApprox(traj.back()->getGlobalLinkTransform(tip_link), 1e-4));
+    }
   }
 
   same_count_var = (variable_count == start_state.getVariableNames().size()) ? true : false;

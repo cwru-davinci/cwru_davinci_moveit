@@ -95,17 +95,9 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
   {
     // convert ompl state to moveit robot state
     const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
-    if(!kstate)
-    {
-      return is_valid;
-    }
 
-    kstate->setToDefaultValues();
-    const std::string selected_group_name = (pHybridState->armIndex().value == 1) ? "psm_one" : "psm_two";
-
-    if (!convertObjectToRobotState(kstate, pHybridState, selected_group_name))
+    if (!hybridStateToRobotState(pHybridState, kstate))
     {
-      printf("Invalid State: No IK solution.");
       return is_valid;
     }
 
@@ -113,10 +105,6 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
 
     if(pHybridState->jointsComputed())
     {
-      moveit::core::AttachedBody* needle_model = createAttachedBody(selected_group_name, m_ObjectName, pHybridState->graspIndex().value);
-      kstate->attachBody(needle_model);
-      kstate->update();
-
       // publishRobotState(*kstate);
 
       planning_scene_->setCurrentState(*kstate);
@@ -163,9 +151,8 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
     return false;
   }
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
-  const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-  if(!convertObjectToRobotState(kstate, hs, selected_group_name))
+  if(!hybridStateToRobotState(hs, kstate))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -194,9 +181,8 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
   }
 
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
-  const std::string selected_group_name = (hs->armIndex().value == 1) ? "psm_one" : "psm_two";
 
-  if(!convertObjectToRobotState(kstate, hs, selected_group_name))
+  if(!hybridStateToRobotState(hs, kstate))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -209,10 +195,18 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 }
 
 
-bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::RobotStatePtr &pRSstate,
-                                                           const HybridObjectStateSpace::StateType *pHyState,
-                                                           const std::string &planning_group) const
+bool HybridStateValidityChecker::hybridStateToRobotState(const HybridObjectStateSpace::StateType *pHyState,
+                                                         const robot_state::RobotStatePtr &pRSstate) const
 {
+  if(!pHyState || !pRSstate)
+  {
+    printf("HybridStateValidityChecker: Invalid state pointer.");
+    return false;
+  }
+
+  pRSstate->setToDefaultValues();
+
+  const std::string supportGroup = (pHyState->armIndex().value == 1) ? "psm_one" : "psm_two";
   if(!pHyState->jointsComputed())
   {
     // convert object pose to robot tip pose
@@ -223,13 +217,14 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
     Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
-    const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(planning_group);
+    const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(supportGroup);
     std::size_t attempts = 2;
     double timeout = 0.1;
     bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
     if(!found_ik)
     {
+      printf("HybridStateValidityChecker: No IK solution.");
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(false);
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->markInvalid();
       return found_ik;
@@ -241,29 +236,34 @@ bool HybridStateValidityChecker::convertObjectToRobotState(const robot_state::Ro
   else
   {
     pRSstate->update();
-    pRSstate->setJointGroupPositions(planning_group, pHyState->jointVariables().values);
+    pRSstate->setJointGroupPositions(supportGroup, pHyState->jointVariables().values);
   }
 
-  const std::string rest_group_name = (planning_group == "psm_one") ? "psm_two" : "psm_one";
-  const robot_state::JointModelGroup *rest_joint_model_group = pRSstate->getJointModelGroup(rest_group_name);
-  pRSstate->setToDefaultValues(rest_joint_model_group, rest_group_name + "_home");
+  setMimicJointPositions(pRSstate, supportGroup);
+  // attach object to supporting joint group of robot
+  moveit::core::AttachedBody* pNeedleModel = createAttachedBody(supportGroup, m_ObjectName, pHyState->graspIndex().value);
+  pRSstate->attachBody(pNeedleModel);
+  pRSstate->update();
 
-  std::string rest_group_eef_name = rest_joint_model_group->getAttachedEndEffectorNames()[0];
-  const robot_state::JointModelGroup *rest_joint_model_group_eef = pRSstate->getJointModelGroup(rest_group_eef_name);
-  pRSstate->setToDefaultValues(rest_joint_model_group_eef, rest_group_eef_name + "_home");
+  // set joints state to resting joint group of robot
+  const std::string restGroup = (supportGroup == "psm_one") ? "psm_two" : "psm_one";
+  const robot_state::JointModelGroup *restJntModelGroup = pRSstate->getJointModelGroup(restGroup);
+  pRSstate->setToDefaultValues(restJntModelGroup, restGroup + "_home");
 
-  setMimicJointPositions(pRSstate, planning_group);
+  std::string restGroupEef = restJntModelGroup->getAttachedEndEffectorNames()[0];
+  const robot_state::JointModelGroup *restJntModelGroupEef = pRSstate->getJointModelGroup(restGroupEef);
+  pRSstate->setToDefaultValues(restJntModelGroupEef, restGroupEef + "_home");
   pRSstate->update();
 
   return true;
 }
 
 moveit::core::AttachedBody*
-HybridStateValidityChecker::createAttachedBody(const std::string &active_group,
+HybridStateValidityChecker::createAttachedBody(const std::string &supportGroup,
                                                const std::string &objectName,
                                                const int grasp_pose_id) const
 {
-  const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(active_group);
+  const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(supportGroup);
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
 
   EigenSTL::vector_Affine3d attach_trans = {hyStateSpace_->graspTransformations()[grasp_pose_id].grasp_pose};

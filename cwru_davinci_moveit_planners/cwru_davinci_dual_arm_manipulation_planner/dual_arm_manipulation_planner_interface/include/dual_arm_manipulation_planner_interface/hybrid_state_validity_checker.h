@@ -71,13 +71,20 @@ public:
 
   virtual double clearance(const ompl::base::State* state) const override;
 
-  bool convertObjectToRobotState(const robot_state::RobotStatePtr &pRSstate,
-                                 const HybridObjectStateSpace::StateType *pHyState,
-                                 const std::string &planning_group) const;
+  bool hybridStateToRobotState(const HybridObjectStateSpace::StateType *pHyState,
+                               const robot_state::RobotStatePtr &pRSstate) const;
 
-  moveit::core::AttachedBody *createAttachedBody(const std::string &active_group,
+  moveit::core::AttachedBody *createAttachedBody(const std::string &supportGroup,
                                                  const std::string &objectName,
                                                  const int grasp_pose_id) const;
+
+  void setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
+                              const std::string &planning_group) const;
+
+  inline const robot_model::RobotModelConstPtr& robotModel() const
+  {
+    return kmodel_;
+  }
 
 protected:
   void defaultSettings();
@@ -86,8 +93,6 @@ protected:
 
   void publishRobotState(const robot_state::RobotState& rstate) const;
 
-  void setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
-                              const std::string &planning_group) const;
 protected:
   HybridObjectStateSpace*                   hyStateSpace_;
 
