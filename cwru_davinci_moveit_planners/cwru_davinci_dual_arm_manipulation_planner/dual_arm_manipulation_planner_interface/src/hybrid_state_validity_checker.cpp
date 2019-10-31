@@ -196,7 +196,8 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 
 
 bool HybridStateValidityChecker::hybridStateToRobotState(const HybridObjectStateSpace::StateType *pHyState,
-                                                         const robot_state::RobotStatePtr &pRSstate) const
+                                                         const robot_state::RobotStatePtr &pRSstate,
+                                                         bool attachedObject) const
 {
   if(!pHyState || !pRSstate)
   {
@@ -240,22 +241,37 @@ bool HybridStateValidityChecker::hybridStateToRobotState(const HybridObjectState
   }
 
   setMimicJointPositions(pRSstate, supportGroup);
-  // attach object to supporting joint group of robot
-  moveit::core::AttachedBody* pNeedleModel = createAttachedBody(supportGroup, m_ObjectName, pHyState->graspIndex().value);
-  pRSstate->attachBody(pNeedleModel);
-  pRSstate->update();
+
+  if(attachedObject)
+  {
+    // attach object to supporting joint group of robot
+    moveit::core::AttachedBody *pNeedleModel = createAttachedBody(supportGroup,
+                                                                  m_ObjectName,
+                                                                  pHyState->graspIndex().value);
+    pRSstate->attachBody(pNeedleModel);
+    pRSstate->update();
+  }
 
   // set joints state to resting joint group of robot
   const std::string restGroup = (supportGroup == "psm_one") ? "psm_two" : "psm_one";
   const robot_state::JointModelGroup *restJntModelGroup = pRSstate->getJointModelGroup(restGroup);
   pRSstate->setToDefaultValues(restJntModelGroup, restGroup + "_home");
 
-  std::string restGroupEef = restJntModelGroup->getAttachedEndEffectorNames()[0];
+  const std::string restGroupEef = restJntModelGroup->getAttachedEndEffectorNames()[0];
   const robot_state::JointModelGroup *restJntModelGroupEef = pRSstate->getJointModelGroup(restGroupEef);
   pRSstate->setToDefaultValues(restJntModelGroupEef, restGroupEef + "_home");
   pRSstate->update();
 
   return true;
+}
+
+bool HybridStateValidityChecker::hybridStateToRobotStateNoAttachedObject
+(
+const HybridObjectStateSpace::StateType *pHyState,
+const robot_state::RobotStatePtr &pRSstate
+) const
+{
+  return hybridStateToRobotState(pHyState, pRSstate, false);
 }
 
 moveit::core::AttachedBody*

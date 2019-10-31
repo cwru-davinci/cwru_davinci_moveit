@@ -136,15 +136,63 @@ protected:
 
   bool planObjectTransit
   (
-  const HybridObjectStateSpace::StateType* pHyFromState,
-  const HybridObjectStateSpace::StateType* pHyToState,
+  const HybridObjectStateSpace::StateType *pHyFromState,
+  const HybridObjectStateSpace::StateType *pHyToState,
   SolutionPathJointTrajectory &jntTrajectoryBtwStates
   );
 
   bool planHandoff
   (
-  const HybridObjectStateSpace::StateType* pHyFromState,
-  const HybridObjectStateSpace::StateType* pHyToState,
+  const HybridObjectStateSpace::StateType *pHyFromState,
+  const HybridObjectStateSpace::StateType *pHyToState,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planNeedleGrasping
+  (
+  const robot_state::RobotStatePtr &pRobotFromState,
+  const robot_state::RobotStateConstPtr &pHandoffRobotState,
+  const std::string &toSupportGroup,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planPreGraspStateToGraspedState
+  (
+  robot_state::RobotStatePtr &pPreGraspRobotState,
+  const robot_state::RobotStateConstPtr &pHandoffRobotState,
+  const std::string &toSupportGroup,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planSafeStateToPreGraspState
+  (
+  const robot_state::RobotStatePtr &pRobotFromState,
+  const robot_state::RobotStateConstPtr &pPreGraspRobotState,
+  const std::string &toSupportGroup,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planNeedleReleasing
+  (
+  const robot_state::RobotStateConstPtr &pHandoffRobotState,
+  const robot_state::RobotStateConstPtr &pRobotToState,
+  const std::string &fromSupportGroup,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planGraspStateToUngraspedState
+  (
+  const robot_state::RobotStateConstPtr &pHandoffRobotState,
+  const robot_state::RobotStatePtr &pUngraspedRobotState,
+  const std::string &fromSupportGroup,
+  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  );
+
+  bool planUngraspedStateToSafeState
+  (
+  const robot_state::RobotStatePtr &pUngraspedRobotState,
+  const robot_state::RobotStateConstPtr &pRobotToState,
+  const std::string &fromSupportGroup,
   SolutionPathJointTrajectory &jntTrajectoryBtwStates
   );
 };

@@ -139,7 +139,11 @@ SolutionPathJointTrajectory& wholePathJntTraj
     {
       return false;
     }
+    wholePathJntTraj.insert(wholePathJntTraj.end(),
+                            jntTrajectoryBtwStates.begin(),
+                            jntTrajectoryBtwStates.end());
   }
+  return true;
 }
 
 void HybridObjectHandoffPlanner::setupSpaceInformation
@@ -257,13 +261,13 @@ SolutionPathJointTrajectory &jntTrajectoryBtwStates
   }
 
   const robot_state::RobotStatePtr pRobotFromState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
-  if(!pRobotFromState || !m_pHyStateValidator->hybridStateToRobotState(pHyFromState, pRobotFromState))
+  if(!pRobotFromState || !m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyFromState, pRobotFromState))
   {
     printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
     return false;
   }
   const robot_state::RobotStatePtr pRobotToState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
-  if(!pRobotToState || !m_pHyStateValidator->hybridStateToRobotState(pHyToState, pRobotToState))
+  if(!pRobotToState || !m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyToState, pRobotToState))
   {
     printf("HybridObjectHandoffPlanner: Invalid ToState to be connected");
     return false;
@@ -287,11 +291,6 @@ SolutionPathJointTrajectory &jntTrajectoryBtwStates
   {
     return false;
   }
-
-  // removable
-  m_pHyStateValidator->setMimicJointPositions(pRobotFromState, supportGroup);
-  pRobotFromState->update();
-  // publishRobotState(*cp_start_state);
 
   JointTrajectory supportGroupJntTraj;
   supportGroupJntTraj.resize(traj.size());
@@ -322,13 +321,13 @@ SolutionPathJointTrajectory &jntTrajectoryBtwStates
   }
 
   const robot_state::RobotStatePtr pRobotFromState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
-  if(!pRobotFromState || !m_pHyStateValidator->hybridStateToRobotState(pHyFromState, pRobotFromState))
+  if(!pRobotFromState || !m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyFromState, pRobotFromState))
   {
     printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
     return false;
   }
   const robot_state::RobotStatePtr pRobotToState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
-  if(!pRobotToState || !m_pHyStateValidator->hybridStateToRobotState(pHyToState, pRobotToState))
+  if(!pRobotToState || !m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyToState, pRobotToState))
   {
     printf("HybridObjectHandoffPlanner: Invalid ToState to be connected");
     return false;
@@ -336,34 +335,316 @@ SolutionPathJointTrajectory &jntTrajectoryBtwStates
 
   // an intermediate state when needle is supporting by two grippers
   const robot_state::RobotStatePtr pHandoffRobotState(new robot_state::RobotState(*pRobotFromState));
+  if (!pHandoffRobotState)
+  {
+    return false;
+  }
 
+  const std::string fromSupportGroup = (pHyFromState->armIndex().value == 1) ? "psm_one" : "psm_two";
   const std::string toSupportGroup = (pHyToState->armIndex().value == 1) ? "psm_one" : "psm_two";
   std::vector<double> toSupportGroupJntPosition;
   pRobotToState->copyJointGroupPositions(toSupportGroup, toSupportGroupJntPosition);
   pHandoffRobotState->setJointGroupPositions(toSupportGroup, toSupportGroupJntPosition);
   m_pHyStateValidator->setMimicJointPositions(pHandoffRobotState, toSupportGroup);
 
-  const moveit::core::AttachedBody *ss_needle_body = pRobotFromState->getAttachedBody(m_ObjectName);
-  const moveit::core::AttachedBody *gs_needle_body = pRobotToState->getAttachedBody(m_ObjectName);
-
-  std::set<std::string> touch_links = ss_needle_body->getTouchLinks();
-  touch_links.insert(gs_needle_body->getTouchLinks().begin(), gs_needle_body->getTouchLinks().end());
-
-  trajectory_msgs::JointTrajectory dettach_posture = ss_needle_body->getDetachPosture();
-  trajectory_msgs::JointTrajectory gs_dettach_posture = gs_needle_body->getDetachPosture();
-
-  dettach_posture.joint_names.insert(dettach_posture.joint_names.end(),
-                                     gs_dettach_posture.joint_names.begin(),
-                                     gs_dettach_posture.joint_names.end());
-
-  dettach_posture.points.insert(dettach_posture.points.end(),
-                                gs_dettach_posture.points.begin(),
-                                gs_dettach_posture.points.end());
-
-
-  pHandoffRobotState->attachBody(gs_needle_body->getName(), gs_needle_body->getShapes(),
-                            gs_needle_body->getFixedTransforms(), touch_links,
-                            gs_needle_body->getAttachedLinkName(), gs_needle_body->getDetachPosture());
   pHandoffRobotState->update();
+  jntTrajectoryBtwStates.resize(4);
+  bool ableToGrasp = planNeedleGrasping(pRobotFromState, pHandoffRobotState, toSupportGroup, jntTrajectoryBtwStates);
+  if (ableToGrasp)
+  {
+    bool ableToRelease = planNeedleReleasing(pHandoffRobotState, pRobotToState, fromSupportGroup, jntTrajectoryBtwStates);
+    if (ableToRelease)
+    {
+      return true;
+    }
+  }
+  return false;
+}
 
+bool HybridObjectHandoffPlanner::planNeedleGrasping
+(
+const robot_state::RobotStatePtr& pRobotFromState,
+const robot_state::RobotStateConstPtr& pHandoffRobotState,
+const std::string& toSupportGroup,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
+)
+{
+// planning in a back order fashion
+  robot_state::RobotStatePtr pPreGraspRobotState(new robot_state::RobotState(*pRobotFromState));
+  if (!planPreGraspStateToGraspedState(pPreGraspRobotState, pHandoffRobotState, toSupportGroup, jntTrajectoryBtwStates))
+    return false;
+  if (!planSafeStateToPreGraspState(pRobotFromState, pPreGraspRobotState, toSupportGroup, jntTrajectoryBtwStates))
+    return false;
+  return true;
+}
+
+bool HybridObjectHandoffPlanner::planPreGraspStateToGraspedState
+(
+robot_state::RobotStatePtr &pPreGraspRobotState,
+const robot_state::RobotStateConstPtr& pHandoffRobotState,
+const std::string& toSupportGroup,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
+)
+{
+// make a pre_grasp_state
+  const robot_state::JointModelGroup *pToSupportJntGroup = pPreGraspRobotState->getJointModelGroup(toSupportGroup);
+  const moveit::core::LinkModel *pTipLink = pToSupportJntGroup->getOnlyOneEndEffectorTip();
+
+  const Eigen::Affine3d graspedToolTipPose = pHandoffRobotState->getGlobalLinkTransform(pTipLink);
+  Eigen::Affine3d pregraspToolTipPose = graspedToolTipPose;
+  Eigen::Vector3d unitApproachDir(0.0, 0.0, 1.0);  // grasp approach along the +z-axis of tip frame
+
+  bool foundIK = false;
+  double distance = 0.008;
+  while (distance <= 0.013)
+  {
+    Eigen::Vector3d approachDist = graspedToolTipPose.linear() * (distance * unitApproachDir);
+    pregraspToolTipPose.translation() = graspedToolTipPose.translation() - approachDist;
+    std::size_t attempts = 1;
+    double timeout = 0.1;
+    foundIK = pPreGraspRobotState->setFromIK(pToSupportJntGroup, pregraspToolTipPose, attempts, timeout);
+    if (foundIK)
+      break;
+    distance += 0.001;
+  }
+  if (!foundIK)
+  {
+    return foundIK;
+  }
+
+  const std::string toSupportEefGroup = pToSupportJntGroup->getAttachedEndEffectorNames()[0];
+  std::vector<double> toSupportEefGroupJntPosition;
+  pPreGraspRobotState->copyJointGroupPositions(toSupportEefGroup, toSupportEefGroupJntPosition);
+
+  for (std::size_t i = 0; i < toSupportEefGroupJntPosition.size(); i++)
+  {
+    toSupportEefGroupJntPosition[i] = 0.5;
+  }
+  pPreGraspRobotState->setJointGroupPositions(toSupportEefGroup, toSupportEefGroupJntPosition);
+  m_pHyStateValidator->setMimicJointPositions(pPreGraspRobotState, toSupportGroup);
+  pPreGraspRobotState->update();
+
+  // publishRobotState(*pPreGraspRobotState);
+
+  std::vector<robot_state::RobotStatePtr> traj;
+  double translationStepMax = 0.001, rotationStepMax = 0.0;
+  moveit::core::MaxEEFStep maxStep(translationStepMax, rotationStepMax);
+  moveit::core::JumpThreshold jumpThreshold;
+  double foundCartesianPath = pPreGraspRobotState->computeCartesianPath(pToSupportJntGroup,
+                                                                          traj,
+                                                                          pTipLink,
+                                                                          graspedToolTipPose,
+                                                                          true,
+                                                                          maxStep,
+                                                                          jumpThreshold);
+
+
+  if (foundCartesianPath != 1.0)
+  {
+    return false;
+  }
+
+  JointTrajectory toSupportGroupJntTraj;
+  toSupportGroupJntTraj.resize(traj.size());
+  pHandoffRobotState->copyJointGroupPositions(toSupportGroup, toSupportGroupJntTraj[traj.size() - 1]);
+
+  JointTrajectory toSupportEefGroupJntTraj;
+  toSupportEefGroupJntTraj.resize(traj.size());
+  pHandoffRobotState->copyJointGroupPositions(toSupportEefGroup, toSupportEefGroupJntTraj[traj.size() - 1]);
+
+  for (std::size_t i = 0; i < traj.size() - 1; ++i)
+  {
+    traj[i]->update();
+    traj[i]->copyJointGroupPositions(toSupportGroup, toSupportGroupJntTraj[i]);
+    traj[i]->copyJointGroupPositions(toSupportEefGroup, toSupportEefGroupJntTraj[i]);
+  }
+
+  PlanningGroupJointTrajectory toSupportGroupObjectApproachGraspJntTraj = {{toSupportGroup, toSupportGroupJntTraj},
+                                                                           {toSupportEefGroup, toSupportEefGroupJntTraj}};
+  jntTrajectoryBtwStates[1] = toSupportGroupObjectApproachGraspJntTraj;
+
+  pPreGraspRobotState.reset(new robot_state::RobotState(*traj[0]));
+  m_pHyStateValidator->setMimicJointPositions(pPreGraspRobotState, toSupportGroup);
+  pPreGraspRobotState->update();
+  return true;
+}
+
+bool HybridObjectHandoffPlanner::planSafeStateToPreGraspState
+(
+const robot_state::RobotStatePtr& pRobotFromState,
+const robot_state::RobotStateConstPtr& pPreGraspRobotState,
+const std::string& toSupportGroup,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
+)
+{
+  const robot_state::JointModelGroup *pToSupportJntGroup = pPreGraspRobotState->getJointModelGroup(toSupportGroup);
+  const moveit::core::LinkModel *pTipLink = pToSupportJntGroup->getOnlyOneEndEffectorTip();
+  const Eigen::Affine3d toolTipPose = pPreGraspRobotState->getGlobalLinkTransform(pTipLink);
+
+  std::vector<robot_state::RobotStatePtr> traj;
+  double foundCartesianPath = pRobotFromState->computeCartesianPath(pRobotFromState->getJointModelGroup(toSupportGroup),
+                                                                    traj,
+                                                                    pTipLink,
+                                                                    toolTipPose,
+                                                                    true,
+                                                                    0.001,
+                                                                    0.0);
+
+  if (foundCartesianPath != 1.0)
+  {
+    return false;
+  }
+
+  JointTrajectory toSupportGroupJntTraj;
+  toSupportGroupJntTraj.resize(traj.size());
+  pPreGraspRobotState->copyJointGroupPositions(toSupportGroup, toSupportGroupJntTraj[traj.size() - 1]);
+
+  for (std::size_t i = 0; i < traj.size() - 1; ++i)
+  {
+    traj[i]->update();
+    traj[i]->copyJointGroupPositions(toSupportGroup, toSupportGroupJntTraj[i]);
+  }
+
+  PlanningGroupJointTrajectory toSupportGroupObjectSafeToPreapproachJntTraj = {{toSupportGroup, toSupportGroupJntTraj}};
+  jntTrajectoryBtwStates[0] = toSupportGroupObjectSafeToPreapproachJntTraj;
+  return true;
+}
+
+
+bool HybridObjectHandoffPlanner::planNeedleReleasing
+(
+const robot_state::RobotStateConstPtr& pHandoffRobotState,
+const robot_state::RobotStateConstPtr& pRobotToState,
+const std::string& fromSupportGroup,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
+)
+{
+  robot_state::RobotStatePtr pUngraspedRobotState(new robot_state::RobotState(*pRobotToState));
+
+  planGraspStateToUngraspedState(pHandoffRobotState, pUngraspedRobotState, fromSupportGroup, jntTrajectoryBtwStates);
+  if (!planUngraspedStateToSafeState(pUngraspedRobotState, pRobotToState, fromSupportGroup, jntTrajectoryBtwStates))
+    return false;
+  return true;
+}
+
+bool HybridObjectHandoffPlanner::planGraspStateToUngraspedState
+(
+const robot_state::RobotStateConstPtr &pHandoffRobotState,
+const robot_state::RobotStatePtr &pUngraspedRobotState,
+const std::string &fromSupportGroup,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
+)
+{
+// make a ungrasped_state
+  const robot_state::JointModelGroup *pFromSupportJntGroup = pHandoffRobotState->getJointModelGroup(fromSupportGroup);
+  const moveit::core::LinkModel *tipLink = pFromSupportJntGroup->getOnlyOneEndEffectorTip();
+
+  const Eigen::Affine3d graspedToolTipPose = pHandoffRobotState->getGlobalLinkTransform(tipLink);
+  Eigen::Affine3d ungraspedToolTipPose = graspedToolTipPose;
+  Eigen::Vector3d retreatDist(0.0, 0.0, -1.0);  // ungrasp retreat along the -z-axis of tip frame
+  double distance = 0.01;
+  retreatDist = graspedToolTipPose.linear() * (distance * retreatDist);
+  ungraspedToolTipPose.translation() += retreatDist;
+
+  std::vector<double> fromSupportGroupJntPosition;
+  pHandoffRobotState->copyJointGroupPositions(fromSupportGroup, fromSupportGroupJntPosition);
+  pUngraspedRobotState->setJointGroupPositions(fromSupportGroup, fromSupportGroupJntPosition);
+  m_pHyStateValidator->setMimicJointPositions(pUngraspedRobotState, fromSupportGroup);
+
+  const std::string fromSupportEefGroup = pFromSupportJntGroup->getAttachedEndEffectorNames()[0];
+  std::vector<double> fromSupportEefGroupJntPosition;
+  pUngraspedRobotState->copyJointGroupPositions(fromSupportEefGroup, fromSupportEefGroupJntPosition);
+
+  for (std::size_t i = 0; i < fromSupportEefGroupJntPosition.size(); i++)
+  {
+    fromSupportEefGroupJntPosition[i] = 0.5;
+  }
+  pUngraspedRobotState->setJointGroupPositions(fromSupportEefGroup, fromSupportEefGroupJntPosition);
+  pUngraspedRobotState->update();
+
+  // publishRobotState(*pUngraspedRobotState);
+
+  std::vector<robot_state::RobotStatePtr> traj;
+  double translationStepMax = 0.001, rotationStepMax = 0.0;
+  moveit::core::MaxEEFStep maxStep(translationStepMax, rotationStepMax);
+  moveit::core::JumpThreshold jumpThreshold;
+  double foundCartesianPath = pUngraspedRobotState->computeCartesianPath(pFromSupportJntGroup,
+                                                                         traj,
+                                                                         tipLink,
+                                                                         ungraspedToolTipPose,
+                                                                         true,
+                                                                         maxStep,
+                                                                         jumpThreshold);
+
+  if (foundCartesianPath != 1.0)
+  {
+    return false;
+  }
+
+  m_pHyStateValidator->setMimicJointPositions(pUngraspedRobotState, fromSupportGroup);
+  pUngraspedRobotState->setToDefaultValues(pUngraspedRobotState->getJointModelGroup(fromSupportEefGroup),
+                                           fromSupportEefGroup + "_home");
+  pUngraspedRobotState->update();
+
+  JointTrajectory fromSupportGroupJntTraj;
+  fromSupportGroupJntTraj.resize(traj.size());
+  pUngraspedRobotState->copyJointGroupPositions(fromSupportGroup, fromSupportGroupJntTraj[traj.size() - 1]);
+
+  JointTrajectory fromSupportEefGroupJntTraj;
+  fromSupportEefGroupJntTraj.resize(traj.size());
+  pUngraspedRobotState->copyJointGroupPositions(fromSupportEefGroup, fromSupportEefGroupJntTraj[traj.size() - 1]);
+
+  for (std::size_t i = 0; i < traj.size() - 1; ++i)
+  {
+    traj[i]->update();
+    traj[i]->copyJointGroupPositions(fromSupportGroup, fromSupportGroupJntTraj[i]);
+    traj[i]->copyJointGroupPositions(fromSupportEefGroup, fromSupportEefGroupJntTraj[i]);
+  }
+
+  PlanningGroupJointTrajectory fromSupportGroupObjectUngraspRetreatJntTraj = {{fromSupportGroup, fromSupportGroupJntTraj},
+                                                                              {fromSupportEefGroup, fromSupportEefGroupJntTraj}};
+  jntTrajectoryBtwStates[2] = fromSupportGroupObjectUngraspRetreatJntTraj;
+
+  return true;
+}
+
+bool HybridObjectHandoffPlanner::planUngraspedStateToSafeState
+(
+const robot_state::RobotStatePtr &pUngraspedRobotState,
+const robot_state::RobotStateConstPtr &pRobotToState,
+const std::string &fromSupportGroup,
+SolutionPathJointTrajectory &jntTrajectoryBtwStates
+)
+{
+  const robot_state::JointModelGroup *pToSupportJntGroup = pRobotToState->getJointModelGroup(fromSupportGroup);
+  const moveit::core::LinkModel *pTipLink = pToSupportJntGroup->getOnlyOneEndEffectorTip();
+  const Eigen::Affine3d toolTipPose = pRobotToState->getGlobalLinkTransform(pTipLink);
+
+  std::vector<robot_state::RobotStatePtr> traj;
+  double foundCartesianPath = pUngraspedRobotState->computeCartesianPath(pUngraspedRobotState->getJointModelGroup(fromSupportGroup),
+                                                                         traj,
+                                                                         pTipLink,
+                                                                         toolTipPose,
+                                                                         true,
+                                                                         0.001,
+                                                                         0.0);
+
+  if (foundCartesianPath != 1.0)
+  {
+    return false;
+  }
+
+  JointTrajectory fromSupportGroupJntTraj;
+  fromSupportGroupJntTraj.resize(traj.size());
+  pRobotToState->copyJointGroupPositions(fromSupportGroup, fromSupportGroupJntTraj[traj.size() - 1]);
+
+  for (std::size_t i = 0; i < traj.size() - 1; ++i)
+  {
+    traj[i]->update();
+    traj[i]->copyJointGroupPositions(fromSupportGroup, fromSupportGroupJntTraj[i]);
+  }
+
+  PlanningGroupJointTrajectory toSupportGroupObjectUngraspToSafeJntTraj = {{fromSupportGroup, fromSupportGroupJntTraj}};
+  jntTrajectoryBtwStates[3] = toSupportGroupObjectUngraspToSafeJntTraj;
+  return true;
 }

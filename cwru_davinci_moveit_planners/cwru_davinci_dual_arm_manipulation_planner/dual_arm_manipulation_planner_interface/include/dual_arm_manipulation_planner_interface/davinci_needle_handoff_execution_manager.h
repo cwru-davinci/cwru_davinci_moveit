@@ -40,16 +40,7 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_DAVINCI_NEEDLE_HANDOFF_EXECUTION_MANAGER_H
 
 //moveit
-//#include <moveit/move_group_interface/move_group_interface.h>
-//#include <moveit/planning_scene_interface/planning_scene_interface.h>
-
-//#include <moveit_msgs/DisplayRobotState.h>
-//#include <moveit_msgs/DisplayTrajectory.h>
-//
-//#include <moveit_msgs/AttachedCollisionObject.h>
-//#include <moveit_msgs/CollisionObject.h>
-
-//#include <moveit_visual_tools/moveit_visual_tools.h>
+#include <moveit/move_group_interface/move_group_interface.h>
 
 //ompl
 #include <ompl/geometric/PathGeometric.h>
@@ -57,40 +48,21 @@
 // cwru_davinci_grasp
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
+#include <dual_arm_manipulation_planner_interface/hybrid_object_handoff_planner.h>
+
+
 namespace dual_arm_manipulation_planner_interface
 {
-enum class TrajDiff
-{
-  SameArm,
-  DiffArm,
-};
-
-struct HandoffSlnPath
-{
-  std::string support_arm;
-  std::string rest_arm;
-  int grasp_id;
-  double* joint_values;
-  geometry_msgs::PoseStamped needle_pose;
-
-  HandoffSlnPath(int dim)
-  {
-    joint_values = new double[dim];
-  }
-
-  ~HandoffSlnPath()
-  {
-    delete[] joint_values;
-  }
-};
-
-class DavinciNeedleHandoffExecution
+class DavinciNeedleHandoffExecutionManager : public HybridObjectHandoffPlanner
 {
 public:
-  DavinciNeedleHandoffExecution(const ompl::geometric::PathGeometric &sln_path,
-                                int joint_space_dim,
-                                const std::vector<cwru_davinci_grasp::GraspInfo> &grasp_poses,
-                                const cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr &needleGrasper);
+  DavinciNeedleHandoffExecutionManager
+  (
+  const ompl::geometric::PathGeometric &sln_path,
+  int joint_space_dim,
+  const std::vector<cwru_davinci_grasp::GraspInfo> &grasp_poses,
+  const cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr &needleGrasper
+  );
 
   bool executeNeedleHandoffTrajy();
 

@@ -281,7 +281,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
     return found_ik;
   }
 
-  std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
+  const std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
   std::vector<double> eef_joint_position;
   pre_grasp_state->copyJointGroupPositions(eef_group_name, eef_joint_position);
 
@@ -432,7 +432,7 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
     return found_ik;
   }
 
-  std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
+  const std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
   std::vector<double> eef_joint_position;
   ungrasped_state->copyJointGroupPositions(eef_group_name, eef_joint_position);
 

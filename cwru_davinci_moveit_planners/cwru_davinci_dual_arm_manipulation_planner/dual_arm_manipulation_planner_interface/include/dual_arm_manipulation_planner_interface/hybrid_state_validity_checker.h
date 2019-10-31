@@ -59,29 +59,49 @@ namespace dual_arm_manipulation_planner_interface
 class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 {
 public:
-  HybridStateValidityChecker(const ompl::base::SpaceInformationPtr &si,
-                             const robot_model::RobotModelConstPtr &pRobotModel,
-                             const std::string &objectName);
+  HybridStateValidityChecker
+  (
+  const ompl::base::SpaceInformationPtr &si,
+  const robot_model::RobotModelConstPtr &pRobotModel,
+  const std::string &objectName
+  );
 
-  virtual ~HybridStateValidityChecker() {}
+  virtual ~HybridStateValidityChecker()
+  {}
 
-  virtual bool isValid(const ompl::base::State* state) const override;
+  virtual bool isValid(const ompl::base::State *state) const override;
 
-  virtual double cost(const ompl::base::State* state) const;
+  virtual double cost(const ompl::base::State *state) const;
 
-  virtual double clearance(const ompl::base::State* state) const override;
+  virtual double clearance(const ompl::base::State *state) const override;
 
-  bool hybridStateToRobotState(const HybridObjectStateSpace::StateType *pHyState,
-                               const robot_state::RobotStatePtr &pRSstate) const;
+  bool hybridStateToRobotState
+  (
+  const HybridObjectStateSpace::StateType *pHyState,
+  const robot_state::RobotStatePtr &pRSstate,
+  bool attachedObject = true
+  ) const;
 
-  moveit::core::AttachedBody *createAttachedBody(const std::string &supportGroup,
-                                                 const std::string &objectName,
-                                                 const int grasp_pose_id) const;
+  bool hybridStateToRobotStateNoAttachedObject
+  (
+  const HybridObjectStateSpace::StateType *pHyState,
+  const robot_state::RobotStatePtr &pRSstate
+  ) const;
 
-  void setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
-                              const std::string &planning_group) const;
+  moveit::core::AttachedBody *createAttachedBody
+  (
+  const std::string &supportGroup,
+  const std::string &objectName,
+  const int grasp_pose_id
+  ) const;
 
-  inline const robot_model::RobotModelConstPtr& robotModel() const
+  void setMimicJointPositions
+  (
+  const robot_state::RobotStatePtr &rstate,
+  const std::string &planning_group
+  ) const;
+
+  inline const robot_model::RobotModelConstPtr &robotModel() const
   {
     return kmodel_;
   }
@@ -91,24 +111,27 @@ protected:
 
   void loadNeedleModel();
 
-  void publishRobotState(const robot_state::RobotState& rstate) const;
+  void publishRobotState
+  (
+  const robot_state::RobotState &rstate
+  ) const;
 
 protected:
-  HybridObjectStateSpace*                   hyStateSpace_;
+  HybridObjectStateSpace                *hyStateSpace_;
 
-  planning_scene::PlanningScenePtr          planning_scene_;
+  planning_scene::PlanningScenePtr      planning_scene_;
 
-  robot_model::RobotModelConstPtr           kmodel_;
+  robot_model::RobotModelConstPtr       kmodel_;
 
-  collision_detection::CollisionRequest     collision_request_simple_;
+  collision_detection::CollisionRequest collision_request_simple_;
 
-  collision_detection::CollisionRequest     collision_request_with_cost_;
+  collision_detection::CollisionRequest collision_request_with_cost_;
 
-  collision_detection::CollisionRequest     collision_request_with_distance_;
+  collision_detection::CollisionRequest collision_request_with_distance_;
 
-  std::string                               m_ObjectName;
+  std::string                           m_ObjectName;
 
-  std::vector<shapes::ShapeConstPtr>        needleShapes_;
+  std::vector<shapes::ShapeConstPtr>    needleShapes_;
 
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
