@@ -53,45 +53,43 @@
 
 namespace dual_arm_manipulation_planner_interface
 {
-class DavinciNeedleHandoffExecutionManager : public HybridObjectHandoffPlanner
+class DavinciNeedleHandoffExecutionManager
 {
 public:
   DavinciNeedleHandoffExecutionManager
   (
-  const ompl::geometric::PathGeometric &sln_path,
-  int joint_space_dim,
-  const std::vector<cwru_davinci_grasp::GraspInfo> &grasp_poses,
-  const cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr &needleGrasper
+  const ros::NodeHandle &nodeHandlePrivate
+  );
+
+  bool planNeedleHandoffTraj
+  (
+  const double solveTime
   );
 
   bool executeNeedleHandoffTrajy();
 
 private:
-//  void defaultSettings();
+  std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
-  bool readData();
+  HybridObjectHandoffPlannerUniquePtr                             m_pHandoffPlanner;
 
-  bool executeNeedleTransfer(const HandoffSlnPath& ss_joint_traj, const HandoffSlnPath& gs_joint_traj);
+  ompl::base::PlannerStatus                                       m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
 
-  bool executeNeedleTransit(const HandoffSlnPath& ss_joint_traj, const HandoffSlnPath& gs_joint_traj);
+  std::unique_ptr<moveit::planning_interface::MoveGroupInterface> m_pSupportArmGroup;
+  std::unique_ptr<moveit::planning_interface::MoveGroupInterface> m_pSupportArmEefGroup;
 
-  bool executeNeedleGrasping(const HandoffSlnPath& joint_traj);
+  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr               m_pNeedleGrasper;
 
-  bool executeNeedleUngrasping(const HandoffSlnPath& joint_traj);
+  ros::Subscriber                                                 m_NeedlePoseSub;
 
-  TrajDiff checkTrajDiff(const std::string& support_arm_1, const std::string& support_arm_2);
+  geometry_msgs::PoseStamped                                      m_NeedlePose;
 
-  std::vector<HandoffSlnPath> handoff_traj_sequence_;
+  SolutionPathJointTrajectory                                     m_HandoffJntTraj;
 
-  std::vector<ompl::base::State*> handoff_state_;
+  ros::NodeHandle                                                 m_NodeHandlePrivate;
 
-  ompl::geometric::PathGeometric sln_path_;
+private:
 
-  int joint_space_dim_;
-
-  std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses_;
-
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr needleGrasper_;
 };
 }
 

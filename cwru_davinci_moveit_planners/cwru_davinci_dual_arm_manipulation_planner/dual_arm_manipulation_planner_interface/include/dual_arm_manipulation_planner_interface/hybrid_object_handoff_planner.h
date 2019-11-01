@@ -196,6 +196,9 @@ protected:
   SolutionPathJointTrajectory &jntTrajectoryBtwStates
   );
 };
+
+typedef std::unique_ptr<HybridObjectHandoffPlanner> HybridObjectHandoffPlannerUniquePtr;
+
 }
 
 #endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_HANDOFF_PLANNER_H
