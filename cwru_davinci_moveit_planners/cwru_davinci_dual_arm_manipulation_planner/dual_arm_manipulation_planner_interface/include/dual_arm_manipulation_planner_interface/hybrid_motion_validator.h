@@ -61,58 +61,97 @@ namespace dual_arm_manipulation_planner_interface
 class HybridMotionValidator : public ompl::base::MotionValidator, public HybridStateValidityChecker
 {
 public:
-  HybridMotionValidator(const ompl::base::SpaceInformationPtr &si,
-                        const robot_model::RobotModelConstPtr &pRobotModel,
-                        const std::string &objectName);
+  HybridMotionValidator
+  (
+  const ompl::base::SpaceInformationPtr& si,
+  const robot_model::RobotModelConstPtr& pRobotModel,
+  const std::string& objectName
+  );
 
-  virtual ~HybridMotionValidator() {}
+  virtual ~HybridMotionValidator()
+  {}
 
-  virtual bool checkMotion (const ompl::base::State *s1, const ompl::base::State *s2) const;
+  virtual bool checkMotion
+  (
+  const ompl::base::State* s1,
+  const ompl::base::State* s2
+  ) const;
 
-  virtual bool checkMotion(const ompl::base::State *s1, const ompl::base::State *s2,
-                           std::pair<ompl::base::State *, double> &lastValid) const
+  virtual bool checkMotion
+  (
+  const ompl::base::State* s1,
+  const ompl::base::State* s2,
+  std::pair<ompl::base::State*, double>& lastValid
+  ) const
   {
     return false;
   }
 
-  bool planHandoff(const robot_state::RobotState &start_state,
-                   const robot_state::RobotState &goal_state,
-                   const std::string &ss_active_group,
-                   const std::string &gs_active_group) const;
+  bool planHandoff
+  (
+  const robot_state::RobotState& start_state,
+  const robot_state::RobotState& goal_state,
+  const std::string& ss_active_group,
+  const std::string& gs_active_group
+  ) const;
 
-  bool planNeedleGrasping(const robot_state::RobotState &start_state,
-                          const robot_state::RobotState &handoff_state,
-                          const std::string &gs_active_group) const;
+  bool planNeedleGrasping
+  (
+  const robot_state::RobotState& start_state,
+  const robot_state::RobotState& handoff_state,
+  const std::string& gs_active_group
+  ) const;
 
-  bool planNeedleReleasing(const robot_state::RobotState &handoff_state,
-                           const robot_state::RobotState &goal_state,
-                           const std::string &ss_active_group) const;
+  bool planNeedleReleasing
+  (
+  const robot_state::RobotState& handoff_state,
+  const robot_state::RobotState& goal_state,
+  const std::string& ss_active_group
+  ) const;
 
 protected:
-  bool planSafeStateToPreGraspState(const robot_state::RobotState &start_state,
-                                    const robot_state::RobotState &pre_grasp_state,
-                                    const std::string &planning_group) const;
+  bool planSafeStateToPreGraspState
+  (
+  const robot_state::RobotState& start_state,
+  const robot_state::RobotState& pre_grasp_state,
+  const std::string& planning_group
+  ) const;
 
-  bool planPreGraspStateToGraspedState(robot_state::RobotStatePtr& pre_grasp_state,
-                                       const robot_state::RobotState &handoff_state,
-                                       const std::string &planning_group) const;
+  bool planPreGraspStateToGraspedState
+  (
+  robot_state::RobotStatePtr& pre_grasp_state,
+  const robot_state::RobotState& handoff_state,
+  const std::string& planning_group
+  ) const;
 
-  bool planGraspStateToUngraspedState(const robot_state::RobotState &handoff_state,
-                                      robot_state::RobotStatePtr& ungrasped_state,
-                                      const std::string &planning_group) const;
+  bool planGraspStateToUngraspedState
+  (
+  const robot_state::RobotState& handoff_state,
+  robot_state::RobotStatePtr& ungrasped_state,
+  const std::string& planning_group
+  ) const;
 
-  bool planUngraspedStateToSafeState(const robot_state::RobotState &ungrasped_state,
-                                     const robot_state::RobotState &goal_state,
-                                     const std::string &planning_group) const;
+  bool planUngraspedStateToSafeState
+  (
+  const robot_state::RobotState& ungrasped_state,
+  const robot_state::RobotState& goal_state,
+  const std::string& planning_group
+  ) const;
 
-  bool planObjectTransit(const robot_state::RobotState &start_state,
-                         const robot_state::RobotState &goal_state,
-                         const std::string &planning_group) const;
+  bool planObjectTransit
+  (
+  const robot_state::RobotState& start_state,
+  const robot_state::RobotState& goal_state,
+  const std::string& planning_group
+  ) const;
 
   bool noCollision(const robot_state::RobotState& rstate) const;
 
-  void setMimicJointPositions(const robot_state::RobotStatePtr& rstate,
-                              const std::string& planning_group) const;
+  void setMimicJointPositions
+  (
+  const robot_state::RobotStatePtr& rstate,
+  const std::string& planning_group
+  ) const;
 protected:
   ros::NodeHandle                           node_priv_;
 };

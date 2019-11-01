@@ -44,15 +44,17 @@
 using namespace dual_arm_manipulation_planner_interface;
 using namespace ompl::base;
 
-HybridStateSampler::HybridStateSampler(const HybridObjectStateSpace *space) :
-  StateSampler(space), hyStateSpace_(space), robot_model_loader_("robot_description")
+HybridStateSampler::HybridStateSampler(const HybridObjectStateSpace* space)
+: StateSampler(space),
+  hyStateSpace_(space),
+  robot_model_loader_("robot_description")
 {
   kmodel_ = robot_model_loader_.getModel();
 
   hyStateSpace_->sampling_duration_ = std::chrono::duration<double>::zero();
 }
 
-void HybridStateSampler::sampleUniform(State *state)
+void HybridStateSampler::sampleUniform(State* state)
 {
   auto start = std::chrono::high_resolution_clock::now();
   hyStateSpace_->sampling_num += 1;
@@ -60,21 +62,22 @@ void HybridStateSampler::sampleUniform(State *state)
   ompl::base::DiscreteStateSampler arm_index_sampler(hyStateSpace_->getSubspace(1).get());
   ompl::base::DiscreteStateSampler grasp_index_sampler(hyStateSpace_->getSubspace(2).get());
 
-  auto *hss = static_cast<HybridObjectStateSpace::StateType *>(state);
+  auto* hss = static_cast<HybridObjectStateSpace::StateType*>(state);
   hss->clearKnownInformation();
 
   arm_index_sampler.sampleUniform(&hss->armIndex());
   grasp_index_sampler.sampleUniform(&hss->graspIndex());
 
   const robot_state::RobotStatePtr robot_sample_state(new robot_state::RobotState(kmodel_));
-  if(!robot_sample_state)
+  if (!robot_sample_state)
   {
     return;
   }
   robot_sample_state->setToDefaultValues();
 
   std::string planning_group = (hss->armIndex().value == 1) ? "psm_one" : "psm_two";
-  const robot_state::JointModelGroup* selected_joint_model_group = robot_sample_state->getJointModelGroup(planning_group);
+  const robot_state::JointModelGroup* selected_joint_model_group = robot_sample_state->getJointModelGroup(
+  planning_group);
   robot_sample_state->setToRandomPositions(selected_joint_model_group);
   robot_sample_state->update();
   std::vector<double> joint_values;
@@ -82,7 +85,7 @@ void HybridStateSampler::sampleUniform(State *state)
   hss->setJointsComputed(true);
 
   const Eigen::Affine3d tool_tip_pose = robot_sample_state->getGlobalLinkTransform(
-    selected_joint_model_group->getOnlyOneEndEffectorTip());
+  selected_joint_model_group->getOnlyOneEndEffectorTip());
   const Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[hss->graspIndex().value].grasp_pose;
   const Eigen::Affine3d object_pose = tool_tip_pose * grasp_pose;
   hyStateSpace_->eigen3dToSE3(object_pose, hss);
@@ -92,27 +95,40 @@ void HybridStateSampler::sampleUniform(State *state)
   hyStateSpace_->sampling_duration_ += elapsed;
 }
 
-void HybridStateSampler::sampleUniformNear(State *state, const State *near, double distance)
+void HybridStateSampler::sampleUniformNear
+(
+State* state,
+const State* near,
+double distance
+)
 {
   // left blank
 }
 
-void HybridStateSampler::sampleGaussian(State *state, const State *mean, double stdDev)
+void HybridStateSampler::sampleGaussian
+(
+State* state,
+const State* mean,
+double stdDev
+)
 {
   // left blank
 }
 
-HybridObjectStateSpace::HybridObjectStateSpace(const int armIdxLwBd,
-                                               const int armIdxUpBd,
-                                               const int graspIdxLwBd,
-                                               const int graspIdxUpBd,
-                                               const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps)
-  : CompoundStateSpace(),
-    m_ArmIdxLwBd(armIdxLwBd),
-    m_ArmIdxUpBd(armIdxUpBd),
-    m_GraspIdxLwBd(graspIdxLwBd),
-    m_GraspIdxUpBd(graspIdxUpBd),
-    m_PossibleGrasps(possible_grasps)
+HybridObjectStateSpace::HybridObjectStateSpace
+(
+const int armIdxLwBd,
+const int armIdxUpBd,
+const int graspIdxLwBd,
+const int graspIdxUpBd,
+const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+)
+: CompoundStateSpace(),
+  m_ArmIdxLwBd(armIdxLwBd),
+  m_ArmIdxUpBd(armIdxUpBd),
+  m_GraspIdxLwBd(graspIdxLwBd),
+  m_GraspIdxUpBd(graspIdxUpBd),
+  m_PossibleGrasps(possible_grasps)
 {
   setName("HybridObject" + getName());
   type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
@@ -135,23 +151,26 @@ HybridObjectStateSpace::HybridObjectStateSpace(const int armIdxLwBd,
   lock();
 }
 
-HybridObjectStateSpace::HybridObjectStateSpace(const double se3BoundXAxisMin,
-                                               const double se3BoundXAxisMax,
-                                               const double se3BoundYAxisMin,
-                                               const double se3BoundYAxisMax,
-                                               const double se3BoundZAxisMin,
-                                               const double se3BoundZAxisMax,
-                                               const int armIdxLwBd,
-                                               const int armIdxUpBd,
-                                               const int graspIdxLwBd,
-                                               const int graspIdxUpBd,
-                                               const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps)
-  : CompoundStateSpace(),
-    m_ArmIdxLwBd(armIdxLwBd),
-    m_ArmIdxUpBd(armIdxUpBd),
-    m_GraspIdxLwBd(graspIdxLwBd),
-    m_GraspIdxUpBd(graspIdxUpBd),
-    m_PossibleGrasps(possible_grasps)
+HybridObjectStateSpace::HybridObjectStateSpace
+(
+const double se3BoundXAxisMin,
+const double se3BoundXAxisMax,
+const double se3BoundYAxisMin,
+const double se3BoundYAxisMax,
+const double se3BoundZAxisMin,
+const double se3BoundZAxisMax,
+const int armIdxLwBd,
+const int armIdxUpBd,
+const int graspIdxLwBd,
+const int graspIdxUpBd,
+const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+)
+: CompoundStateSpace(),
+  m_ArmIdxLwBd(armIdxLwBd),
+  m_ArmIdxUpBd(armIdxUpBd),
+  m_GraspIdxLwBd(graspIdxLwBd),
+  m_GraspIdxUpBd(graspIdxUpBd),
+  m_PossibleGrasps(possible_grasps)
 {
   setName("HybridObject" + getName());
   type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
@@ -222,10 +241,13 @@ void HybridObjectStateSpace::resetTimer()
   HybridObjectStateSpace::hand_off_failed_num = 0;
 }
 
-void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool verbose)
+void HybridObjectStateSpace::printExecutionDuration(
+double* total_time,
+bool verbose
+)
 {
 
-  if(verbose)
+  if (verbose)
   {
     std::cout << "Sampling Elapsed duration and times of called: " << sampling_duration_.count() << "s and "
               << sampling_num << "\n"
@@ -248,8 +270,8 @@ void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool ver
   }
 
   std::chrono::duration<double> total_time_chro =
-    sampling_duration_ + validity_checking_duration_ + interpolation_duration_ + check_motion_duration_;
-  if(total_time)
+  sampling_duration_ + validity_checking_duration_ + interpolation_duration_ + check_motion_duration_;
+  if (total_time)
   {
     *total_time = total_time_chro.count();
   }
@@ -257,44 +279,59 @@ void HybridObjectStateSpace::printExecutionDuration(double* total_time, bool ver
   std::cout << "Total Time is: " << total_time_chro.count() << "s" << std::endl;
 }
 
-void HybridObjectStateSpace::setSE3Bounds(const RealVectorBounds &bounds)
+void HybridObjectStateSpace::setSE3Bounds(const RealVectorBounds& bounds)
 {
   components_[0]->as<SE3StateSpace>()->setBounds(bounds);
 }
 
-void HybridObjectStateSpace::setSE3Bounds(const double se3BoundXAxisMin,
-                                          const double se3BoundXAxisMax,
-                                          const double se3BoundYAxisMin,
-                                          const double se3BoundYAxisMax,
-                                          const double se3BoundZAxisMin,
-                                          const double se3BoundZAxisMax)
+void HybridObjectStateSpace::setSE3Bounds
+(
+const double se3BoundXAxisMin,
+const double se3BoundXAxisMax,
+const double se3BoundYAxisMin,
+const double se3BoundYAxisMax,
+const double se3BoundZAxisMin,
+const double se3BoundZAxisMax
+)
 {
   RealVectorBounds se3XYZBounds(3);
-  se3XYZBounds.setLow(0,  se3BoundXAxisMin);
+  se3XYZBounds.setLow(0, se3BoundXAxisMin);
   se3XYZBounds.setHigh(0, se3BoundXAxisMax);
-  se3XYZBounds.setLow(1,  se3BoundYAxisMin);
+  se3XYZBounds.setLow(1, se3BoundYAxisMin);
   se3XYZBounds.setHigh(1, se3BoundYAxisMax);
-  se3XYZBounds.setLow(2,  se3BoundZAxisMin);
+  se3XYZBounds.setLow(2, se3BoundZAxisMin);
   se3XYZBounds.setHigh(2, se3BoundZAxisMax);
   setSE3Bounds(se3XYZBounds);
 }
 
-void HybridObjectStateSpace::setArmIndexBounds(int lowerBound, int upperBound)
+void HybridObjectStateSpace::setArmIndexBounds
+(
+int lowerBound,
+int upperBound
+)
 {
   components_[1]->as<DiscreteStateSpace>()->setBounds(lowerBound, upperBound);
 }
 
-void HybridObjectStateSpace::setGraspIndexBounds(int lowerBound, int upperBound)
+void HybridObjectStateSpace::setGraspIndexBounds
+(
+int lowerBound,
+int upperBound
+)
 {
   components_[2]->as<DiscreteStateSpace>()->setBounds(lowerBound, upperBound);
 }
 
-bool HybridObjectStateSpace::setJointValues(const std::vector<double> &joint_values, StateType *state) const
+bool HybridObjectStateSpace::setJointValues
+(
+const std::vector<double>& joint_values,
+StateType* state
+) const
 {
 
-  ompl::base::RealVectorStateSpace::StateType &joint_variable = state->jointVariables();
+  ompl::base::RealVectorStateSpace::StateType& joint_variable = state->jointVariables();
   int joint_space_size = components_[3]->as<RealVectorStateSpace>()->getDimension();
-  if(joint_values.size() != joint_space_size)
+  if (joint_values.size() != joint_space_size)
   {
     printf("Robot's JointModelGroup Variables Dimension is NOT %d", joint_space_size);
     return false;
@@ -318,10 +355,14 @@ bool HybridObjectStateSpace::isHybrid() const
   return true;
 }
 
-double HybridObjectStateSpace::distance(const State *state1, const State *state2) const
+double HybridObjectStateSpace::distance
+(
+const State* state1,
+const State* state2
+) const
 {
-  const auto *hs1 = static_cast<const StateType *>(state1);
-  const auto *hs2 = static_cast<const StateType *>(state2);
+  const auto* hs1 = static_cast<const StateType*>(state1);
+  const auto* hs2 = static_cast<const StateType*>(state2);
 
   double se3_dist = components_[0]->distance(hs1->components[0], hs2->components[0]);
 
@@ -347,33 +388,37 @@ double HybridObjectStateSpace::distance(const State *state1, const State *state2
   return total_dist;
 }
 
-void HybridObjectStateSpace::serialize(void *serialization, const State *state) const
+void HybridObjectStateSpace::serialize
+(
+void* serialization,
+const State* state
+) const
 {
-  const auto *hystate = static_cast<const StateType*>(state);
+  const auto* hystate = static_cast<const StateType*>(state);
   unsigned int l = 0;
   for (unsigned int i = 0; i < componentCount_ - 1; ++i)
   {
-    components_[i]->serialize(reinterpret_cast<char *>(serialization) + l, hystate->components[i]);
+    components_[i]->serialize(reinterpret_cast<char*>(serialization) + l, hystate->components[i]);
     l += components_[i]->getSerializationLength();
   }
 }
 
-State *HybridObjectStateSpace::allocState() const
+State* HybridObjectStateSpace::allocState() const
 {
-  auto *state = new StateType();
+  auto* state = new StateType();
   ompl::base::CompoundStateSpace::allocStateComponents(state);
-  return static_cast<ompl::base::State *>(state);
+  return static_cast<ompl::base::State*>(state);
 }
 
 
-void HybridObjectStateSpace::freeState(State *state) const
+void HybridObjectStateSpace::freeState(State* state) const
 {
   ompl::base::CompoundStateSpace::freeState(state);
 }
 
-bool HybridObjectStateSpace::satisfiesBounds(const State *state) const
+bool HybridObjectStateSpace::satisfiesBounds(const State* state) const
 {
-  const auto *cstate = static_cast<const StateType *>(state);
+  const auto* cstate = static_cast<const StateType*>(state);
   for (unsigned int i = 0; i < componentCount_ - 1; ++i)
   {
     if (!components_[i]->satisfiesBounds(cstate->components[i]))
@@ -385,21 +430,29 @@ bool HybridObjectStateSpace::satisfiesBounds(const State *state) const
   return true;
 }
 
-void HybridObjectStateSpace::copyState(State *destination, const State *source) const
+void HybridObjectStateSpace::copyState
+(
+State* destination,
+const State* source
+) const
 {
   ompl::base::CompoundStateSpace::copyState(destination, source);
   destination->as<StateType>()->flags = source->as<StateType>()->flags;
 }
 
-bool HybridObjectStateSpace::equalStates(const State *state1, const State *state2) const
+bool HybridObjectStateSpace::equalStates
+(
+const State* state1,
+const State* state2
+) const
 {
-  const auto *hs1 = static_cast<const StateType *>(state1);
-  const auto *hs2 = static_cast<const StateType *>(state2);
+  const auto* hs1 = static_cast<const StateType*>(state1);
+  const auto* hs2 = static_cast<const StateType*>(state2);
   bool is_se3_equal = components_[0]->equalStates(hs1->components[0], hs2->components[0]);
   bool is_armid_equal = components_[1]->equalStates(hs1->components[1], hs2->components[1]);
   bool is_graspid_equal = components_[2]->equalStates(hs1->components[2], hs2->components[2]);
 
-  if(is_se3_equal && is_armid_equal && is_graspid_equal)
+  if (is_se3_equal && is_armid_equal && is_graspid_equal)
   {
     return true;
   }
@@ -407,7 +460,11 @@ bool HybridObjectStateSpace::equalStates(const State *state1, const State *state
   return false;
 }
 
-void HybridObjectStateSpace::printState(const State *state, std::ostream &out) const
+void HybridObjectStateSpace::printState
+(
+const State* state,
+std::ostream& out
+) const
 {
   ompl::base::CompoundStateSpace::printState(state, out);
 }
@@ -422,10 +479,14 @@ StateSamplerPtr HybridObjectStateSpace::allocStateSampler() const
   return std::make_shared<HybridStateSampler>(this);
 }
 
-unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, const State *state2) const
+unsigned int HybridObjectStateSpace::validSegmentCount
+(
+const State* state1,
+const State* state2
+) const
 {
-  const auto *hs1 = static_cast<const StateType *>(state1);
-  const auto *hs2 = static_cast<const StateType *>(state2);
+  const auto* hs1 = static_cast<const StateType*>(state1);
+  const auto* hs2 = static_cast<const StateType*>(state2);
 
   const int s1_arm_index = hs1->armIndex().value;
   const int s2_arm_index = hs2->armIndex().value;
@@ -456,17 +517,20 @@ unsigned int HybridObjectStateSpace::validSegmentCount(const State *state1, cons
 }
 
 
-void HybridObjectStateSpace::interpolate(const State *from,
-                                         const State *to,
-                                         const double t,
-                                         State *state) const
+void HybridObjectStateSpace::interpolate
+(
+const State* from,
+const State* to,
+const double t,
+State* state
+) const
 {
   auto start = std::chrono::high_resolution_clock::now();
-  auto *cstate = static_cast<StateType *>(state);
+  auto* cstate = static_cast<StateType*>(state);
   cstate->clearKnownInformation();
 
-  const auto *hys_from = static_cast<const StateType *>(from);
-  const auto *hys_to = static_cast<const StateType *>(to);
+  const auto* hys_from = static_cast<const StateType*>(from);
+  const auto* hys_to = static_cast<const StateType*>(to);
 
   // ompl::RNG randNum;
   // double random_num = randNum.gaussian01();
@@ -529,25 +593,37 @@ void HybridObjectStateSpace::interpolate(const State *from,
   call_interpolation_num += 1;
 }
 
-void HybridObjectStateSpace::copyToReals(std::vector<double> &reals, const State *source) const
+void HybridObjectStateSpace::copyToReals
+(
+std::vector<double>& reals,
+const State* source
+) const
 {
-  auto *hysource = static_cast<const StateType *>(source);
+  auto* hysource = static_cast<const StateType*>(source);
   components_[0]->copyToReals(reals, hysource->components[0]);
   reals.push_back(hysource->armIndex().value);
   reals.push_back(hysource->graspIndex().value);
 }
 
-void HybridObjectStateSpace::se3ToEigen3d(const StateType *state, Eigen::Affine3d& affine3d) const
+void HybridObjectStateSpace::se3ToEigen3d
+(
+const StateType* state,
+Eigen::Affine3d& affine3d
+) const
 {
   affine3d.translation() << state->se3State().getX(), state->se3State().getY(), state->se3State().getZ();
 
-  affine3d.linear() =  Eigen::Quaterniond(state->se3State().rotation().w,
-                                          state->se3State().rotation().x,
-                                          state->se3State().rotation().y,
-                                          state->se3State().rotation().z).toRotationMatrix();
+  affine3d.linear() = Eigen::Quaterniond(state->se3State().rotation().w,
+                                         state->se3State().rotation().x,
+                                         state->se3State().rotation().y,
+                                         state->se3State().rotation().z).toRotationMatrix();
 }
 
-void HybridObjectStateSpace::eigen3dToSE3(const Eigen::Affine3d &affine3d, StateType *state) const
+void HybridObjectStateSpace::eigen3dToSE3
+(
+const Eigen::Affine3d& affine3d,
+StateType* state
+) const
 {
   state->se3State().setXYZ(affine3d.translation().x(), affine3d.translation().y(), affine3d.translation().z());
 
@@ -558,15 +634,19 @@ void HybridObjectStateSpace::eigen3dToSE3(const Eigen::Affine3d &affine3d, State
   state->se3State().rotation().z = qua.z();
 }
 
-StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const StateType *state2) const
+StateDiff HybridObjectStateSpace::checkStateDiff
+(
+const StateType* state1,
+const StateType* state2
+) const
 {
   bool same_pose = components_[0]->equalStates(state1->components[0], state2->components[0]);
   bool same_arm = components_[1]->equalStates(state1->components[1], state2->components[1]);
   bool same_grasp = components_[2]->equalStates(state1->components[2], state2->components[2]);
 
-  if(same_arm)
+  if (same_arm)
   {
-    if(same_grasp)
+    if (same_grasp)
     {
       return same_pose ? StateDiff::AllSame : StateDiff::PoseDiffArmAndGraspSame;
     }
@@ -577,7 +657,7 @@ StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const 
   }
   else
   {
-    if(same_grasp)
+    if (same_grasp)
     {
       return same_pose ? StateDiff::ArmDiffGraspAndPoseSame : StateDiff::ArmAndPoseDiffGraspSame;
     }
@@ -589,9 +669,12 @@ StateDiff HybridObjectStateSpace::checkStateDiff(const StateType *state1, const 
 }
 
 
-void HybridObjectStateSpace::interpolateGrasp(const StateType *from,
-                                              const StateType *to,
-                                              StateType *cstate) const
+void HybridObjectStateSpace::interpolateGrasp
+(
+const StateType* from,
+const StateType* to,
+StateType* cstate
+) const
 {
   const int from_arm_index = from->armIndex().value;
   const int to_arm_index = to->armIndex().value;
@@ -602,7 +685,8 @@ void HybridObjectStateSpace::interpolateGrasp(const StateType *from,
   const int from_part_id = m_PossibleGrasps[from_grasp_index].part_id;
   const int to_part_id = m_PossibleGrasps[to_grasp_index].part_id;
 
-  int num_handoff = handOffsNum(from_arm_index,from_grasp_index, from_part_id, to_arm_index, to_grasp_index, to_part_id);
+  int num_handoff = handOffsNum(from_arm_index, from_grasp_index, from_part_id, to_arm_index, to_grasp_index,
+                                to_part_id);
 
   switch (num_handoff)
   {
@@ -625,12 +709,15 @@ void HybridObjectStateSpace::interpolateGrasp(const StateType *from,
 }
 
 
-int HybridObjectStateSpace::handOffsNum(const int from_arm_index,
-                                        const int from_grasp_index,
-                                        const int from_part_id,
-                                        const int to_arm_index,
-                                        const int to_grasp_index,
-                                        const int to_part_id) const
+int HybridObjectStateSpace::handOffsNum
+(
+const int from_arm_index,
+const int from_grasp_index,
+const int from_part_id,
+const int to_arm_index,
+const int to_grasp_index,
+const int to_part_id
+) const
 {
   if (from_arm_index != to_arm_index)
   {
@@ -642,7 +729,11 @@ int HybridObjectStateSpace::handOffsNum(const int from_arm_index,
   }
 }
 
-int HybridObjectStateSpace::chooseSupportArm(const int from_arm_index, const int to_arm_index) const
+int HybridObjectStateSpace::chooseSupportArm
+(
+const int from_arm_index,
+const int to_arm_index
+) const
 {
   if ((from_arm_index & to_arm_index) == 1)
   {
@@ -654,7 +745,11 @@ int HybridObjectStateSpace::chooseSupportArm(const int from_arm_index, const int
   }
 }
 
-int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) const
+int HybridObjectStateSpace::chooseGraspPart
+(
+int from_part_id,
+int to_part_id
+) const
 {
   ompl::RNG randNumGenerator;
   int cs_grasp_id;
@@ -662,19 +757,19 @@ int HybridObjectStateSpace::chooseGraspPart(int from_part_id, int to_part_id) co
   std::unordered_set<int> invalid_grasp_list;
 
   int stop_it_num = m_GraspIdxUpBd + 1;
-  while(invalid_grasp_list.size() < stop_it_num)
+  while (invalid_grasp_list.size() < stop_it_num)
   {
     cs_grasp_id = randNumGenerator.uniformInt(m_GraspIdxLwBd, m_GraspIdxUpBd);
-    if(invalid_grasp_list.find(cs_grasp_id) == invalid_grasp_list.end())  // element is not in the container
+    if (invalid_grasp_list.find(cs_grasp_id) == invalid_grasp_list.end())  // element is not in the container
     {
       int cs_grasp_part = m_PossibleGrasps[cs_grasp_id].part_id;
-      if((cs_grasp_part != from_part_id) && (cs_grasp_part != to_part_id))  // if failed insert to invalid_grasp_list
+      if ((cs_grasp_part != from_part_id) && (cs_grasp_part != to_part_id))  // if failed insert to invalid_grasp_list
       {
         return cs_grasp_id;
       }
       else
       {
-        invalid_grasp_list.insert(cs_grasp_id);    
+        invalid_grasp_list.insert(cs_grasp_id);
       }
     }
   }

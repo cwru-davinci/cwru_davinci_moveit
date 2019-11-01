@@ -43,27 +43,106 @@ namespace ob = ompl::base;
 
 DavinciNeedleHandoffExecutionManager::DavinciNeedleHandoffExecutionManager
 (
-const ros::NodeHandle &nodeHandlePrivate
+const ros::NodeHandle& nodeHandle,
+const ros::NodeHandle& nodeHandlePrivate
 )
-: m_NodeHandlePrivate(nodeHandlePrivate)
+:m_NodeHandle(nodeHandle), m_NodeHandlePrivate(nodeHandlePrivate)
 {
-
+//  m_pNeedleGrasper(new )
 }
 
-bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
+moveit_msgs::MoveItErrorCodes DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
 (
 )
 {
-  if (m_PlanningStatus == ob::PlannerStatus::EXACT_SOLUTION && !m_HandoffJntTraj.empty())
+  moveit_msgs::MoveItErrorCodes errorCodes;
+  if (!m_PlanningStatus == ob::PlannerStatus::EXACT_SOLUTION || m_HandoffJntTraj.empty())
   {
-    for (std::size_t i = 0; i < m_HandoffJntTraj.size(); ++i)
-    {
-      
-    }
+    errorCodes.val = errorCodes.FAILURE;
+    return errorCodes;
   }
-  else
+
+  for (std::size_t i = 0; i < m_HandoffJntTraj.size(); ++i)
   {
-    return false;
+    for (std::size_t j = 0; j < m_HandoffJntTraj[i].size(); ++j)
+    {
+      if (m_HandoffJntTraj[j].size() == 1)  // object Transit
+      {
+        // move
+        const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
+        m_pSupportArmGroup.reset(new MoveGroupInterface(jntTrajSeg.begin()->first));
+        const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
+        for(std::size_t k; k < jntTra.size(); ++k)
+        {
+          m_pSupportArmGroup->setJointValueTarget(jntTra[k]);
+          errorCodes = m_pSupportArmGroup->move();
+//          if ()
+        }
+      }
+      else if (m_HandoffJntTraj[j].size() == 4)  // object Transfer
+      {
+        // move in fashion: home to pregrasp, approach-grasp, ungrasp-retreat, back to home
+        const MoveGroupJointTrajectorySegment& safePlaceToPreGraspJntTrajSeg = m_HandoffJntTraj[i][0].second;
+        m_pSupportArmGroup.reset(new MoveGroupInterface(safePlaceToPreGraspJntTrajSeg.begin()->first));
+        {
+          const JointTrajectory& jntTra = safePlaceToPreGraspJntTrajSeg.begin()->second;
+          for(std::size_t k; k < jntTra.size(); ++k)
+          {
+            m_pSupportArmGroup->setJointValueTarget(jntTra[k]);
+            m_pSupportArmGroup->move();
+          }
+        }
+
+        const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
+        m_pSupportArmGroup.reset(new MoveGroupInterface(preGraspToGraspedJntTrajSeg.begin()->first));
+        m_pSupportArmEefGroup.reset(new MoveGroupInterface((++preGraspToGraspedJntTrajSeg.begin())->first));
+        {
+          const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
+          for(std::size_t k; k < armJntTra.size(); ++k)
+          {
+            m_pSupportArmGroup->setJointValueTarget(armJntTra[k]);
+            m_pSupportArmGroup->move();
+          }
+
+          const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
+          for(std::size_t k; k < gripperJntTra.size(); ++k)
+          {
+            m_pSupportArmEefGroup->setJointValueTarget(gripperJntTra[k]);
+            m_pSupportArmEefGroup->move();
+          }
+        }
+
+        const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
+        m_pSupportArmGroup.reset(new MoveGroupInterface(graspToUngraspedJntSeg.begin()->first));
+        {
+          const JointTrajectory& jntTra = graspToUngraspedJntSeg.begin()->second;
+          for(std::size_t k; k < jntTra.size(); ++k)
+          {
+            m_pSupportArmGroup->setJointValueTarget(jntTra[k]);
+            m_pSupportArmGroup->move();
+          }
+        }
+
+        const MoveGroupJointTrajectorySegment& ungraspedToSafePlaceJntTrajSeg = m_HandoffJntTraj[i][3].second;
+        m_pSupportArmGroup.reset(new MoveGroupInterface(ungraspedToSafePlaceJntTrajSeg.begin()->first));
+        m_pSupportArmEefGroup.reset(new MoveGroupInterface((++ungraspedToSafePlaceJntTrajSeg.begin())->first));
+        {
+          const JointTrajectory& armJntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
+          for(std::size_t k; k < armJntTra.size(); ++k)
+          {
+            m_pSupportArmGroup->setJointValueTarget(armJntTra[k]);
+            m_pSupportArmGroup->move();
+          }
+
+          const JointTrajectory& gripperJntTra = (++ungraspedToSafePlaceJntTrajSeg.begin())->second;
+          for(std::size_t k; k < gripperJntTra.size(); ++k)
+          {
+            m_pSupportArmEefGroup->setJointValueTarget(gripperJntTra[k]);
+            m_pSupportArmEefGroup->move();
+          }
+        }
+      }
+    }
   }
 }
 

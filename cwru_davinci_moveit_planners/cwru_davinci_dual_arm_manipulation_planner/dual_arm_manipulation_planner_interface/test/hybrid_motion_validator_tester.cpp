@@ -45,17 +45,25 @@ namespace hybrid_planner_test
 class HybridMotionValidatorTester : public HybridMotionValidator
 {
 public:
-  HybridMotionValidatorTester(const ompl::base::SpaceInformationPtr &si,
-                              const robot_model::RobotModelConstPtr &pRobotModel,
-                              const std::string &objectName)
-                              : HybridMotionValidator(si, pRobotModel, objectName) {}
+  HybridMotionValidatorTester
+  (
+  const ompl::base::SpaceInformationPtr& si,
+  const robot_model::RobotModelConstPtr& pRobotModel,
+  const std::string& objectName
+  )
+  : HybridMotionValidator(si, pRobotModel, objectName)
+  {}
 
-  ~HybridMotionValidatorTester() {}
+  ~HybridMotionValidatorTester()
+  {}
 
   const robot_state::RobotStatePtr& sampleRobotState();
 
-  bool testComputeCartesianPath(const robot_state::RobotState &start_state,
-                                const robot_state::RobotState &goal_state);
+  bool testComputeCartesianPath
+  (
+  const robot_state::RobotState& start_state,
+  const robot_state::RobotState& goal_state
+  );
 
   inline const robot_model::RobotModelConstPtr getRobotModel() const
   {
@@ -78,19 +86,22 @@ private:
   int test_num_ = 0;
 };
 
-bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::RobotState &start_state,
-                                                           const robot_state::RobotState &goal_state)
+bool HybridMotionValidatorTester::testComputeCartesianPath
+(
+const robot_state::RobotState& start_state,
+const robot_state::RobotState& goal_state
+)
 {
   test_num_ += 1;
   ROS_INFO("This is %dth test", test_num_);
   bool first = false;
   {
     const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(start_state));
-    const robot_state::JointModelGroup *arm_joint_group = goal_state.getJointModelGroup(planning_group_);
-    const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+    const robot_state::JointModelGroup* arm_joint_group = goal_state.getJointModelGroup(planning_group_);
+    const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
     const Eigen::Affine3d goal_tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
-    std::vector <robot_state::RobotStatePtr> traj;
+    std::vector<robot_state::RobotStatePtr> traj;
     double translation_step_max = 0.001, rotation_step_max = 0.001;
     moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
 //    double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
@@ -121,11 +132,11 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
   bool second = false;
   {
     const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(start_state));
-    const robot_state::JointModelGroup *arm_joint_group = goal_state.getJointModelGroup(planning_group_);
-    const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+    const robot_state::JointModelGroup* arm_joint_group = goal_state.getJointModelGroup(planning_group_);
+    const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
     const Eigen::Affine3d goal_tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
-    std::vector <robot_state::RobotStatePtr> traj;
+    std::vector<robot_state::RobotStatePtr> traj;
     double path_percent = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group_),
                                                                traj,
                                                                tip_link,
@@ -141,7 +152,7 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
     std::vector<double> first_traj_jnt_value;
     traj[0]->copyJointGroupPositions(planning_group_, first_traj_jnt_value);
 
-    for(std::size_t j = 0; j < start_state_jnt_value.size(); ++j)
+    for (std::size_t j = 0; j < start_state_jnt_value.size(); ++j)
     {
       EXPECT_EQ(start_state_jnt_value[j], first_traj_jnt_value[j]);
     }
@@ -149,11 +160,11 @@ bool HybridMotionValidatorTester::testComputeCartesianPath(const robot_state::Ro
     std::vector<double> goal_state_jnt_value;
     goal_state.copyJointGroupPositions(planning_group_, goal_state_jnt_value);
 
-    if(second)
+    if (second)
     {
       std::vector<double> last_traj_jnt_value;
       traj.back()->copyJointGroupPositions(planning_group_, last_traj_jnt_value);
-      for(std::size_t j = 0; j < start_state_jnt_value.size(); ++j)
+      for (std::size_t j = 0; j < start_state_jnt_value.size(); ++j)
       {
         EXPECT_NEAR(goal_state_jnt_value[j], last_traj_jnt_value[j], 1e-4);
       }
@@ -190,5 +201,4 @@ const robot_state::RobotStatePtr& HybridMotionValidatorTester::sampleRobotState(
   pRState->update();
   return pRState;
 }
-
 }

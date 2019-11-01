@@ -109,7 +109,7 @@ TEST(TestHybridRRT, HybridMotionValidator)
   EXPECT_TRUE(success_count);
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   testing::InitGoogleTest(&argc, argv);
   ros::init(argc, argv, "test_hybrid_motion_validator");

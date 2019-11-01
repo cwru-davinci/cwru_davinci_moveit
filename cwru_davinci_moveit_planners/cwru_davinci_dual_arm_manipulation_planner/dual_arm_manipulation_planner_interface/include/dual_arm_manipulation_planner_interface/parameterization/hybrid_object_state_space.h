@@ -66,19 +66,30 @@ OMPL_CLASS_FORWARD(HybridObjectStateSpace);
 class HybridStateSampler : public ompl::base::StateSampler
 {
 public:
-  HybridStateSampler(const HybridObjectStateSpace *space);
+  HybridStateSampler(const HybridObjectStateSpace* space);
 
-  virtual ~HybridStateSampler() {}
+  virtual ~HybridStateSampler()
+  {}
 
-  void sampleUniform(ompl::base::State *state) override;
+  void sampleUniform(ompl::base::State* state) override;
 
-  void sampleUniformNear(ompl::base::State *state, const ompl::base::State *near, double distance) override;
+  void sampleUniformNear
+  (
+  ompl::base::State* state,
+  const ompl::base::State* near,
+  double distance
+  ) override;
 
-  void sampleGaussian(ompl::base::State *state, const ompl::base::State *mean, double stdDev) override;
+  void sampleGaussian
+  (
+  ompl::base::State* state,
+  const ompl::base::State* mean,
+  double stdDev
+  ) override;
 private:
-  const HybridObjectStateSpace *hyStateSpace_;
+  const HybridObjectStateSpace*        hyStateSpace_;
 
-  robot_model::RobotModelConstPtr kmodel_;
+  robot_model::RobotModelConstPtr      kmodel_;
 
   robot_model_loader::RobotModelLoader robot_model_loader_;
 };
@@ -204,12 +215,12 @@ public:
      * @brief Get the SE(3) components of the state and allow changing it as well
      * @return
      */
-    const ompl::base::SE3StateSpace::StateType &se3State() const
+    const ompl::base::SE3StateSpace::StateType& se3State() const
     {
       return *as<ompl::base::SE3StateSpace::StateType>(0);
     }
 
-    ompl::base::SE3StateSpace::StateType &se3State()
+    ompl::base::SE3StateSpace::StateType& se3State()
     {
       return *as<ompl::base::SE3StateSpace::StateType>(0);
     }
@@ -218,7 +229,7 @@ public:
      * @brief Get the Arm index components of the state and allow changing it as well
      * @return
      */
-    const ompl::base::DiscreteStateSpace::StateType &armIndex() const
+    const ompl::base::DiscreteStateSpace::StateType& armIndex() const
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(1);
     }
@@ -228,7 +239,7 @@ public:
      * @brief Get the arm index components of the state and allow changing it as well
      * @return
      */
-    ompl::base::DiscreteStateSpace::StateType &armIndex()
+    ompl::base::DiscreteStateSpace::StateType& armIndex()
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(1);
     }
@@ -237,7 +248,7 @@ public:
      * @brief Get the grasp index components of the state and allow changing it as well
      * @return
      */
-    const ompl::base::DiscreteStateSpace::StateType &graspIndex() const
+    const ompl::base::DiscreteStateSpace::StateType& graspIndex() const
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(2);
     }
@@ -246,17 +257,17 @@ public:
      * @brief Get the grasp index components of the state and allow changing it as well
      * @return
      */
-    ompl::base::DiscreteStateSpace::StateType &graspIndex()
+    ompl::base::DiscreteStateSpace::StateType& graspIndex()
     {
       return *as<ompl::base::DiscreteStateSpace::StateType>(2);
     }
 
-    const ompl::base::RealVectorStateSpace::StateType &jointVariables() const
+    const ompl::base::RealVectorStateSpace::StateType& jointVariables() const
     {
       return *as<ompl::base::RealVectorStateSpace::StateType>(3);
     }
 
-    ompl::base::RealVectorStateSpace::StateType &jointVariables()
+    ompl::base::RealVectorStateSpace::StateType& jointVariables()
     {
       return *as<ompl::base::RealVectorStateSpace::StateType>(3);
     }
@@ -270,67 +281,116 @@ public:
     int flags;
   };
 
-  HybridObjectStateSpace(const int armIdxLwBd,
-                         const int armIdxUpBd,
-                         const int graspIdxLwBd,
-                         const int graspIdxUpBd,
-                         const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps);
+  HybridObjectStateSpace
+  (
+  const int armIdxLwBd,
+  const int armIdxUpBd,
+  const int graspIdxLwBd,
+  const int graspIdxUpBd,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+  );
 
-  HybridObjectStateSpace(const double se3BoundXAxisMin,
-                         const double se3BoundXAxisMax,
-                         const double se3BoundYAxisMin,
-                         const double se3BoundYAxisMax,
-                         const double se3BoundZAxisMin,
-                         const double se3BoundZAxisMax,
-                         const int armIdxLwBd,
-                         const int armIdxUpBd,
-                         const int graspIdxLwBd,
-                         const int graspIdxUpBd,
-                         const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps);
+  HybridObjectStateSpace
+  (
+  const double se3BoundXAxisMin,
+  const double se3BoundXAxisMax,
+  const double se3BoundYAxisMin,
+  const double se3BoundYAxisMax,
+  const double se3BoundZAxisMin,
+  const double se3BoundZAxisMax,
+  const int armIdxLwBd,
+  const int armIdxUpBd,
+  const int graspIdxLwBd,
+  const int graspIdxUpBd,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+  );
 
-  virtual ~HybridObjectStateSpace() {}
+  virtual ~HybridObjectStateSpace()
+  {}
 
-  void setSE3Bounds(const ompl::base::RealVectorBounds &bounds);
+  void setSE3Bounds(const ompl::base::RealVectorBounds& bounds);
 
-  void setSE3Bounds(const double se3BoundXAxisMin,
-                    const double se3BoundXAxisMax,
-                    const double se3BoundYAxisMin,
-                    const double se3BoundYAxisMax,
-                    const double se3BoundZAxisMin,
-                    const double se3BoundZAxisMax);
+  void setSE3Bounds
+  (
+  const double se3BoundXAxisMin,
+  const double se3BoundXAxisMax,
+  const double se3BoundYAxisMin,
+  const double se3BoundYAxisMax,
+  const double se3BoundZAxisMin,
+  const double se3BoundZAxisMax
+  );
 
-  void setArmIndexBounds(int lowerBound, int upperBound);
+  void setArmIndexBounds
+  (
+  int lowerBound,
+  int upperBound
+  );
 
-  void setGraspIndexBounds(int lowerBound, int upperBound);
+  void setGraspIndexBounds
+  (
+  int lowerBound,
+  int upperBound
+  );
 
-  bool setJointValues(const std::vector<double> &joint_values, StateType *state) const;
+  bool setJointValues
+  (
+  const std::vector<double>& joint_values,
+  StateType* state
+  ) const;
 
   int getJointSpaceDimension() const;
 
   virtual bool isHybrid() const;
 
-  virtual double distance(const ompl::base::State *state1, const ompl::base::State *state2) const override;
+  virtual double distance
+  (
+  const ompl::base::State* state1,
+  const ompl::base::State* state2
+  ) const override;
 
-  virtual void serialize(void *serialization, const ompl::base::State *state) const override;
+  virtual void serialize
+  (
+  void* serialization,
+  const ompl::base::State* state
+  ) const override;
 
-  virtual ompl::base::State *allocState() const override;
+  virtual ompl::base::State* allocState() const override;
 
-  virtual void freeState(ompl::base::State *state) const override;
+  virtual void freeState(ompl::base::State* state) const override;
 
-  virtual bool satisfiesBounds(const ompl::base::State *state) const;
+  virtual bool satisfiesBounds(const ompl::base::State* state) const;
 
-  virtual void copyState(ompl::base::State *destination, const ompl::base::State *source) const override;
+  virtual void copyState
+  (
+  ompl::base::State* destination,
+  const ompl::base::State* source
+  ) const override;
 
-  virtual bool equalStates(const ompl::base::State *state1, const ompl::base::State *state2) const override;
+  virtual bool equalStates
+  (
+  const ompl::base::State* state1,
+  const ompl::base::State* state2
+  ) const override;
 
-  virtual void printState(const ompl::base::State *state, std::ostream &out) const override;
+  virtual void printState
+  (
+  const ompl::base::State* state,
+  std::ostream& out
+  ) const override;
 
-  virtual void interpolate(const ompl::base::State *from,
-                           const ompl::base::State *to,
-                           const double t,
-                           ompl::base::State *state) const override;
+  virtual void interpolate
+  (
+  const ompl::base::State* from,
+  const ompl::base::State* to,
+  const double t,
+  ompl::base::State* state
+  ) const override;
 
-  virtual void copyToReals(std::vector<double> &reals, const ompl::base::State *source) const override;
+  virtual void copyToReals
+  (
+  std::vector<double>& reals,
+  const ompl::base::State* source
+  ) const override;
 
   virtual ompl::base::StateSamplerPtr allocDefaultStateSampler() const override;
 
@@ -342,13 +402,29 @@ public:
    * @param state2
    * @return
    */
-  virtual unsigned int validSegmentCount(const ompl::base::State *state1, const ompl::base::State *state2) const;
+  virtual unsigned int validSegmentCount
+  (
+  const ompl::base::State* state1,
+  const ompl::base::State* state2
+  ) const;
 
-  void se3ToEigen3d(const StateType *state, Eigen::Affine3d &affine3d) const;
+  void se3ToEigen3d
+  (
+  const StateType* state,
+  Eigen::Affine3d& affine3d
+  ) const;
 
-  void eigen3dToSE3(const Eigen::Affine3d &affine3d, StateType *state) const;
+  void eigen3dToSE3
+  (
+  const Eigen::Affine3d& affine3d,
+  StateType* state
+  ) const;
 
-  StateDiff checkStateDiff(const StateType *state1, const StateType *state2) const;
+  StateDiff checkStateDiff
+  (
+  const StateType* state1,
+  const StateType* state2
+  ) const;
 
   inline const std::vector<cwru_davinci_grasp::GraspInfo>& graspTransformations() const
   {
@@ -356,18 +432,28 @@ public:
   }
 
 protected:
-  int chooseSupportArm(const int from_arm_index, const int to_arm_index) const;
+  int chooseSupportArm
+  (
+  const int from_arm_index,
+  const int to_arm_index
+  ) const;
 
-  void interpolateGrasp(const StateType *from,
-                        const StateType *to,
-                        StateType *cstate) const;
+  void interpolateGrasp
+  (
+  const StateType* from,
+  const StateType* to,
+  StateType* cstate
+  ) const;
 
-  int handOffsNum(const int from_arm_index,
-                  const int from_grasp_index,
-                  const int from_part_id,
-                  const int to_arm_index,
-                  const int to_grasp_index,
-                  const int to_part_id) const;
+  int handOffsNum
+  (
+  const int from_arm_index,
+  const int from_grasp_index,
+  const int from_part_id,
+  const int to_arm_index,
+  const int to_grasp_index,
+  const int to_part_id
+  ) const;
 
   /**
    * @brief Return the first grasp_id which its part_id different than @param from_part_id and @param @to_part_id
@@ -375,7 +461,11 @@ protected:
    * @param to_part_id
    * @return
    */
-  int chooseGraspPart(int from_part_id, int to_part_id) const;
+  int chooseGraspPart
+  (
+  int from_part_id,
+  int to_part_id
+  ) const;
 
 protected:
   int                                        m_ArmIdxLwBd;

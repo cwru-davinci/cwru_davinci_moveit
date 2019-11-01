@@ -45,10 +45,13 @@
 
 using namespace dual_arm_manipulation_planner_interface;
 
-HybridMotionValidator::HybridMotionValidator(const ompl::base::SpaceInformationPtr &si,
-                                             const robot_model::RobotModelConstPtr &pRobotModel,
-                                             const std::string &objectName) :
-  ompl::base::MotionValidator(si),
+HybridMotionValidator::HybridMotionValidator
+(
+const ompl::base::SpaceInformationPtr& si,
+const robot_model::RobotModelConstPtr& pRobotModel,
+const std::string& objectName
+)
+: ompl::base::MotionValidator(si),
   HybridStateValidityChecker(si,
                              pRobotModel,
                              objectName)
@@ -72,7 +75,11 @@ HybridMotionValidator::HybridMotionValidator(const ompl::base::SpaceInformationP
   hyStateSpace_->hand_off_failed_num = 0;
 }
 
-bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const
+bool HybridMotionValidator::checkMotion
+(
+const ompl::base::State* s1,
+const ompl::base::State* s2
+) const
 {
   hyStateSpace_->check_motion_num += 1;
   auto start = std::chrono::high_resolution_clock::now();
@@ -84,22 +91,22 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
   }
   else
   {
-    const HybridObjectStateSpace::StateType *pHyState1 = dynamic_cast<const HybridObjectStateSpace::StateType *>(s1);
-    const HybridObjectStateSpace::StateType *pHyState2 = dynamic_cast<const HybridObjectStateSpace::StateType *>(s2);
+    const HybridObjectStateSpace::StateType* pHyState1 = dynamic_cast<const HybridObjectStateSpace::StateType*>(s1);
+    const HybridObjectStateSpace::StateType* pHyState2 = dynamic_cast<const HybridObjectStateSpace::StateType*>(s2);
 
-    if(!pHyState1 || !pHyState2)
+    if (!pHyState1 || !pHyState2)
     {
       printf("HybridMotionValidator: Invalid states to be connected");
       return false;
     }
 
     const robot_state::RobotStatePtr start_state(new robot_state::RobotState(kmodel_));
-    if(!start_state || !hybridStateToRobotState(pHyState1, start_state))
+    if (!start_state || !hybridStateToRobotState(pHyState1, start_state))
     {
       return result;
     }
     const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(kmodel_));
-    if(!goal_state || !hybridStateToRobotState(pHyState2, goal_state))
+    if (!goal_state || !hybridStateToRobotState(pHyState2, goal_state))
     {
       return result;
     }
@@ -133,7 +140,7 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
       }
       case StateDiff::ArmAndGraspDiffPoseSame:
         result = planHandoff(*start_state, *goal_state, supportGroupS1, supportGroupS2);
-        if(!result)
+        if (!result)
           hyStateSpace_->hand_off_failed_num += 1;
         break;
       default:
@@ -153,10 +160,13 @@ bool HybridMotionValidator::checkMotion(const ompl::base::State *s1, const ompl:
   return result;
 }
 
-bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_state,
-                                        const robot_state::RobotState &goal_state,
-                                        const std::string &ss_active_group,
-                                        const std::string &gs_active_group) const
+bool HybridMotionValidator::planHandoff
+(
+const robot_state::RobotState& start_state,
+const robot_state::RobotState& goal_state,
+const std::string& ss_active_group,
+const std::string& gs_active_group
+) const
 {
   hyStateSpace_->hand_off_planning_num += 1;
   auto start = std::chrono::high_resolution_clock::now();
@@ -173,8 +183,8 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
   handoff_state->setJointGroupPositions(gs_active_group, gs_jt_position);
   setMimicJointPositions(handoff_state, gs_active_group);
 
-  const moveit::core::AttachedBody *ss_needle_body = start_state.getAttachedBody(m_ObjectName);
-  const moveit::core::AttachedBody *gs_needle_body = goal_state.getAttachedBody(m_ObjectName);
+  const moveit::core::AttachedBody* ss_needle_body = start_state.getAttachedBody(m_ObjectName);
+  const moveit::core::AttachedBody* gs_needle_body = goal_state.getAttachedBody(m_ObjectName);
 
   std::set<std::string> touch_links = ss_needle_body->getTouchLinks();
   touch_links.insert(gs_needle_body->getTouchLinks().begin(), gs_needle_body->getTouchLinks().end());
@@ -221,9 +231,12 @@ bool HybridMotionValidator::planHandoff(const robot_state::RobotState &start_sta
   return able_to_handoff;
 }
 
-bool HybridMotionValidator::planNeedleGrasping(const robot_state::RobotState &start_state,
-                                               const robot_state::RobotState &handoff_state,
-                                               const std::string &gs_active_group) const
+bool HybridMotionValidator::planNeedleGrasping
+(
+const robot_state::RobotState& start_state,
+const robot_state::RobotState& handoff_state,
+const std::string& gs_active_group
+) const
 {
   // planning in a back order fashion
   robot_state::RobotStatePtr pre_grasp_state(new robot_state::RobotState(start_state));
@@ -234,9 +247,12 @@ bool HybridMotionValidator::planNeedleGrasping(const robot_state::RobotState &st
   return true;
 }
 
-bool HybridMotionValidator::planNeedleReleasing(const robot_state::RobotState &handoff_state,
-                                                const robot_state::RobotState &goal_state,
-                                                const std::string &ss_active_group) const
+bool HybridMotionValidator::planNeedleReleasing
+(
+const robot_state::RobotState& handoff_state,
+const robot_state::RobotState& goal_state,
+const std::string& ss_active_group
+) const
 {
   robot_state::RobotStatePtr ungrasped_state(new robot_state::RobotState(goal_state));
 
@@ -246,13 +262,16 @@ bool HybridMotionValidator::planNeedleReleasing(const robot_state::RobotState &h
   return true;
 }
 
-bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotStatePtr& pre_grasp_state,
-                                                            const robot_state::RobotState &handoff_state,
-                                                            const std::string &planning_group) const
+bool HybridMotionValidator::planPreGraspStateToGraspedState
+(
+robot_state::RobotStatePtr& pre_grasp_state,
+const robot_state::RobotState& handoff_state,
+const std::string& planning_group
+) const
 {
   // make a pre_grasp_state
-  const robot_state::JointModelGroup *arm_joint_group = pre_grasp_state->getJointModelGroup(planning_group);
-  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+  const robot_state::JointModelGroup* arm_joint_group = pre_grasp_state->getJointModelGroup(planning_group);
+  const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
 
   const Eigen::Affine3d grasped_tool_tip_pose = handoff_state.getGlobalLinkTransform(tip_link);
   Eigen::Affine3d pregrasp_tool_tip_pose = grasped_tool_tip_pose;
@@ -322,7 +341,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
 
   // publishRobotState(*pre_grasp_state);
 
-  const moveit::core::AttachedBody *hdof_needle_body = handoff_state.getAttachedBody(m_ObjectName);
+  const moveit::core::AttachedBody* hdof_needle_body = handoff_state.getAttachedBody(m_ObjectName);
 
   traj.back()->attachBody(hdof_needle_body->getName(), hdof_needle_body->getShapes(),
                           hdof_needle_body->getFixedTransforms(), hdof_needle_body->getTouchLinks(),
@@ -332,7 +351,7 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
   {
     eef_joint_position[i] = 0.0;
   }
-  traj.back()->setJointGroupPositions(eef_group_name,eef_joint_position);
+  traj.back()->setJointGroupPositions(eef_group_name, eef_joint_position);
   traj.back()->update();
 
   for (std::size_t i = 0; i < traj.size(); i++)
@@ -354,15 +373,18 @@ bool HybridMotionValidator::planPreGraspStateToGraspedState(robot_state::RobotSt
 }
 
 
-bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::RobotState &start_state,
-                                                         const robot_state::RobotState &pre_grasp_state,
-                                                         const std::string &planning_group) const
+bool HybridMotionValidator::planSafeStateToPreGraspState
+(
+const robot_state::RobotState& start_state,
+const robot_state::RobotState& pre_grasp_state,
+const std::string& planning_group
+) const
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(start_state));
-  const robot_state::JointModelGroup *arm_joint_group = pre_grasp_state.getJointModelGroup(planning_group);
-  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+  const robot_state::JointModelGroup* arm_joint_group = pre_grasp_state.getJointModelGroup(planning_group);
+  const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d pre_grasp_tool_tip_pose = pre_grasp_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
@@ -403,13 +425,16 @@ bool HybridMotionValidator::planSafeStateToPreGraspState(const robot_state::Robo
   return clear_path;
 }
 
-bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::RobotState &handoff_state,
-                                                           robot_state::RobotStatePtr& ungrasped_state,
-                                                           const std::string &planning_group) const
+bool HybridMotionValidator::planGraspStateToUngraspedState
+(
+const robot_state::RobotState& handoff_state,
+robot_state::RobotStatePtr& ungrasped_state,
+const std::string& planning_group
+) const
 {
   // make a ungrasped_state
-  const robot_state::JointModelGroup *arm_joint_group = handoff_state.getJointModelGroup(planning_group);
-  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+  const robot_state::JointModelGroup* arm_joint_group = handoff_state.getJointModelGroup(planning_group);
+  const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
 
   const Eigen::Affine3d grasped_tool_tip_pose = handoff_state.getGlobalLinkTransform(tip_link);
   Eigen::Affine3d ungrasped_tool_tip_pose = grasped_tool_tip_pose;
@@ -494,15 +519,18 @@ bool HybridMotionValidator::planGraspStateToUngraspedState(const robot_state::Ro
   return clear_path;
 }
 
-bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::RobotState &ungrasped_state,
-                                                          const robot_state::RobotState &goal_state,
-                                                          const std::string &planning_group) const
+bool HybridMotionValidator::planUngraspedStateToSafeState
+(
+const robot_state::RobotState& ungrasped_state,
+const robot_state::RobotState& goal_state,
+const std::string& planning_group
+) const
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(ungrasped_state));
-  const robot_state::JointModelGroup *arm_joint_group = goal_state.getJointModelGroup(planning_group);
-  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+  const robot_state::JointModelGroup* arm_joint_group = goal_state.getJointModelGroup(planning_group);
+  const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
@@ -544,16 +572,19 @@ bool HybridMotionValidator::planUngraspedStateToSafeState(const robot_state::Rob
   return clear_path;
 }
 
-bool HybridMotionValidator::planObjectTransit(const robot_state::RobotState &start_state,
-                                              const robot_state::RobotState &goal_state,
-                                              const std::string &planning_group) const
+bool HybridMotionValidator::planObjectTransit
+(
+const robot_state::RobotState& start_state,
+const robot_state::RobotState& goal_state,
+const std::string& planning_group
+) const
 {
   hyStateSpace_->object_transit_motion_planner_num += 1;
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(start_state));
-  const robot_state::JointModelGroup *arm_joint_group = goal_state.getJointModelGroup(planning_group);
-  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+  const robot_state::JointModelGroup* arm_joint_group = goal_state.getJointModelGroup(planning_group);
+  const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
@@ -609,11 +640,12 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->collision_checking_duration_ += elapsed;
 
-  if(collision_result.collision)
+  if (collision_result.collision)
   {
     ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
     collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-    for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
     {
       ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
     }
@@ -621,11 +653,14 @@ bool HybridMotionValidator::noCollision(const robot_state::RobotState& rstate) c
   return no_collision;
 }
 
-void HybridMotionValidator::setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
-                                                   const std::string &planning_group) const
+void HybridMotionValidator::setMimicJointPositions
+(
+const robot_state::RobotStatePtr& rstate,
+const std::string& planning_group
+) const
 {
   const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
-  const double *joint_val = rstate->getJointPositions(outer_pitch_joint);
-  if(joint_val)
+  const double* joint_val = rstate->getJointPositions(outer_pitch_joint);
+  if (joint_val)
     rstate->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
 }
