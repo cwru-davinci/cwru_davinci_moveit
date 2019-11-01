@@ -58,7 +58,8 @@ class DavinciNeedleHandoffExecutionManager
 public:
   DavinciNeedleHandoffExecutionManager
   (
-  const ros::NodeHandle &nodeHandlePrivate
+  const ros::NodeHandle& nodeHandle,
+  const ros::NodeHandle& nodeHandlePrivate
   );
 
   bool planNeedleHandoffTraj
@@ -69,14 +70,17 @@ public:
   bool executeNeedleHandoffTrajy();
 
 private:
+  typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
+
+private:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
   HybridObjectHandoffPlannerUniquePtr                             m_pHandoffPlanner;
 
   ompl::base::PlannerStatus                                       m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
 
-  std::unique_ptr<moveit::planning_interface::MoveGroupInterface> m_pSupportArmGroup;
-  std::unique_ptr<moveit::planning_interface::MoveGroupInterface> m_pSupportArmEefGroup;
+  std::unique_ptr<MoveGroupInterface>                             m_pSupportArmGroup;
+  std::unique_ptr<MoveGroupInterface>                             m_pSupportArmEefGroup;
 
   cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr               m_pNeedleGrasper;
 
@@ -84,10 +88,10 @@ private:
 
   geometry_msgs::PoseStamped                                      m_NeedlePose;
 
-  SolutionPathJointTrajectory                                     m_HandoffJntTraj;
+  PathJointTrajectory                                             m_HandoffJntTraj;
 
   ros::NodeHandle                                                 m_NodeHandlePrivate;
-
+  ros::NodeHandle                                                 m_NodeHandle;
 private:
 
 };

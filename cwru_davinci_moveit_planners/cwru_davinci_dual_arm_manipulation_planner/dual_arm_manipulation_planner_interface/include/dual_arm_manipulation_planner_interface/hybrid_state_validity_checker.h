@@ -61,47 +61,47 @@ class HybridStateValidityChecker : public ompl::base::StateValidityChecker
 public:
   HybridStateValidityChecker
   (
-  const ompl::base::SpaceInformationPtr &si,
-  const robot_model::RobotModelConstPtr &pRobotModel,
-  const std::string &objectName
+  const ompl::base::SpaceInformationPtr& si,
+  const robot_model::RobotModelConstPtr& pRobotModel,
+  const std::string& objectName
   );
 
   virtual ~HybridStateValidityChecker()
   {}
 
-  virtual bool isValid(const ompl::base::State *state) const override;
+  virtual bool isValid(const ompl::base::State* state) const override;
 
-  virtual double cost(const ompl::base::State *state) const;
+  virtual double cost(const ompl::base::State* state) const;
 
-  virtual double clearance(const ompl::base::State *state) const override;
+  virtual double clearance(const ompl::base::State* state) const override;
 
   bool hybridStateToRobotState
   (
-  const HybridObjectStateSpace::StateType *pHyState,
-  const robot_state::RobotStatePtr &pRSstate,
+  const HybridObjectStateSpace::StateType* pHyState,
+  const robot_state::RobotStatePtr& pRSstate,
   bool attachedObject = true
   ) const;
 
   bool hybridStateToRobotStateNoAttachedObject
   (
-  const HybridObjectStateSpace::StateType *pHyState,
-  const robot_state::RobotStatePtr &pRSstate
+  const HybridObjectStateSpace::StateType* pHyState,
+  const robot_state::RobotStatePtr& pRSstate
   ) const;
 
-  moveit::core::AttachedBody *createAttachedBody
+  moveit::core::AttachedBody* createAttachedBody
   (
-  const std::string &supportGroup,
-  const std::string &objectName,
+  const std::string& supportGroup,
+  const std::string& objectName,
   const int grasp_pose_id
   ) const;
 
   void setMimicJointPositions
   (
-  const robot_state::RobotStatePtr &rstate,
-  const std::string &planning_group
+  const robot_state::RobotStatePtr& rstate,
+  const std::string& planning_group
   ) const;
 
-  inline const robot_model::RobotModelConstPtr &robotModel() const
+  inline const robot_model::RobotModelConstPtr& robotModel() const
   {
     return kmodel_;
   }
@@ -113,7 +113,7 @@ protected:
 
   void publishRobotState
   (
-  const robot_state::RobotState &rstate
+  const robot_state::RobotState& rstate
   ) const;
 
 protected:

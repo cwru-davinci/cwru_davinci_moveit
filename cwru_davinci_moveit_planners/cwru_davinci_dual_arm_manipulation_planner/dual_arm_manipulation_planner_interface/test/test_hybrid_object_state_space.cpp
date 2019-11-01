@@ -50,16 +50,19 @@ using namespace dual_arm_manipulation_planner_interface;
 using namespace hybrid_planner_test;
 namespace ob =  ompl::base;
 
-void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspIndex,
-                      const int from_grasp_index,
-                      int& to_grasp_index,
-                      bool same_grasp_part)
+void chooseGraspIndex
+(
+const std::vector<cwru_davinci_grasp::GraspInfo>& graspIndex,
+const int from_grasp_index,
+int& to_grasp_index,
+bool same_grasp_part
+)
 {
-  if(same_grasp_part)
+  if (same_grasp_part)
   {
     for (std::size_t i = 0; i < graspIndex.size(); ++i)
     {
-      if(graspIndex[i].part_id == graspIndex[from_grasp_index].part_id && i != from_grasp_index)
+      if (graspIndex[i].part_id == graspIndex[from_grasp_index].part_id && i != from_grasp_index)
       {
         to_grasp_index = i;
         return;
@@ -70,7 +73,7 @@ void chooseGraspIndex(const std::vector<cwru_davinci_grasp::GraspInfo>& graspInd
   {
     for (std::size_t i = 0; i < graspIndex.size(); ++i)
     {
-      if(graspIndex[i].part_id != graspIndex[from_grasp_index].part_id && i != from_grasp_index)
+      if (graspIndex[i].part_id != graspIndex[from_grasp_index].part_id && i != from_grasp_index)
       {
         to_grasp_index = i;
         return;

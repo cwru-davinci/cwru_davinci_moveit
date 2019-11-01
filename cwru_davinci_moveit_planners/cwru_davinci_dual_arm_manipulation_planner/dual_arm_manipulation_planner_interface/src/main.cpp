@@ -58,14 +58,17 @@ namespace ob = ompl::base;
 namespace og = ompl::geometric;
 using namespace dual_arm_manipulation_planner_interface;
 
-void plan(const ros::NodeHandle &node_handle,
-          const ros::NodeHandle &node_handle_priv,
-          std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses)
+void plan
+(
+const ros::NodeHandle& node_handle,
+const ros::NodeHandle& node_handle_priv,
+std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
+)
 {
   std::string objectName = "needle_r";
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
 
   // construct an instance of space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -81,9 +84,9 @@ void plan(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
 
   si->setup();
 
@@ -94,8 +97,8 @@ void plan(const ros::NodeHandle &node_handle,
   ob::ScopedState<HybridObjectStateSpace> start(hystsp);
   ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-  bool is_ss_valid= false;
-  while(!is_ss_valid)
+  bool is_ss_valid = false;
+  while (!is_ss_valid)
   {
     stateSampler->sampleUniform(start.get());
     is_ss_valid = si->isValid(start.get());
@@ -111,14 +114,14 @@ void plan(const ros::NodeHandle &node_handle,
   bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
 
   bool is_gs_valid = si->isValid(goal.get());
-  while(same_arm || same_grasp_part || !is_gs_valid)
+  while (same_arm || same_grasp_part || !is_gs_valid)
   {
     stateSampler->sampleUniform(goal.get());
     is_gs_valid = si->isValid(goal.get());
-    if(!is_gs_valid)
+    if (!is_gs_valid)
       continue;
     same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-    same_grasp_part = ( start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+    same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
   }
 
   // create a problem instance
@@ -151,7 +154,7 @@ void plan(const ros::NodeHandle &node_handle,
     if (pdef->hasExactSolution())
     {
       std::cout << "Has exact solution" << std::endl;
-      double *total_time = new double;
+      double* total_time = new double;
       si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
       delete total_time;
 
@@ -161,10 +164,10 @@ void plan(const ros::NodeHandle &node_handle,
       std::cout << "Found solution with " << slnPath.getStateCount()
                 << " states and length " << slnPath.length() << std::endl;
       // print the path to screen
-  
+
       std::string packPath;
       node_handle_priv.getParam("packPath", packPath);
-      std::ofstream outFile(packPath +"/../../../" + "PathFound.txt");
+      std::ofstream outFile(packPath + "/../../../" + "PathFound.txt");
       slnPath.printAsMatrix(outFile);
       outFile.close();
     }
@@ -201,13 +204,12 @@ int main(int argc, char** argv)
   ros::Duration(3.0).sleep();
 
   cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =
-    boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(node_handle_priv,
-                                                                     "psm_one",
-                                                                     "psm_one_gripper");
+  boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(node_handle_priv,
+                                                                   "psm_one",
+                                                                   "psm_one_gripper");
 
 
-
-  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
+  std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
 
   plan(node_handle, node_handle_priv, grasp_poses);
 

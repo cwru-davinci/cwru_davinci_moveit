@@ -51,17 +51,29 @@
 namespace dual_arm_manipulation_planner_interface
 {
 
-typedef std::vector<std::vector<double>> JointTrajectory;
-typedef std::map<std::string, JointTrajectory> PlanningGroupJointTrajectory;
-typedef std::vector<PlanningGroupJointTrajectory> SolutionPathJointTrajectory;
+enum class TrajectoryType
+{
+  ObjectTransit,
+  SafePlaceToPreGrasp,
+  PreGraspToGrasped,
+  GraspedToUngrasped,
+  UngrasedToSafePlace
+};
+
+typedef std::vector<double> JointTrajectoryPoint;
+typedef std::vector<JointTrajectoryPoint> JointTrajectory;
+typedef std::string MoveGroup;
+typedef std::map<MoveGroup, JointTrajectory>  MoveGroupJointTrajectorySegment;
+typedef std::vector<std::pair<TrajectoryType, MoveGroupJointTrajectorySegment>> MoveGroupJointTrajectory;
+typedef std::vector<MoveGroupJointTrajectory> PathJointTrajectory;
 
 class HybridObjectHandoffPlanner
 {
 public:
   HybridObjectHandoffPlanner
   (
-  const ompl::base::State *start,
-  const ompl::base::State *goal,
+  const ompl::base::State* start,
+  const ompl::base::State* goal,
   const double se3BoundXAxisMin,
   const double se3BoundXAxisMax,
   const double se3BoundYAxisMin,
@@ -72,9 +84,9 @@ public:
   const int armIdxUpBd,
   const int graspIdxLwBd,
   const int graspIdxUpBd,
-  const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
   const robot_model::RobotModelConstPtr& pRobotModel,
-  const std::string &objectName,
+  const std::string& objectName,
   const double maxDistance,
   bool verbose = true
   );
@@ -88,7 +100,7 @@ public:
 
   bool getSolutionPathJointTrajectory
   (
-  SolutionPathJointTrajectory& wholePathJntTraj
+  PathJointTrajectory& handoffPathJntTraj
   );
 
 protected:
@@ -113,13 +125,13 @@ protected:
   (
   const HybridObjectStateSpacePtr& pHyStateSpace,
   const robot_model::RobotModelConstPtr& pRobotModel,
-  const std::string &objectName
+  const std::string& objectName
   );
 
   void setupProblemDefinition
   (
-  const ompl::base::State *start,
-  const ompl::base::State *goal
+  const ompl::base::State* start,
+  const ompl::base::State* goal
   );
 
   void setupPlanner
@@ -129,71 +141,71 @@ protected:
 
   bool connectStates
   (
-  const ompl::base::State *pFromState,
-  const ompl::base::State *pToState,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const ompl::base::State* pFromState,
+  const ompl::base::State* pToState,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planObjectTransit
   (
-  const HybridObjectStateSpace::StateType *pHyFromState,
-  const HybridObjectStateSpace::StateType *pHyToState,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const HybridObjectStateSpace::StateType* pHyFromState,
+  const HybridObjectStateSpace::StateType* pHyToState,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planHandoff
   (
-  const HybridObjectStateSpace::StateType *pHyFromState,
-  const HybridObjectStateSpace::StateType *pHyToState,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const HybridObjectStateSpace::StateType* pHyFromState,
+  const HybridObjectStateSpace::StateType* pHyToState,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planNeedleGrasping
   (
-  const robot_state::RobotStatePtr &pRobotFromState,
-  const robot_state::RobotStateConstPtr &pHandoffRobotState,
-  const std::string &toSupportGroup,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const robot_state::RobotStatePtr& pRobotFromState,
+  const robot_state::RobotStateConstPtr& pHandoffRobotState,
+  const std::string& toSupportGroup,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planPreGraspStateToGraspedState
   (
-  robot_state::RobotStatePtr &pPreGraspRobotState,
-  const robot_state::RobotStateConstPtr &pHandoffRobotState,
-  const std::string &toSupportGroup,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  robot_state::RobotStatePtr& pPreGraspRobotState,
+  const robot_state::RobotStateConstPtr& pHandoffRobotState,
+  const std::string& toSupportGroup,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planSafeStateToPreGraspState
   (
-  const robot_state::RobotStatePtr &pRobotFromState,
-  const robot_state::RobotStateConstPtr &pPreGraspRobotState,
-  const std::string &toSupportGroup,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const robot_state::RobotStatePtr& pRobotFromState,
+  const robot_state::RobotStateConstPtr& pPreGraspRobotState,
+  const std::string& toSupportGroup,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planNeedleReleasing
   (
-  const robot_state::RobotStateConstPtr &pHandoffRobotState,
-  const robot_state::RobotStateConstPtr &pRobotToState,
-  const std::string &fromSupportGroup,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const robot_state::RobotStateConstPtr& pHandoffRobotState,
+  const robot_state::RobotStateConstPtr& pRobotToState,
+  const std::string& fromSupportGroup,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planGraspStateToUngraspedState
   (
-  const robot_state::RobotStateConstPtr &pHandoffRobotState,
-  const robot_state::RobotStatePtr &pUngraspedRobotState,
-  const std::string &fromSupportGroup,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const robot_state::RobotStateConstPtr& pHandoffRobotState,
+  const robot_state::RobotStatePtr& pUngraspedRobotState,
+  const std::string& fromSupportGroup,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planUngraspedStateToSafeState
   (
-  const robot_state::RobotStatePtr &pUngraspedRobotState,
-  const robot_state::RobotStateConstPtr &pRobotToState,
-  const std::string &fromSupportGroup,
-  SolutionPathJointTrajectory &jntTrajectoryBtwStates
+  const robot_state::RobotStatePtr& pUngraspedRobotState,
+  const robot_state::RobotStateConstPtr& pRobotToState,
+  const std::string& fromSupportGroup,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 };
 

@@ -43,9 +43,12 @@
 
 using namespace dual_arm_manipulation_planner_interface;
 
-HybridStateValidityChecker::HybridStateValidityChecker(const ompl::base::SpaceInformationPtr &si,
-                                                       const robot_model::RobotModelConstPtr &pRobotModel,
-                                                       const std::string &objectName)
+HybridStateValidityChecker::HybridStateValidityChecker
+(
+const ompl::base::SpaceInformationPtr& si,
+const robot_model::RobotModelConstPtr& pRobotModel,
+const std::string& objectName
+)
 : ompl::base::StateValidityChecker(si),
   kmodel_(pRobotModel),
   m_ObjectName(objectName)
@@ -70,7 +73,7 @@ HybridStateValidityChecker::HybridStateValidityChecker(const ompl::base::SpaceIn
   loadNeedleModel();
 }
 
-bool HybridStateValidityChecker::isValid(const ompl::base::State *state) const
+bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 {
   auto start = std::chrono::high_resolution_clock::now();
   hyStateSpace_->validty_check_num += 1;
@@ -195,9 +198,12 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 }
 
 
-bool HybridStateValidityChecker::hybridStateToRobotState(const HybridObjectStateSpace::StateType *pHyState,
-                                                         const robot_state::RobotStatePtr &pRSstate,
-                                                         bool attachedObject) const
+bool HybridStateValidityChecker::hybridStateToRobotState
+(
+const HybridObjectStateSpace::StateType* pHyState,
+const robot_state::RobotStatePtr& pRSstate,
+bool attachedObject
+) const
 {
   if(!pHyState || !pRSstate)
   {
@@ -267,17 +273,20 @@ bool HybridStateValidityChecker::hybridStateToRobotState(const HybridObjectState
 
 bool HybridStateValidityChecker::hybridStateToRobotStateNoAttachedObject
 (
-const HybridObjectStateSpace::StateType *pHyState,
-const robot_state::RobotStatePtr &pRSstate
+const HybridObjectStateSpace::StateType* pHyState,
+const robot_state::RobotStatePtr& pRSstate
 ) const
 {
   return hybridStateToRobotState(pHyState, pRSstate, false);
 }
 
 moveit::core::AttachedBody*
-HybridStateValidityChecker::createAttachedBody(const std::string &supportGroup,
-                                               const std::string &objectName,
-                                               const int grasp_pose_id) const
+HybridStateValidityChecker::createAttachedBody
+(
+const std::string& supportGroup,
+const std::string& objectName,
+const int grasp_pose_id
+) const
 {
   const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(supportGroup);
   const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
@@ -335,8 +344,11 @@ void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState
 //  ros::Duration(0.1).sleep();
 }
 
-void HybridStateValidityChecker::setMimicJointPositions(const robot_state::RobotStatePtr &rstate,
-                                                        const std::string &planning_group) const
+void HybridStateValidityChecker::setMimicJointPositions
+(
+const robot_state::RobotStatePtr& rstate,
+const std::string& planning_group
+) const
 {
   const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
   const double *joint_val = rstate->getJointPositions(outer_pitch_joint);

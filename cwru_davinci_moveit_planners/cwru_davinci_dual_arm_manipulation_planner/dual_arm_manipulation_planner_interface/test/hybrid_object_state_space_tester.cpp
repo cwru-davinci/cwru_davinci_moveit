@@ -63,19 +63,22 @@ public:
       space. When samples need to be taken to ensure certain
       functionality works, \e n samples are to be drawn. For
       distance comparisons, use an error margin of \e eps. */
-  HybridObjectStateSpaceTester(int arm_idx_lw_bd,
-                               int arm_idx_up_bd,
-                               int grasp_idx_lw_bd,
-                               int grasp_idx_up_bd,
-                               const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps,
-                               const std::shared_ptr<HybridObjectStateSpace> &pHyStateSpace,
-                               double eps = std::numeric_limits<double>::epsilon() * 10.0) :
-    HybridObjectStateSpace(arm_idx_lw_bd,
-                           arm_idx_up_bd,
-                           grasp_idx_lw_bd,
-                           grasp_idx_up_bd,
-                           possible_grasps),
-    pHyStateSpace_(pHyStateSpace), eps_(eps)
+  HybridObjectStateSpaceTester
+  (
+  int arm_idx_lw_bd,
+  int arm_idx_up_bd,
+  int grasp_idx_lw_bd,
+  int grasp_idx_up_bd,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
+  const std::shared_ptr<HybridObjectStateSpace>& pHyStateSpace,
+  double eps = std::numeric_limits<double>::epsilon() * 10.0
+  ) :
+  HybridObjectStateSpace(arm_idx_lw_bd,
+                         arm_idx_up_bd,
+                         grasp_idx_lw_bd,
+                         grasp_idx_up_bd,
+                         possible_grasps),
+  pHyStateSpace_(pHyStateSpace), eps_(eps)
   {
 
   }
@@ -119,9 +122,9 @@ public:
 
 private:
 
-  std::shared_ptr<HybridObjectStateSpace>           pHyStateSpace_;
-  ompl::RNG                                         rng_;
+  std::shared_ptr<HybridObjectStateSpace> pHyStateSpace_;
+  ompl::RNG rng_;
 
-  double                                            eps_;
+  double eps_;
 };
 }

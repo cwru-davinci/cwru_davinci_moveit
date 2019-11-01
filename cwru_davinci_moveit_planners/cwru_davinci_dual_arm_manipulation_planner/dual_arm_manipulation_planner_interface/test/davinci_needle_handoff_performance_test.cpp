@@ -68,6 +68,7 @@ struct PerformanceStats
   double min;
   int failed_num;
   int succeeded_num;
+
   PerformanceStats()
   {
     mean = 0.0;
@@ -80,7 +81,11 @@ struct PerformanceStats
   }
 };
 
-void printPerformanceStats(const PerformanceStats& pStats, const std::string& testCase)
+void printPerformanceStats
+(
+const PerformanceStats& pStats,
+const std::string& testCase
+)
 {
   std::cout << "The test case is " << testCase << " and its performance stats are listed below:" << std::endl;
   std::cout << "Number of failed times is " << pStats.failed_num << "\n"
@@ -91,9 +96,14 @@ void printPerformanceStats(const PerformanceStats& pStats, const std::string& te
             << "Test case min running time is " << pStats.min << "s" << std::endl;
 }
 
-bool findValidGrasp(const ompl::base::SpaceInformationPtr &si, ob::ScopedState<HybridObjectStateSpace> cstate,
-                    const std::vector<cwru_davinci_grasp::GraspInfo> &possible_grasps, int from_part_id = 0,
-                    bool pick_right_part = false)
+bool findValidGrasp
+(
+const ompl::base::SpaceInformationPtr& si,
+ob::ScopedState<HybridObjectStateSpace> cstate,
+const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
+int from_part_id = 0,
+bool pick_right_part = false
+)
 {
   bool is_found = false;
   std::unordered_set<int> invalid_grasp_list;
@@ -129,7 +139,11 @@ bool findValidGrasp(const ompl::base::SpaceInformationPtr &si, ob::ScopedState<H
   }
 }
 
-void getPerformanceStats(const std::vector<double>& running_time, PerformanceStats& stats)
+void getPerformanceStats
+(
+const std::vector<double>& running_time,
+PerformanceStats& stats
+)
 {
   stats.max = *std::max_element(running_time.begin(), running_time.end());
   stats.min = *std::min_element(running_time.begin(), running_time.end());
@@ -139,21 +153,25 @@ void getPerformanceStats(const std::vector<double>& running_time, PerformanceSta
   double mean = accum / running_time.size();
   stats.mean = mean;
 
-  std::for_each (running_time.begin(), running_time.end(), [&](const double d) {
+  std::for_each(running_time.begin(), running_time.end(), [&](const double d)
+  {
     accum += (d - mean) * (d - mean);
   });
-  stats.stdev = sqrt(accum / (running_time.size()-1));
+  stats.stdev = sqrt(accum / (running_time.size() - 1));
 }
 
-PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
-                                const ros::NodeHandle &node_handle_priv,
-                                const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-                                int num_test)
+PerformanceStats oneHandoffTest
+(
+const ros::NodeHandle& node_handle,
+const ros::NodeHandle& node_handle_priv,
+const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+int num_test
+)
 {
   std::string objectName = "needle_r";
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
 
   // construct an instance of  space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -169,9 +187,9 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -187,8 +205,8 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
     ob::ScopedState<HybridObjectStateSpace> start(hystsp);
     ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-    bool is_ss_valid= false;
-    while(!is_ss_valid)
+    bool is_ss_valid = false;
+    while (!is_ss_valid)
     {
       stateSampler->sampleUniform(start.get());
       is_ss_valid = si->isValid(start.get());
@@ -204,14 +222,14 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
     bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
 
     bool is_gs_valid = si->isValid(goal.get());
-    while(same_arm || same_grasp_part || !is_gs_valid)
+    while (same_arm || same_grasp_part || !is_gs_valid)
     {
       stateSampler->sampleUniform(goal.get());
       is_gs_valid = si->isValid(goal.get());
-      if(!is_gs_valid)
+      if (!is_gs_valid)
         continue;
       same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-      same_grasp_part = ( start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+      same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
     }
 
 //    hystsp->printState(start.get(), std::cout);
@@ -251,7 +269,7 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
       {
         std::cout << "Has exact solution" << std::endl;
         succeeded_num += 1;
-        double *total_time = new double;
+        double* total_time = new double;
         si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
         running_time.push_back(*total_time);
         delete total_time;
@@ -294,15 +312,18 @@ PerformanceStats oneHandoffTest(const ros::NodeHandle &node_handle,
   return stats;
 }
 
-PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
-                                const ros::NodeHandle &node_handle_priv,
-                                const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-                                int num_test)
+PerformanceStats twoHandoffTest
+(
+const ros::NodeHandle& node_handle,
+const ros::NodeHandle& node_handle_priv,
+const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+int num_test
+)
 {
   std::string objectName = "needle_r";
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
 
   // construct an instance of  space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -318,9 +339,9 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -336,8 +357,8 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
     ob::ScopedState<HybridObjectStateSpace> start(hystsp);
     ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-    bool is_ss_valid= false;
-    while(!is_ss_valid)
+    bool is_ss_valid = false;
+    while (!is_ss_valid)
     {
       stateSampler->sampleUniform(start.get());
       is_ss_valid = si->isValid(start.get());
@@ -353,14 +374,14 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
     bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
 
     bool is_gs_valid = si->isValid(goal.get());
-    while(!same_arm || same_grasp_part || !is_gs_valid)
+    while (!same_arm || same_grasp_part || !is_gs_valid)
     {
       stateSampler->sampleUniform(goal.get());
       is_gs_valid = si->isValid(goal.get());
-      if(!is_gs_valid)
+      if (!is_gs_valid)
         continue;
       same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-      same_grasp_part = ( start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+      same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
     }
 
 //    hystsp->printState(start.get(), std::cout);
@@ -400,7 +421,7 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
       {
         std::cout << "Has exact solution" << std::endl;
         succeeded_num += 1;
-        double *total_time = new double;
+        double* total_time = new double;
         si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
         running_time.push_back(*total_time);
         delete total_time;
@@ -443,15 +464,18 @@ PerformanceStats twoHandoffTest(const ros::NodeHandle &node_handle,
   return stats;
 }
 
-PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
-                                  const ros::NodeHandle &node_handle_priv,
-                                  const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-                                  int num_test)
+PerformanceStats threeHandoffTest
+(
+const ros::NodeHandle& node_handle,
+const ros::NodeHandle& node_handle_priv,
+const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+int num_test
+)
 {
   std::string objectName = "needle_r";
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   // create an instance of state space  // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
 
   // construct an instance of  space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
@@ -467,9 +491,9 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
   hystsp->setSE3Bounds(se3_xyz_bounds);
 
   si->setStateValidityChecker(
-    std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
   si->setMotionValidator(
-    std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
+  std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
   si->setup();
 
   ob::StateSamplerPtr stateSampler;  // setup a sampler
@@ -485,8 +509,8 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
     ob::ScopedState<HybridObjectStateSpace> start(hystsp);
     ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-    bool is_ss_valid= false;
-    while(!is_ss_valid)
+    bool is_ss_valid = false;
+    while (!is_ss_valid)
     {
       stateSampler->sampleUniform(start.get());
       is_ss_valid = si->isValid(start.get());
@@ -502,14 +526,14 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
     bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
 
     bool is_gs_valid = si->isValid(goal.get());
-    while(same_arm || !same_grasp_part || !is_gs_valid)
+    while (same_arm || !same_grasp_part || !is_gs_valid)
     {
       stateSampler->sampleUniform(goal.get());
       is_gs_valid = si->isValid(goal.get());
-      if(!is_gs_valid)
+      if (!is_gs_valid)
         continue;
       same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-      same_grasp_part = ( start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+      same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
     }
 
 //    hystsp->printState(start.get(), std::cout);
@@ -549,7 +573,7 @@ PerformanceStats threeHandoffTest(const ros::NodeHandle &node_handle,
       {
         std::cout << "Has exact solution" << std::endl;
         succeeded_num += 1;
-        double *total_time = new double;
+        double* total_time = new double;
         si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
         running_time.push_back(*total_time);
         delete total_time;
@@ -601,13 +625,13 @@ int main(int argc, char** argv)
   ros::Duration(3.0).sleep();
 
   cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =
-    boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(
-      node_handle_priv, "psm_one", "psm_one_gripper");
+  boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(
+  node_handle_priv, "psm_one", "psm_one_gripper");
 
   int test_num = 0;
   node_handle_priv.getParam("test_num", test_num);
 
-  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
+  std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
 
   PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
   PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
