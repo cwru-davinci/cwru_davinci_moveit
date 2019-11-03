@@ -67,7 +67,7 @@ public:
   const double solveTime
   );
 
-  moveit_msgs::MoveItErrorCodes executeNeedleHandoffTrajy();
+  bool executeNeedleHandoffTrajy();
 
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
