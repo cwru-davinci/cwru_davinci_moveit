@@ -57,7 +57,7 @@ const int armIdxLwBd,
 const int armIdxUpBd,
 const int graspIdxLwBd,
 const int graspIdxUpBd,
-const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
+const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
 const robot_model::RobotModelConstPtr& pRobotModel,
 const std::string& objectName,
 const double maxDistance,
@@ -75,7 +75,7 @@ bool verbose
                                                              armIdxUpBd,
                                                              graspIdxLwBd,
                                                              graspIdxUpBd,
-                                                             possible_grasps);
+                                                             possibleGrasps);
   if (!m_pHyStateSpace)
   {
     m_pSpaceInfor = nullptr;

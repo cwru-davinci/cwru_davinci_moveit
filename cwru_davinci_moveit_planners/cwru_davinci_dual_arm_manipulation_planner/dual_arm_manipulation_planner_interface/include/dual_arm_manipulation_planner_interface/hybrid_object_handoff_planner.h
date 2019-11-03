@@ -84,7 +84,7 @@ public:
   const int armIdxUpBd,
   const int graspIdxLwBd,
   const int graspIdxUpBd,
-  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
   const robot_model::RobotModelConstPtr& pRobotModel,
   const std::string& objectName,
   const double maxDistance,
