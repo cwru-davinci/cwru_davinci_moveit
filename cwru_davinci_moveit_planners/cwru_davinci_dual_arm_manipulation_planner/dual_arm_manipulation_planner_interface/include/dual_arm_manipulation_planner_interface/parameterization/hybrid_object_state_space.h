@@ -283,6 +283,10 @@ public:
 
   HybridObjectStateSpace
   (
+  );
+
+  HybridObjectStateSpace
+  (
   const int armIdxLwBd,
   const int armIdxUpBd,
   const int graspIdxLwBd,
@@ -329,7 +333,8 @@ public:
   void setGraspIndexBounds
   (
   int lowerBound,
-  int upperBound
+  int upperBound,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
   );
 
   bool setJointValues

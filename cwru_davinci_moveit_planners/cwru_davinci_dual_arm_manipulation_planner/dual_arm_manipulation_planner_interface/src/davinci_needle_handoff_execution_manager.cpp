@@ -44,11 +44,20 @@ namespace ob = ompl::base;
 DavinciNeedleHandoffExecutionManager::DavinciNeedleHandoffExecutionManager
 (
 const ros::NodeHandle& nodeHandle,
-const ros::NodeHandle& nodeHandlePrivate
+const ros::NodeHandle& nodeHandlePrivate,
+const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
+const std::string& robotDescription
 )
-:m_NodeHandle(nodeHandle), m_NodeHandlePrivate(nodeHandlePrivate)
+ : HybridObjectHandoffPlanner(),
+   m_NodeHandle(nodeHandle),
+   m_NodeHandlePrivate(nodeHandlePrivate),
+   m_RobotModelLoader(robotDescription)
 {
-//  m_pNeedleGrasper(new )
+  if(!initializePlanner(possibleGrasps))
+  {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed initializing handoff planner");
+    ros::shutdown();
+  }
 }
 
 bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
@@ -210,16 +219,116 @@ const double solveTime
       }
       else
       {
-        printf("DavinciNeedleHandoffExecutionManager: Failed to generate handoff trajectories");
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to generate handoff trajectories");
         return false;
       }
     }
     else
     {
-      printf("DavinciNeedleHandoffExecutionManager: Needle handoff planning failed");
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: Needle handoff planning failed, the error code is %s",
+               m_PlanningStatus.asString().c_str());
       m_HandoffJntTraj.resize(0);
       return false;
     }
   }
 
+}
+
+bool DavinciNeedleHandoffExecutionManager::initializePlanner
+(
+const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps
+)
+{
+  if (!m_NodeHandlePrivate.hasParam("se3_bounds"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `se3_bounds` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << m_NodeHandlePrivate.getNamespace());
+    return false;
+  }
+
+  XmlRpc::XmlRpcValue xmlSE3BoundsArray;
+  m_NodeHandlePrivate.getParam("se3_bounds", xmlSE3BoundsArray);
+  if (xmlSE3BoundsArray.getType() == XmlRpc::XmlRpcValue::TypeArray)
+  {
+    for (std::size_t i = 0; i < xmlSE3BoundsArray.size(); ++i)
+    {
+      ROS_ASSERT(xmlSE3BoundsArray[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+      m_SE3Bounds[i] = static_cast<double>(xmlSE3BoundsArray[i]);
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("SE3 bounds type is not type array?");
+  }
+
+  if (!m_NodeHandlePrivate.hasParam("arm_index_bounds"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `arm_index_bounds` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << m_NodeHandlePrivate.getNamespace());
+    return false;
+  }
+
+  XmlRpc::XmlRpcValue xmlArmIndexBounds;
+  m_NodeHandlePrivate.getParam("arm_index_bounds", xmlArmIndexBounds);
+  if (xmlArmIndexBounds.getType() == XmlRpc::XmlRpcValue::TypeArray)
+  {
+    for (std::size_t i = 0; i < xmlArmIndexBounds.size(); ++i)
+    {
+      ROS_ASSERT(xmlArmIndexBounds[i].getType() == XmlRpc::XmlRpcValue::TypeInt);
+      m_ArmIndexBounds[i] = static_cast<double>(xmlArmIndexBounds[i]);
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("SE3 bounds type is not type array?");
+  }
+
+  if (!m_NodeHandlePrivate.hasParam("object_name"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `object_name` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                      << m_NodeHandlePrivate.getNamespace());
+    return false;
+  }
+  std::string objectName;
+  m_NodeHandlePrivate.getParam("object_name", objectName);
+
+  if (!m_NodeHandlePrivate.hasParam("max_distance"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `max_distance` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << m_NodeHandlePrivate.getNamespace());
+    return false;
+  }
+  double maxDistance;
+  m_NodeHandlePrivate.getParam("max_distance", maxDistance);
+
+  if(possibleGrasps.empty())
+  {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: input grasp info list is empty");
+    return false;
+  }
+
+  m_pHandoffPlanner.reset(new DavinciNeedleHandoffExecutionManager());
+  m_pHandoffPlanner = std::dynamic_pointer_cast<DavinciNeedleHandoffExecutionManager>(m_pHandoffPlanner);
+  if(!m_pHandoffPlanner)
+  {
+    return false;
+  }
+
+  m_pHandoffPlanner->setupStateSpace();
+  m_pHandoffPlanner->m_pHyStateSpace->setSE3Bounds(m_SE3Bounds[0],
+                                                   m_SE3Bounds[1],
+                                                   m_SE3Bounds[2],
+                                                   m_SE3Bounds[3],
+                                                   m_SE3Bounds[4],
+                                                   m_SE3Bounds[5]);
+
+  return true;
 }

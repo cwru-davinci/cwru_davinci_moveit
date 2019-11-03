@@ -153,6 +153,30 @@ const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
 
 HybridObjectStateSpace::HybridObjectStateSpace
 (
+)
+: CompoundStateSpace()
+{
+  setName("HybridObject" + getName());
+  type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
+
+  addSubspace(std::make_shared<SE3StateSpace>(), 1.0);  // object pose space
+  components_.back()->setName(components_.back()->getName() + ":ObjectPose");
+
+  addSubspace(std::make_shared<DiscreteStateSpace>(0, 0), 1.0);  // arm index
+  components_.back()->setName(components_.back()->getName() + ":ArmIndex");
+
+  addSubspace(std::make_shared<DiscreteStateSpace>(0, 0), 1.0);  // grasp index
+  components_.back()->setName(components_.back()->getName() + ":GraspIndex");
+
+  addSubspace(std::make_shared<RealVectorStateSpace>(6), 1.0);
+  components_.back()->setName(components_.back()->getName() + ":JointVariables");
+  components_[3]->as<RealVectorStateSpace>()->setBounds(-7, 7);
+
+  lock();
+}
+
+HybridObjectStateSpace::HybridObjectStateSpace
+(
 const double se3BoundXAxisMin,
 const double se3BoundXAxisMax,
 const double se3BoundYAxisMin,
@@ -316,10 +340,12 @@ int upperBound
 void HybridObjectStateSpace::setGraspIndexBounds
 (
 int lowerBound,
-int upperBound
+int upperBound,
+const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
 )
 {
   components_[2]->as<DiscreteStateSpace>()->setBounds(lowerBound, upperBound);
+  m_PossibleGrasps = possible_grasps;
 }
 
 bool HybridObjectStateSpace::setJointValues

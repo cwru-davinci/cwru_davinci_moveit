@@ -84,10 +84,15 @@ public:
   const int armIdxUpBd,
   const int graspIdxLwBd,
   const int graspIdxUpBd,
-  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
   const robot_model::RobotModelConstPtr& pRobotModel,
   const std::string& objectName,
   const double maxDistance,
+  bool verbose = true
+  );
+
+  HybridObjectHandoffPlanner
+  (
   bool verbose = true
   );
 
@@ -121,6 +126,8 @@ protected:
   std::string                                  m_ObjectName;
 
 protected:
+  void setupStateSpace();
+
   void setupSpaceInformation
   (
   const HybridObjectStateSpacePtr& pHyStateSpace,
@@ -209,7 +216,7 @@ protected:
   );
 };
 
-typedef std::unique_ptr<HybridObjectHandoffPlanner> HybridObjectHandoffPlannerUniquePtr;
+typedef std::shared_ptr<HybridObjectHandoffPlanner> HybridObjectHandoffPlannerPtr;
 
 }
 

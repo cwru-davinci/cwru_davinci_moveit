@@ -57,13 +57,13 @@ const int armIdxLwBd,
 const int armIdxUpBd,
 const int graspIdxLwBd,
 const int graspIdxUpBd,
-const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
+const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
 const robot_model::RobotModelConstPtr& pRobotModel,
 const std::string& objectName,
 const double maxDistance,
 bool verbose
 )
-: m_Verbose(verbose), m_ObjectName(objectName)
+: m_Verbose(verbose)
 {
   m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>(se3BoundXAxisMin,
                                                              se3BoundXAxisMax,
@@ -75,7 +75,7 @@ bool verbose
                                                              armIdxUpBd,
                                                              graspIdxLwBd,
                                                              graspIdxUpBd,
-                                                             possible_grasps);
+                                                             possibleGrasps);
   if (!m_pHyStateSpace)
   {
     m_pSpaceInfor = nullptr;
@@ -101,6 +101,13 @@ bool verbose
     }
   }
 }
+
+HybridObjectHandoffPlanner::HybridObjectHandoffPlanner
+(
+bool verbose
+)
+ : m_Verbose(verbose)
+{}
 
 ob::PlannerStatus::StatusType HybridObjectHandoffPlanner::solve
 (
@@ -143,6 +150,11 @@ PathJointTrajectory& handoffPathJntTraj
     handoffPathJntTraj[i] = jntTrajectoryBtwStates;
   }
   return true;
+}
+
+void HybridObjectHandoffPlanner::setupStateSpace()
+{
+  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>();
 }
 
 void HybridObjectHandoffPlanner::setupSpaceInformation

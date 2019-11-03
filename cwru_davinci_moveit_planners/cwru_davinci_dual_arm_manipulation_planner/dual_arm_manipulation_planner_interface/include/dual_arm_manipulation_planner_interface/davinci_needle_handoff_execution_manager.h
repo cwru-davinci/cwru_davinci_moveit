@@ -53,14 +53,18 @@
 
 namespace dual_arm_manipulation_planner_interface
 {
-class DavinciNeedleHandoffExecutionManager
+class DavinciNeedleHandoffExecutionManager : public HybridObjectHandoffPlanner
 {
 public:
   DavinciNeedleHandoffExecutionManager
   (
   const ros::NodeHandle& nodeHandle,
-  const ros::NodeHandle& nodeHandlePrivate
+  const ros::NodeHandle& nodeHandlePrivate,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
+  const std::string& robotDescription = "robot_description"
   );
+
+  DavinciNeedleHandoffExecutionManager() : HybridObjectHandoffPlanner() {};
 
   bool planNeedleHandoffTraj
   (
@@ -75,7 +79,7 @@ private:
 private:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
-  HybridObjectHandoffPlannerUniquePtr                             m_pHandoffPlanner;
+  HybridObjectHandoffPlannerPtr                             m_pHandoffPlanner = nullptr;
 
   ompl::base::PlannerStatus                                       m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
 
@@ -92,8 +96,19 @@ private:
 
   ros::NodeHandle                                                 m_NodeHandlePrivate;
   ros::NodeHandle                                                 m_NodeHandle;
-private:
 
+  double                                                          m_SE3Bounds[6];
+  int                                                             m_ArmIndexBounds[2];
+  int                                                             m_GraspIndexBounds[2];
+
+  robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
+private:
+  bool initializePlanner
+  (
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps
+  );
+
+  bool constructStartAndGoalState();
 };
 }
 
