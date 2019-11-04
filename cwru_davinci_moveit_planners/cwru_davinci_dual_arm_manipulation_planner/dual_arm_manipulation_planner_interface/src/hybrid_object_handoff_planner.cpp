@@ -45,61 +45,11 @@ namespace og = ompl::geometric;
 
 HybridObjectHandoffPlanner::HybridObjectHandoffPlanner
 (
-const ob::State* start,
-const ob::State* goal,
-const double se3BoundXAxisMin,
-const double se3BoundXAxisMax,
-const double se3BoundYAxisMin,
-const double se3BoundYAxisMax,
-const double se3BoundZAxisMin,
-const double se3BoundZAxisMax,
-const int armIdxLwBd,
-const int armIdxUpBd,
-const int graspIdxLwBd,
-const int graspIdxUpBd,
-const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
-const robot_model::RobotModelConstPtr& pRobotModel,
-const std::string& objectName,
-const double maxDistance,
 bool verbose
 )
-: m_Verbose(verbose), m_ObjectName(objectName)
+ : m_Verbose(verbose)
 {
-  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>(se3BoundXAxisMin,
-                                                             se3BoundXAxisMax,
-                                                             se3BoundYAxisMin,
-                                                             se3BoundYAxisMax,
-                                                             se3BoundZAxisMin,
-                                                             se3BoundZAxisMax,
-                                                             armIdxLwBd,
-                                                             armIdxUpBd,
-                                                             graspIdxLwBd,
-                                                             graspIdxUpBd,
-                                                             possibleGrasps);
-  if (!m_pHyStateSpace)
-  {
-    m_pSpaceInfor = nullptr;
-    m_pProblemDef = nullptr;
-    m_pRRTConnectPlanner = nullptr;
-    printf("HybridObjectHandoffPlanner: Failed to initialize hybrid object state space");
-  }
-  else
-  {
-    setupSpaceInformation(m_pHyStateSpace, pRobotModel, objectName);
-    if (m_pSpaceInfor)
-    {
-      setupProblemDefinition(start, goal);
-      if (m_pProblemDef)
-      {
-        setupPlanner(maxDistance);
-        if (m_Verbose)
-        {
-          m_pSpaceInfor->printSettings(std::cout);
-          m_pProblemDef->print(std::cout);
-        }
-      }
-    }
-  }
+  setupStateSpace();
 }
 
 ob::PlannerStatus::StatusType HybridObjectHandoffPlanner::solve
@@ -143,6 +93,11 @@ PathJointTrajectory& handoffPathJntTraj
     handoffPathJntTraj[i] = jntTrajectoryBtwStates;
   }
   return true;
+}
+
+void HybridObjectHandoffPlanner::setupStateSpace()
+{
+  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>();
 }
 
 void HybridObjectHandoffPlanner::setupSpaceInformation
@@ -225,23 +180,23 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     return false;
   }
 
-  bool goodPath = false;
+  bool hasTraj = false;
   switch (m_pHyStateSpace->checkStateDiff(pHyFromState, pHyToState))
   {
     case StateDiff::AllSame:
-      goodPath = true;
+      hasTraj = true;
       break;
     case StateDiff::PoseDiffArmAndGraspSame:
-      goodPath = planObjectTransit(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
+      hasTraj = planObjectTransit(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
       break;
     case StateDiff::ArmAndGraspDiffPoseSame:
-      goodPath = planHandoff(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
+      hasTraj = planHandoff(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
       break;
     default:
       // should not be there
       break;
   }
-  return goodPath;
+  return hasTraj;
 }
 
 bool HybridObjectHandoffPlanner::planObjectTransit

@@ -72,22 +72,6 @@ class HybridObjectHandoffPlanner
 public:
   HybridObjectHandoffPlanner
   (
-  const ompl::base::State* start,
-  const ompl::base::State* goal,
-  const double se3BoundXAxisMin,
-  const double se3BoundXAxisMax,
-  const double se3BoundYAxisMin,
-  const double se3BoundYAxisMax,
-  const double se3BoundZAxisMin,
-  const double se3BoundZAxisMax,
-  const int armIdxLwBd,
-  const int armIdxUpBd,
-  const int graspIdxLwBd,
-  const int graspIdxUpBd,
-  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
-  const robot_model::RobotModelConstPtr& pRobotModel,
-  const std::string& objectName,
-  const double maxDistance,
   bool verbose = true
   );
 
@@ -121,6 +105,8 @@ protected:
   std::string                                  m_ObjectName;
 
 protected:
+  void setupStateSpace();
+
   void setupSpaceInformation
   (
   const HybridObjectStateSpacePtr& pHyStateSpace,
@@ -207,9 +193,12 @@ protected:
   const std::string& fromSupportGroup,
   MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
+
+protected:
+  friend class DavinciNeedleHandoffExecutionManager;
 };
 
-typedef std::unique_ptr<HybridObjectHandoffPlanner> HybridObjectHandoffPlannerUniquePtr;
+typedef std::shared_ptr<HybridObjectHandoffPlanner> HybridObjectHandoffPlannerPtr;
 
 }
 

@@ -142,8 +142,6 @@ public:
     {
       VALIDITY_KNOWN = 1,
       VALIDITY_TRUE = 4,
-      IS_TRANSFER = 8,
-      IS_TRANSIT = 16,
       JOINTS_COMPUTED = 256
     };
 
@@ -152,26 +150,6 @@ public:
     {
     }
 
-//    bool isTransfer() const
-//    {
-//      return flags & IS_TRANSFER;
-//    }
-//
-//    bool isTransit() const
-//    {
-//      return flags & IS_TRANSIT;
-//    }
-//
-//    void markTransfer() const
-//    {
-//      flags |= IS_TRANSFER;
-//    }
-//
-//    void markTransit() const
-//    {
-//      flags |= IS_TRANSIT;
-//    }
-//
     void markInvalid()
     {
       flags &= ~VALIDITY_TRUE;
@@ -283,6 +261,10 @@ public:
 
   HybridObjectStateSpace
   (
+  );
+
+  HybridObjectStateSpace
+  (
   const int armIdxLwBd,
   const int armIdxUpBd,
   const int graspIdxLwBd,
@@ -305,8 +287,7 @@ public:
   const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
   );
 
-  virtual ~HybridObjectStateSpace()
-  {}
+  virtual ~HybridObjectStateSpace() {}
 
   void setSE3Bounds(const ompl::base::RealVectorBounds& bounds);
 
@@ -329,7 +310,8 @@ public:
   void setGraspIndexBounds
   (
   int lowerBound,
-  int upperBound
+  int upperBound,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
   );
 
   bool setJointValues
@@ -476,7 +458,7 @@ protected:
 };
 
 typedef std::shared_ptr<HybridObjectStateSpace> HybridObjectStateSpacePtr;
-typedef std::shared_ptr<const HybridObjectStateSpace> HybridObjectStateSpaceConstPtr;
+
 }
 
 #endif //CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_STATE_SPACE_H

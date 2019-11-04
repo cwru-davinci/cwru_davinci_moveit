@@ -1,3 +1,6 @@
+# translation x, y, z, orientation, w, x, y, z, arm index, grasp index
+start_state : []
+goal_state : []
 # SE3 bounds: x_min, x_max, y_min, y_max, z_min, z_max wr/t /world from
 se3_bounds : [-0.101, 0.101, -0.06, 0.09, 0.266, 0.496]
 

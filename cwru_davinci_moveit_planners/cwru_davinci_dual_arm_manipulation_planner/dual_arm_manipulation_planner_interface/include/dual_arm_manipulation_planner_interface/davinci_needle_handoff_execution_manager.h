@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
+ *  Copyright (c) 2019, Case Western Reserve University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -60,9 +60,11 @@ public:
   (
   const ros::NodeHandle& nodeHandle,
   const ros::NodeHandle& nodeHandlePrivate,
-  const std::string& robotDescription = "robot_description",
-  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
+  const std::string& robotDescription = "robot_description"
   );
+
+  ~DavinciNeedleHandoffExecutionManager();
 
   bool planNeedleHandoffTraj
   (
@@ -71,20 +73,32 @@ public:
 
   bool executeNeedleHandoffTrajy();
 
+  bool constructStartAndGoalState
+  (
+  const ompl::base::SE3StateSpace::StateType* objStartPose,
+  const int startSupportArmIdx,
+  const int startGraspIdx,
+  const ompl::base::SE3StateSpace::StateType* objGoalPose,
+  const int goalSupportArmIdx,
+  const int goalGraspIdx
+  );
+
+  bool initializePlanner
+  (
+  );
+
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
-
 private:
+
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
-  HybridObjectHandoffPlannerUniquePtr                             m_pHandoffPlanner = nullptr;
+  HybridObjectHandoffPlannerPtr                                   m_pHandoffPlanner = nullptr;
 
   ompl::base::PlannerStatus                                       m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
-
   std::unique_ptr<MoveGroupInterface>                             m_pSupportArmGroup;
-  std::unique_ptr<MoveGroupInterface>                             m_pSupportArmEefGroup;
 
-  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr               m_pNeedleGrasper;
+  std::unique_ptr<MoveGroupInterface>                             m_pSupportArmEefGroup;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
 
@@ -95,18 +109,13 @@ private:
   ros::NodeHandle                                                 m_NodeHandlePrivate;
   ros::NodeHandle                                                 m_NodeHandle;
 
+  HybridObjectStateSpace::StateType*                              m_pHyStartState;
+  HybridObjectStateSpace::StateType*                              m_pHyGoalState;
+
   double                                                          m_SE3Bounds[6];
   int                                                             m_ArmIndexBounds[2];
-  int                                                             m_GraspIndexBounds[2];
 
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
-private:
-  bool initializePlanner
-  (
-  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps
-  );
-
-  bool constructStartAndGoalState();
 };
 }
 

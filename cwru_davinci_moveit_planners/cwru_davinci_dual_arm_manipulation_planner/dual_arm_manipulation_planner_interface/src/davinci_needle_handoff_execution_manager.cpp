@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
+ *  Copyright (c) 2019, Case Western Reserve University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -45,18 +45,23 @@ DavinciNeedleHandoffExecutionManager::DavinciNeedleHandoffExecutionManager
 (
 const ros::NodeHandle& nodeHandle,
 const ros::NodeHandle& nodeHandlePrivate,
-const std::string& robotDescription,
-const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps
+const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
+const std::string& robotDescription
 )
  : m_NodeHandle(nodeHandle),
    m_NodeHandlePrivate(nodeHandlePrivate),
+   m_GraspInfo(possibleGrasps),
    m_RobotModelLoader(robotDescription)
 {
-  if(!initializePlanner(possibleGrasps))
-  {
-    ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed initializing handoff planner");
-    ros::shutdown();
-  }
+  m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
+}
+
+DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
+(
+)
+{
+  m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyStartState);
+  m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyGoalState);
 }
 
 bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
@@ -230,12 +235,54 @@ const double solveTime
       return false;
     }
   }
+}
 
+bool DavinciNeedleHandoffExecutionManager::constructStartAndGoalState
+(
+const ompl::base::SE3StateSpace::StateType* objStartPose,
+const int startSupportArmIdx,
+const int startGraspIdx,
+const ompl::base::SE3StateSpace::StateType* objGoalPose,
+const int goalSupportArmIdx,
+const int goalGraspIdx
+)
+{
+  if(!m_pHandoffPlanner->m_pHyStateSpace)
+  {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: invalid hybrid state space pointer");
+    return false;
+  }
+
+  m_pHyStartState = m_pHandoffPlanner->m_pHyStateSpace->allocState()->as<HybridObjectStateSpace::StateType>();
+  m_pHyGoalState = m_pHandoffPlanner->m_pHyStateSpace->allocState()->as<HybridObjectStateSpace::StateType>();
+
+  m_pHyStartState->se3State().setXYZ(objStartPose->getX(),
+                                   objStartPose->getY(),
+                                   objStartPose->getZ());
+  m_pHyStartState->se3State().rotation().x = objStartPose->rotation().x;
+  m_pHyStartState->se3State().rotation().y = objStartPose->rotation().y;
+  m_pHyStartState->se3State().rotation().z = objStartPose->rotation().z;
+  m_pHyStartState->se3State().rotation().w = objStartPose->rotation().w;
+
+  m_pHyStartState->armIndex().value = startSupportArmIdx;
+  m_pHyStartState->graspIndex().value = startGraspIdx;
+
+  m_pHyGoalState->se3State().setXYZ(objGoalPose->getX(),
+                                 objGoalPose->getY(),
+                                 objGoalPose->getZ());
+  m_pHyGoalState->se3State().rotation().x = objGoalPose->rotation().x;
+  m_pHyGoalState->se3State().rotation().y = objGoalPose->rotation().y;
+  m_pHyGoalState->se3State().rotation().z = objGoalPose->rotation().z;
+  m_pHyGoalState->se3State().rotation().w = objGoalPose->rotation().w;
+
+  m_pHyGoalState->armIndex().value = goalSupportArmIdx;
+  m_pHyGoalState->graspIndex().value = goalGraspIdx;
+
+  return true;
 }
 
 bool DavinciNeedleHandoffExecutionManager::initializePlanner
 (
-const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps
 )
 {
   if (!m_NodeHandlePrivate.hasParam("se3_bounds"))
@@ -308,32 +355,41 @@ const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps
   double maxDistance;
   m_NodeHandlePrivate.getParam("max_distance", maxDistance);
 
-  if(possibleGrasps.empty())
+  if(m_GraspInfo.empty())
   {
     ROS_ERROR("DavinciNeedleHandoffExecutionManager: input grasp info list is empty");
     return false;
   }
 
-  m_pHandoffPlanner.reset(new HybridObjectHandoffPlanner(reinterpret_cast<const ompl::base::State*>(new ob::State*),
-                                                         reinterpret_cast<const ompl::base::State*>(new ob::State*),
-                                                         m_SE3Bounds[0],
-                                                         m_SE3Bounds[1],
-                                                         m_SE3Bounds[2],
-                                                         m_SE3Bounds[3],
-                                                         m_SE3Bounds[4],
-                                                         m_SE3Bounds[5],
-                                                         m_ArmIndexBounds[0],
-                                                         m_ArmIndexBounds[1],
-                                                         0,
-                                                         possibleGrasps.size()-1,
-                                                         possibleGrasps,
-                                                         m_RobotModelLoader.getModel(),
-                                                         objectName,
-                                                         maxDistance));
   if(!m_pHandoffPlanner)
   {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: invalid handoff planner pointer");
     return false;
   }
 
+  if (!m_pHandoffPlanner->m_pHyStateSpace)
+  {
+    m_pHandoffPlanner->setupStateSpace();
+  }
+  m_pHandoffPlanner->m_pHyStateSpace->setSE3Bounds(m_SE3Bounds[0],
+                                                   m_SE3Bounds[1],
+                                                   m_SE3Bounds[2],
+                                                   m_SE3Bounds[3],
+                                                   m_SE3Bounds[4],
+                                                   m_SE3Bounds[5]);
+
+  m_pHandoffPlanner->m_pHyStateSpace->setArmIndexBounds(m_ArmIndexBounds[0],
+                                                        m_ArmIndexBounds[1]);
+
+  m_pHandoffPlanner->m_pHyStateSpace->setGraspIndexBounds(0,
+                                                          m_GraspInfo.size()-1,
+                                                          m_GraspInfo);
+
+  m_pHandoffPlanner->setupSpaceInformation(m_pHandoffPlanner->m_pHyStateSpace,
+                                           m_RobotModelLoader.getModel(),
+                                           objectName);
+
+  m_pHandoffPlanner->setupProblemDefinition(m_pHyStartState, m_pHyGoalState);
+  m_pHandoffPlanner->setupPlanner(maxDistance);
   return true;
 }
