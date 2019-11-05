@@ -46,11 +46,13 @@ DavinciNeedleHandoffExecutionManager::DavinciNeedleHandoffExecutionManager
 const ros::NodeHandle& nodeHandle,
 const ros::NodeHandle& nodeHandlePrivate,
 const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
+const std::string& objectName,
 const std::string& robotDescription
 )
  : m_NodeHandle(nodeHandle),
    m_NodeHandlePrivate(nodeHandlePrivate),
    m_GraspInfo(possibleGrasps),
+   m_ObjectName(objectName),
    m_RobotModelLoader(robotDescription)
 {
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
@@ -257,8 +259,8 @@ const int goalGraspIdx
   m_pHyGoalState = m_pHandoffPlanner->m_pHyStateSpace->allocState()->as<HybridObjectStateSpace::StateType>();
 
   m_pHyStartState->se3State().setXYZ(objStartPose->getX(),
-                                   objStartPose->getY(),
-                                   objStartPose->getZ());
+                                     objStartPose->getY(),
+                                     objStartPose->getZ());
   m_pHyStartState->se3State().rotation().x = objStartPose->rotation().x;
   m_pHyStartState->se3State().rotation().y = objStartPose->rotation().y;
   m_pHyStartState->se3State().rotation().z = objStartPose->rotation().z;
@@ -268,8 +270,8 @@ const int goalGraspIdx
   m_pHyStartState->graspIndex().value = startGraspIdx;
 
   m_pHyGoalState->se3State().setXYZ(objGoalPose->getX(),
-                                 objGoalPose->getY(),
-                                 objGoalPose->getZ());
+                                    objGoalPose->getY(),
+                                    objGoalPose->getZ());
   m_pHyGoalState->se3State().rotation().x = objGoalPose->rotation().x;
   m_pHyGoalState->se3State().rotation().y = objGoalPose->rotation().y;
   m_pHyGoalState->se3State().rotation().z = objGoalPose->rotation().z;

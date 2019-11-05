@@ -61,6 +61,7 @@ public:
   const ros::NodeHandle& nodeHandle,
   const ros::NodeHandle& nodeHandlePrivate,
   const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
+  const std::string& objectName,
   const std::string& robotDescription = "robot_description"
   );
 
@@ -114,7 +115,7 @@ private:
 
   double                                                          m_SE3Bounds[6];
   int                                                             m_ArmIndexBounds[2];
-
+  std::string                                                     m_ObjectName;
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
 };
 }

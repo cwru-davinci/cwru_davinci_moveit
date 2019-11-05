@@ -50,36 +50,131 @@ int main(int argc, char** argv)
   ros::NodeHandle nodeHandlePriv("~");
   ros::Duration(3.0).sleep();
 
-  cwru_davinci_grasp::DavinciNeedleGrasperBasePtr simpleGrasp =
-  boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(nodeHandle,
-                                                                   nodeHandlePriv,
-                                                                   "psm_one",
-                                                                   "needle_r");
-
-  // TO DO
-  // execute needle grasping first
-
-  std::vector<cwru_davinci_grasp::GraspInfo> graspPoses = simpleGrasp->getAllPossibleNeedleGrasps(false);
-
-  DavinciNeedleHandoffExecutionManager needleHandoffExecutor(nodeHandle,
-                                                             nodeHandlePriv,
-                                                             graspPoses);
-
-
-  needleHandoffExecutor.constructStartAndGoalState();
-  if(!needleHandoffExecutor.initializePlanner())
+  if (!nodeHandlePriv.hasParam("object_name"))
   {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `object_name` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << nodeHandlePriv.getNamespace());
+    return false;
+  }
+  std::string objectName;
+  nodeHandlePriv.getParam("object_name", objectName);
+
+  if (!nodeHandlePriv.hasParam("initial_support_arm"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `initial_support_arm` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << nodeHandlePriv.getNamespace());
+    return false;
+  }
+  std::string initialSupportArm;
+  nodeHandlePriv.getParam("initial_support_arm", initialSupportArm);
+
+  if (!nodeHandlePriv.hasParam("planning_time"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `planning_time` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << nodeHandlePriv.getNamespace());
+    return false;
+  }
+  double planningTime;
+  nodeHandlePriv.getParam("planning_time", planningTime);
+
+  if (!nodeHandlePriv.hasParam("goal_state"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `goal_state` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << nodeHandlePriv.getNamespace());
     return false;
   }
 
-  if(!needleHandoffExecutor.planNeedleHandoffTraj())
+  double goalStateAry[9];
+  XmlRpc::XmlRpcValue xmlGoalStateArray;
+  nodeHandlePriv.getParam("goal_state", xmlGoalStateArray);
+  if (xmlGoalStateArray.getType() == XmlRpc::XmlRpcValue::TypeArray)
   {
-    return false;
+    for (std::size_t i = 0; i < xmlGoalStateArray.size(); ++i)
+    {
+      ROS_ASSERT(xmlGoalStateArray[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+      goalStateAry[i] = static_cast<double>(xmlGoalStateArray[i]);
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("SE3 bounds type is not type array?");
+  }
+
+  ob::ScopedState<ob::SE3StateSpace> goalNeedlePose(std::make_shared<ob::SE3StateSpace>());
+  goalNeedlePose->setXYZ(goalStateAry[0],
+                         goalStateAry[1],
+                         goalStateAry[2]);
+
+  goalNeedlePose->rotation().x = goalStateAry[3];
+  goalNeedlePose->rotation().y = goalStateAry[4];
+  goalNeedlePose->rotation().z = goalStateAry[5];
+  goalNeedlePose->rotation().w = goalStateAry[6];
+
+  cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr pSimpleGrasp =
+  boost::make_shared<cwru_davinci_grasp::DavinciSimpleNeedleGrasper>(nodeHandle,
+                                                                     nodeHandlePriv,
+                                                                     initialSupportArm,
+                                                                     objectName);
+
+  // Try defined grasped fist
+  if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::DEFINED, objectName))
+  {
+    return -1;
+  }
+
+  if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::FINDGOOD, objectName))
+  {
+    return -1;
+  }
+
+  // TO DO
+  // execute needle grasping first
+  std::vector<cwru_davinci_grasp::GraspInfo> graspPoses = pSimpleGrasp->getAllPossibleNeedleGrasps(false);
+  cwru_davinci_grasp::GraspInfo initialGraspInfo = pSimpleGrasp->getSelectedGraspInfo();
+
+  geometry_msgs::Pose needlePose = pSimpleGrasp->getNeedlePose().pose;
+  ob::ScopedState<ob::SE3StateSpace> startNeedlePose(std::make_shared<ob::SE3StateSpace>());
+  initialGraspInfo = graspPoses[initialGraspInfo.graspParamInfo.grasp_id];
+  startNeedlePose->setXYZ(needlePose.position.x,
+                          needlePose.position.y,
+                          needlePose.position.z);
+  startNeedlePose->rotation().x = needlePose.orientation.x;
+  startNeedlePose->rotation().y = needlePose.orientation.y;
+  startNeedlePose->rotation().z = needlePose.orientation.z;
+  startNeedlePose->rotation().w = needlePose.orientation.w;
+
+  DavinciNeedleHandoffExecutionManager needleHandoffExecutor(nodeHandle,
+                                                             nodeHandlePriv,
+                                                             graspPoses, objectName);
+
+  needleHandoffExecutor.constructStartAndGoalState(startNeedlePose.get(),
+                                                   (initialSupportArm == "psm_one" ? 1 : 2),
+                                                   initialGraspInfo.graspParamInfo.grasp_id,
+                                                   goalNeedlePose.get(),
+                                                   (int)goalStateAry[7],
+                                                   (int)goalStateAry[8]);
+
+  if(!needleHandoffExecutor.initializePlanner())
+  {
+    return -1;
+  }
+
+  if(!needleHandoffExecutor.planNeedleHandoffTraj(planningTime))
+  {
+    return -1;
   }
 
   if(!needleHandoffExecutor.executeNeedleHandoffTrajy())
   {
-    return false;
+    return -1;
   }
 
   return 0;
