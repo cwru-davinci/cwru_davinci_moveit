@@ -175,55 +175,6 @@ HybridObjectStateSpace::HybridObjectStateSpace
   lock();
 }
 
-HybridObjectStateSpace::HybridObjectStateSpace
-(
-const double se3BoundXAxisMin,
-const double se3BoundXAxisMax,
-const double se3BoundYAxisMin,
-const double se3BoundYAxisMax,
-const double se3BoundZAxisMin,
-const double se3BoundZAxisMax,
-const int armIdxLwBd,
-const int armIdxUpBd,
-const int graspIdxLwBd,
-const int graspIdxUpBd,
-const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
-)
-: CompoundStateSpace(),
-  m_ArmIdxLwBd(armIdxLwBd),
-  m_ArmIdxUpBd(armIdxUpBd),
-  m_GraspIdxLwBd(graspIdxLwBd),
-  m_GraspIdxUpBd(graspIdxUpBd),
-  m_PossibleGrasps(possible_grasps)
-{
-  setName("HybridObject" + getName());
-  type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
-
-  addSubspace(std::make_shared<SE3StateSpace>(), 1.0);  // object pose space
-  components_.back()->setName(components_.back()->getName() + ":ObjectPose");
-
-  setSE3Bounds(se3BoundXAxisMin,
-               se3BoundXAxisMax,
-               se3BoundYAxisMin,
-               se3BoundYAxisMax,
-               se3BoundZAxisMin,
-               se3BoundZAxisMax);
-
-  addSubspace(std::make_shared<DiscreteStateSpace>(m_ArmIdxLwBd, m_ArmIdxUpBd),
-              1.0);  // arm index
-  components_.back()->setName(components_.back()->getName() + ":ArmIndex");
-
-  addSubspace(std::make_shared<DiscreteStateSpace>(m_GraspIdxLwBd, m_GraspIdxUpBd),
-              1.0);  // grasp index
-  components_.back()->setName(components_.back()->getName() + ":GraspIndex");
-
-  addSubspace(std::make_shared<RealVectorStateSpace>(6), 1.0);
-  components_.back()->setName(components_.back()->getName() + ":JointVariables");
-  components_[3]->as<RealVectorStateSpace>()->setBounds(-7, 7);
-
-  lock();
-}
-
 std::chrono::duration<double> HybridObjectStateSpace::object_transit_planning_duration_ = std::chrono::duration<double>::zero();
 std::chrono::duration<double> HybridObjectStateSpace::check_motion_duration_ = std::chrono::duration<double>::zero();
 std::chrono::duration<double> HybridObjectStateSpace::validity_checking_duration_ = std::chrono::duration<double>::zero();

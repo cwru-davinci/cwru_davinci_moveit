@@ -34,7 +34,6 @@
 
 /* Author: Su Lu*/
 
-//#include <boost/test/unit_test.hpp>
 #include "ompl/base/StateSpace.h"
 #include "ompl/base/ScopedState.h"
 #include "ompl/util/RandomNumbers.h"

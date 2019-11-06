@@ -17,6 +17,9 @@ target_link_libraries(${DUAL_ARM_PLANNER_LIB} ${OMPL_LIBRARIES} ${catkin_LIBRARI
 #set_target_properties(${DUAL_ARM_PLANNER_LIB} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 #set_target_properties(${DUAL_ARM_PLANNER_LIB} PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
 
+add_library(hybrid_object_handoff_planner_tester test/hybrid_object_handoff_planner_tester.cpp)
+target_link_libraries(hybrid_object_handoff_planner_tester ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
 add_library(hybrid_motion_validator_tester test/hybrid_motion_validator_tester.cpp)
 target_link_libraries(hybrid_motion_validator_tester ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 

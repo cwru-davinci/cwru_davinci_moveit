@@ -272,21 +272,6 @@ public:
   const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
   );
 
-  HybridObjectStateSpace
-  (
-  const double se3BoundXAxisMin,
-  const double se3BoundXAxisMax,
-  const double se3BoundYAxisMin,
-  const double se3BoundYAxisMax,
-  const double se3BoundZAxisMin,
-  const double se3BoundZAxisMax,
-  const int armIdxLwBd,
-  const int armIdxUpBd,
-  const int graspIdxLwBd,
-  const int graspIdxUpBd,
-  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
-  );
-
   virtual ~HybridObjectStateSpace() {}
 
   void setSE3Bounds(const ompl::base::RealVectorBounds& bounds);
