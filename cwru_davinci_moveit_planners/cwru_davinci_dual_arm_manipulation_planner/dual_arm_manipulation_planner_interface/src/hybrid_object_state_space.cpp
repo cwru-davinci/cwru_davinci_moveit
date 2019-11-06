@@ -175,6 +175,32 @@ HybridObjectStateSpace::HybridObjectStateSpace
   lock();
 }
 
+HybridObjectStateSpace::HybridObjectStateSpace
+(
+const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+)
+: CompoundStateSpace(),
+  m_PossibleGrasps(possible_grasps)
+{
+  setName("HybridObject" + getName());
+  type_ = ompl::base::STATE_SPACE_TYPE_COUNT + 10;
+
+  addSubspace(std::make_shared<SE3StateSpace>(), 1.0);  // object pose space
+  components_.back()->setName(components_.back()->getName() + ":ObjectPose");
+
+  addSubspace(std::make_shared<DiscreteStateSpace>(0, 0), 1.0);  // arm index
+  components_.back()->setName(components_.back()->getName() + ":ArmIndex");
+
+  addSubspace(std::make_shared<DiscreteStateSpace>(0, 0), 1.0);  // grasp index
+  components_.back()->setName(components_.back()->getName() + ":GraspIndex");
+
+  addSubspace(std::make_shared<RealVectorStateSpace>(6), 1.0);
+  components_.back()->setName(components_.back()->getName() + ":JointVariables");
+  components_[3]->as<RealVectorStateSpace>()->setBounds(-7, 7);
+
+  lock();
+}
+
 std::chrono::duration<double> HybridObjectStateSpace::object_transit_planning_duration_ = std::chrono::duration<double>::zero();
 std::chrono::duration<double> HybridObjectStateSpace::check_motion_duration_ = std::chrono::duration<double>::zero();
 std::chrono::duration<double> HybridObjectStateSpace::validity_checking_duration_ = std::chrono::duration<double>::zero();
@@ -372,7 +398,7 @@ const State* state
 {
   const auto* hystate = static_cast<const StateType*>(state);
   unsigned int l = 0;
-  for (unsigned int i = 0; i < componentCount_ - 1; ++i)
+  for (unsigned int i = 0; i < componentCount_; ++i)
   {
     components_[i]->serialize(reinterpret_cast<char*>(serialization) + l, hystate->components[i]);
     l += components_[i]->getSerializationLength();
@@ -507,20 +533,20 @@ State* state
   const auto* hys_from = static_cast<const StateType*>(from);
   const auto* hys_to = static_cast<const StateType*>(to);
 
-  // ompl::RNG randNum;
-  // double random_num = randNum.gaussian01();
-  // bool bound = 0.40;
-  // bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
-  // bool do_transit = within_1Sd ? true : false;
+   ompl::RNG randNum;
+   double random_num = randNum.gaussian01();
+   bool bound = 0.40;
+   bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
+   bool do_transit = within_1Sd ? true : false;
 
-  // if(do_transit)
-  // {
-  //   components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-  //   components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-  //   components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-  //   components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-  //   return;
-  // }
+   if(do_transit)
+   {
+     components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+     components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+     components_[2]->copyState(cstate->components[2], hys_from->components[2]);
+     components_[3]->copyState(cstate->components[3], hys_from->components[3]);
+     return;
+   }
 
   switch (checkStateDiff(hys_from, hys_to))
   {
@@ -578,6 +604,9 @@ const State* source
   components_[0]->copyToReals(reals, hysource->components[0]);
   reals.push_back(hysource->armIndex().value);
   reals.push_back(hysource->graspIndex().value);
+  std::vector<double> jointValues;
+  components_[3]->copyToReals(jointValues, hysource->components[3]);
+  reals.insert(reals.end(), jointValues.begin(), jointValues.end());
 }
 
 void HybridObjectStateSpace::se3ToEigen3d
