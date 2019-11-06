@@ -49,7 +49,17 @@ bool verbose
 )
  : m_Verbose(verbose)
 {
-  setupStateSpace();
+  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>();
+}
+
+HybridObjectHandoffPlanner::HybridObjectHandoffPlanner
+(
+const std::vector<cwru_davinci_grasp::GraspInfo>& graspInfo,
+bool verbose
+)
+ : m_Verbose(verbose)
+{
+  setupStateSpace(graspInfo);
 }
 
 ob::PlannerStatus::StatusType HybridObjectHandoffPlanner::solve
@@ -95,9 +105,12 @@ PathJointTrajectory& handoffPathJntTraj
   return true;
 }
 
-void HybridObjectHandoffPlanner::setupStateSpace()
+void HybridObjectHandoffPlanner::setupStateSpace
+(
+const std::vector<cwru_davinci_grasp::GraspInfo>& graspInfo
+)
 {
-  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>();
+  m_pHyStateSpace = std::make_shared<HybridObjectStateSpace>(graspInfo);
 }
 
 void HybridObjectHandoffPlanner::setupSpaceInformation

@@ -1,0 +1,5 @@
+<launch>
+    <node name="hybrid_planner_planning_data_visualization" pkg="cwru_davinci_dual_arm_manipulation_planner" type="hybrid_planner_planning_data_visualization" output="screen">
+        <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
+    </node>
+</launch>

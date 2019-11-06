@@ -43,9 +43,12 @@
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/goals/GoalState.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 
+#include <cwru_davinci_grasp/davinci_needle_grasper_base.h>
 #include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <boost/graph/depth_first_search.hpp>
+#include <boost/graph/astar_search.hpp>
 #include <iostream>
 
 #include <ros/package.h>
@@ -107,14 +110,39 @@ void HyperPlaneDrawing::drawSubCube()
   plt::show();
 }
 
+// Used for A* search.  Computes the heuristic distance from vertex v1 to the goal
+ob::Cost distanceHeuristic(ob::PlannerData::Graph::Vertex v1,
+                           const ob::GoalState* goal,
+                           const ob::OptimizationObjective* obj,
+                           const boost::property_map<ob::PlannerData::Graph::Type,
+                           vertex_type_t>::type& plannerDataVertices)
+{
+  return ob::Cost(obj->costToGo(plannerDataVertices[v1]->getState(), goal));
+}
+
 void readPlannerDataStoredToGraphViz()
 {
   std::cout << std::endl;
   std::cout << "Reading PlannerData" << std::endl;
+  ros::NodeHandle node_handle_priv("~");
+  cwru_davinci_grasp::DavinciNeedleGrasperBasePtr pNeedleGrasper(new cwru_davinci_grasp::DavinciNeedleGrasperBase(node_handle_priv,
+                                                                                                                  "psm_one",
+                                                                                                                  "psm_one_gripper"));
+
+  const std::vector<cwru_davinci_grasp::GraspInfo> graspInfos = pNeedleGrasper->getAllPossibleNeedleGrasps();
 
   // Recreating the space information from the stored planner data instance
-  std::vector <cwru_davinci_grasp::GraspInfo> grasp_poses;
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size()-1, grasp_poses));
+  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, graspInfos.size() - 1, graspInfos));
+
+  ompl::base::RealVectorBounds se3_xyz_bounds(3);
+  se3_xyz_bounds.setLow(0, -0.101);
+  se3_xyz_bounds.setHigh(0, 0.101);
+  se3_xyz_bounds.setLow(1, -0.1);
+  se3_xyz_bounds.setHigh(1, 0.1);
+  se3_xyz_bounds.setLow(2, -0.03);
+  se3_xyz_bounds.setHigh(2, 0.18);
+
+  hystsp->setSE3Bounds(se3_xyz_bounds);
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
   ob::PlannerDataStorage dataStorage;
@@ -122,10 +150,60 @@ void readPlannerDataStoredToGraphViz()
 
   std::string dataPath = ros::package::getPath("cwru_davinci_dual_arm_manipulation_planner");
   dataStorage.load((dataPath + "/../../../" + "HybridRRTPlannerData").c_str(), data);
-
   std::ofstream graphVizOutput(dataPath + "/../../../" + "HybridRRTPlannerData.dot");
   data.printGraphviz(graphVizOutput);
   graphVizOutput.close();
+
+  // Re-extract the shortest path from the loaded planner data
+  if (data.numStartVertices() > 0 && data.numGoalVertices() > 0)
+  {
+    // Create an optimization objective for optimizing path length in A*
+    ob::PathLengthOptimizationObjective opt(si);
+
+    // Computing the weights of all edges based on the state space distance
+    // This is not done by default for efficiency
+    data.computeEdgeWeights(opt);
+
+    // Getting a handle to the raw Boost.Graph data
+    ob::PlannerData::Graph::Type& graph = data.toBoostGraph();
+
+    // Now we can apply any Boost.Graph algorithm.  How about A*!
+
+    // create a predecessor map to store A* results in
+    boost::vector_property_map<ob::PlannerData::Graph::Vertex> prev(data.numVertices());
+
+    // Retrieve a property map with the PlannerDataVertex object pointers for quick lookup
+    boost::property_map<ob::PlannerData::Graph::Type, vertex_type_t>::type vertices = get(vertex_type_t(), graph);
+
+    // Run A* search over our planner data
+    ob::GoalState goal(si);
+    goal.setState(data.getGoalVertex(0).getState());
+    ob::PlannerData::Graph::Vertex start = boost::vertex(data.getStartIndex(0), graph);
+    boost::astar_search(graph, start,
+                        [&goal, &opt, &vertices](ob::PlannerData::Graph::Vertex v1) { return distanceHeuristic(v1, &goal, &opt, vertices); },
+                        boost::predecessor_map(prev).
+                        distance_compare([&opt](ob::Cost c1, ob::Cost c2) { return opt.isCostBetterThan(c1, c2); }).
+                        distance_combine([&opt](ob::Cost c1, ob::Cost c2) { return opt.combineCosts(c1, c2); }).
+                        distance_inf(opt.infiniteCost()).
+                        distance_zero(opt.identityCost()));
+
+    // Extracting the path
+    og::PathGeometric path(si);
+    for (ob::PlannerData::Graph::Vertex pos = boost::vertex(data.getGoalIndex(0), graph);
+         prev[pos] != pos;
+         pos = prev[pos])
+    {
+      path.append(vertices[pos]->getState());
+    }
+    path.append(vertices[start]->getState());
+    path.reverse();
+    
+    // print the path to screen
+    std::ofstream outFile(dataPath + "/../../../" + "SolutionPathFromPlannerData.txt");
+    path.print(std::cout);
+    path.printAsMatrix(outFile);
+    std::cout << "Found stored solution with " << path.getStateCount() << " states and length " << path.length() << std::endl;
+  }
 }
 
 void readPlannerData()
@@ -172,7 +250,10 @@ void readPlannerData()
 
 int main(int argc, char** argv)
 {
-  // readPlannerDataStoredToGraphViz();
-  readPlannerData();
+  ros::init(argc, argv, "hybrid_planner_planning_data_visualization");
+  ros::NodeHandle node_handle;
+  ros::Duration(3.0).sleep();
+   readPlannerDataStoredToGraphViz();
+//  readPlannerData();
   return 0;
 }

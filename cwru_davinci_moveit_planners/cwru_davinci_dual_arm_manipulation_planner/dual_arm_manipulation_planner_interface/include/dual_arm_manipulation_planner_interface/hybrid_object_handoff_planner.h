@@ -75,6 +75,12 @@ public:
   bool verbose = true
   );
 
+  HybridObjectHandoffPlanner
+  (
+  const std::vector<cwru_davinci_grasp::GraspInfo>& graspInfo,
+  bool verbose = true
+  );
+
   ~HybridObjectHandoffPlanner(){}
 
   ompl::base::PlannerStatus::StatusType solve
@@ -101,11 +107,11 @@ protected:
   ompl::base::PlannerStatus                    m_Solved;
 
   bool                                         m_Verbose;
-
-  std::string                                  m_ObjectName;
-
 protected:
-  void setupStateSpace();
+  void setupStateSpace
+  (
+  const std::vector<cwru_davinci_grasp::GraspInfo>& graspInfo
+  );
 
   void setupSpaceInformation
   (

@@ -261,6 +261,11 @@ public:
 
   HybridObjectStateSpace
   (
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+  );
+
+  HybridObjectStateSpace
+  (
   );
 
   HybridObjectStateSpace
