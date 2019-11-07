@@ -198,19 +198,6 @@ void readPlannerDataStoredToGraphViz()
     path.append(vertices[start]->getState());
     path.reverse();
 
-    std::vector<ob::State *> pStates = path.getStates();
-    for(std::size_t i = 0; i < pStates.size(); ++i)
-    {
-      HybridObjectStateSpace::StateType* pHyState = pStates[i]->as<HybridObjectStateSpace::StateType>();
-      std::vector<double> jointValues(6, 0.0);
-      std::cout << pHyState->jointVariables()[0] << " "
-                << pHyState->jointVariables()[1] << " "
-                << pHyState->jointVariables()[2] << " "
-                << pHyState->jointVariables()[3] << " "
-                << pHyState->jointVariables()[4] << " "
-                << pHyState->jointVariables()[5] << "\n";
-    }
-
     // print the path to screen
     std::ofstream outFile(dataPath + "/../../../" + "SolutionPathFromPlannerData.txt");
     path.print(std::cout);
