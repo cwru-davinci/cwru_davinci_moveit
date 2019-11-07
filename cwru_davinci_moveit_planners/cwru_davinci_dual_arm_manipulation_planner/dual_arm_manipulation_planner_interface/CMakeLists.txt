@@ -53,4 +53,7 @@ if(CATKIN_ENABLE_TESTING)
 
   add_rostest_gtest(test_hybrid_motion_validator test/test_hybrid_motion_validator.test test/test_hybrid_motion_validator.cpp)
   target_link_libraries(test_hybrid_motion_validator hybrid_motion_validator_tester ${DUAL_ARM_PLANNER_LIB} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+  add_rostest_gtest(test_hybrid_object_handoff_planner test/test_hybrid_object_handoff_planner.test test/test_hybrid_object_handoff_planner.cpp)
+  target_link_libraries(test_hybrid_object_handoff_planner hybrid_object_handoff_planner_tester ${DUAL_ARM_PLANNER_LIB} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif()

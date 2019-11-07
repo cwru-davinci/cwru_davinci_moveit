@@ -371,7 +371,7 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
 
   if (!m_pHandoffPlanner->m_pHyStateSpace)
   {
-    m_pHandoffPlanner->setupStateSpace();
+    m_pHandoffPlanner->setupStateSpace(m_GraspInfo);
   }
   m_pHandoffPlanner->m_pHyStateSpace->setSE3Bounds(m_SE3Bounds[0],
                                                    m_SE3Bounds[1],

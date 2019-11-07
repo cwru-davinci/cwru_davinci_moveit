@@ -197,8 +197,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   switch (m_pHyStateSpace->checkStateDiff(pHyFromState, pHyToState))
   {
     case StateDiff::AllSame:
-      hasTraj = true;
-      break;
+      // progress to PoseDiffArmAndGraspSame
     case StateDiff::PoseDiffArmAndGraspSame:
       hasTraj = planObjectTransit(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
       break;

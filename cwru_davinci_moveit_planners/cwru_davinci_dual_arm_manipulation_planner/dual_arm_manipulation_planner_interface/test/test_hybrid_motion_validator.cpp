@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
+ *  Copyright (c) 2019, Case Western Reserve University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
