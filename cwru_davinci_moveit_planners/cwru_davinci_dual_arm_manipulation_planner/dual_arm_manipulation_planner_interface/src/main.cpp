@@ -114,7 +114,7 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
   bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
 
   bool is_gs_valid = si->isValid(goal.get());
-  while (same_arm || same_grasp_part || !is_gs_valid)
+  while (!same_arm || same_grasp_part || !is_gs_valid)
   {
     stateSampler->sampleUniform(goal.get());
     is_gs_valid = si->isValid(goal.get());

@@ -68,7 +68,7 @@ const std::string& objectName
 
   hyStateSpace_->validty_check_num = 0;
 
-//  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
+  visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
 
   loadNeedleModel();
 }
@@ -339,9 +339,8 @@ void HybridStateValidityChecker::loadNeedleModel()
 
 void HybridStateValidityChecker::publishRobotState(const robot_state::RobotState& rstate) const
 {
-  return;
-//  visual_tools_->publishRobotState(rstate);
-//  ros::Duration(0.1).sleep();
+  visual_tools_->publishRobotState(rstate);
+  ros::Duration(0.1).sleep();
 }
 
 void HybridStateValidityChecker::setMimicJointPositions

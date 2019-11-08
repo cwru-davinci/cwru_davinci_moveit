@@ -191,7 +191,12 @@ const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
   addSubspace(std::make_shared<DiscreteStateSpace>(0, 0), 1.0);  // arm index
   components_.back()->setName(components_.back()->getName() + ":ArmIndex");
 
-  addSubspace(std::make_shared<DiscreteStateSpace>(0, 0), 1.0);  // grasp index
+  if (!m_PossibleGrasps.empty())
+  {
+    m_GraspIdxLwBd = 0;
+    m_GraspIdxUpBd = static_cast<int>(m_PossibleGrasps.size() - 1);
+  }
+  addSubspace(std::make_shared<DiscreteStateSpace>(m_GraspIdxLwBd, m_GraspIdxUpBd), 1.0);  // grasp index
   components_.back()->setName(components_.back()->getName() + ":GraspIndex");
 
   addSubspace(std::make_shared<RealVectorStateSpace>(6), 1.0);
@@ -311,18 +316,20 @@ int lowerBound,
 int upperBound
 )
 {
-  components_[1]->as<DiscreteStateSpace>()->setBounds(lowerBound, upperBound);
+  m_ArmIdxLwBd = lowerBound;
+  m_ArmIdxUpBd = upperBound;
+  components_[1]->as<DiscreteStateSpace>()->setBounds(m_ArmIdxLwBd, m_ArmIdxUpBd);
 }
 
 void HybridObjectStateSpace::setGraspIndexBounds
 (
 int lowerBound,
-int upperBound,
-const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+int upperBound
 )
 {
-  components_[2]->as<DiscreteStateSpace>()->setBounds(lowerBound, upperBound);
-  m_PossibleGrasps = possible_grasps;
+  m_GraspIdxLwBd = lowerBound;
+  m_GraspIdxUpBd = upperBound;
+  components_[2]->as<DiscreteStateSpace>()->setBounds(m_GraspIdxLwBd, m_GraspIdxUpBd);
 }
 
 bool HybridObjectStateSpace::setJointValues

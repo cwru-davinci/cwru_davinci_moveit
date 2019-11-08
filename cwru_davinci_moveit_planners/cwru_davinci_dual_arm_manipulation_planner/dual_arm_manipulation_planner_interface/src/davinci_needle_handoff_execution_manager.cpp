@@ -383,9 +383,7 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
   m_pHandoffPlanner->m_pHyStateSpace->setArmIndexBounds(m_ArmIndexBounds[0],
                                                         m_ArmIndexBounds[1]);
 
-  m_pHandoffPlanner->m_pHyStateSpace->setGraspIndexBounds(0,
-                                                          m_GraspInfo.size()-1,
-                                                          m_GraspInfo);
+  m_pHandoffPlanner->m_pHyStateSpace->setGraspIndexBounds(0, m_GraspInfo.size()-1);
 
   m_pHandoffPlanner->setupSpaceInformation(m_pHandoffPlanner->m_pHyStateSpace,
                                            m_RobotModelLoader.getModel(),

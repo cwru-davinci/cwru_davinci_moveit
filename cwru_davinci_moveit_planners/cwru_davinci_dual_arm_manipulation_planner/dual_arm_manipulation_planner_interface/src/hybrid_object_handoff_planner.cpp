@@ -354,6 +354,7 @@ const std::string& toSupportGroup,
 MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
+  m_pHyStateValidator->publishRobotState(*pPreGraspRobotState);
 // make a pre_grasp_state
   const robot_state::JointModelGroup* pToSupportJntGroup = pPreGraspRobotState->getJointModelGroup(toSupportGroup);
   const moveit::core::LinkModel* pTipLink = pToSupportJntGroup->getOnlyOneEndEffectorTip();
@@ -392,7 +393,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   m_pHyStateValidator->setMimicJointPositions(pPreGraspRobotState, toSupportGroup);
   pPreGraspRobotState->update();
 
-  // publishRobotState(*pPreGraspRobotState);
+  m_pHyStateValidator->publishRobotState(*pPreGraspRobotState);
 
   std::vector<robot_state::RobotStatePtr> traj;
   double translationStepMax = 0.001, rotationStepMax = 0.0;
@@ -411,6 +412,10 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   {
     return false;
   }
+
+  // removable
+  pPreGraspRobotState->update();
+  m_pHyStateValidator->publishRobotState(*pPreGraspRobotState);
 
   JointTrajectory toSupportGroupJntTraj;
   toSupportGroupJntTraj.resize(traj.size());
@@ -434,6 +439,9 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   pPreGraspRobotState.reset(new robot_state::RobotState(*traj[0]));
   m_pHyStateValidator->setMimicJointPositions(pPreGraspRobotState, toSupportGroup);
   pPreGraspRobotState->update();
+
+  m_pHyStateValidator->publishRobotState(*pPreGraspRobotState);
+
   return true;
 }
 
@@ -445,6 +453,8 @@ const std::string& toSupportGroup,
 MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
+  m_pHyStateValidator->publishRobotState(*pPreGraspRobotState);
+
   const robot_state::JointModelGroup* pToSupportJntGroup = pPreGraspRobotState->getJointModelGroup(toSupportGroup);
   const moveit::core::LinkModel* pTipLink = pToSupportJntGroup->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d toolTipPose = pPreGraspRobotState->getGlobalLinkTransform(pTipLink);
@@ -462,6 +472,9 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   {
     return false;
   }
+
+  pRobotFromState->update();
+  m_pHyStateValidator->publishRobotState(*pRobotFromState);
 
   JointTrajectory toSupportGroupJntTraj;
   toSupportGroupJntTraj.resize(traj.size());
@@ -491,6 +504,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   robot_state::RobotStatePtr pUngraspedRobotState(new robot_state::RobotState(*pRobotToState));
 
   planGraspStateToUngraspedState(pHandoffRobotState, pUngraspedRobotState, fromSupportGroup, jntTrajectoryBtwStates);
+  m_pHyStateValidator->publishRobotState(*pUngraspedRobotState);
   if (!planUngraspedStateToSafeState(pUngraspedRobotState, pRobotToState, fromSupportGroup, jntTrajectoryBtwStates))
     return false;
   return true;
@@ -505,6 +519,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
 // make a ungrasped_state
+  m_pHyStateValidator->publishRobotState(*pHandoffRobotState);
   const robot_state::JointModelGroup* pFromSupportJntGroup = pHandoffRobotState->getJointModelGroup(fromSupportGroup);
   const moveit::core::LinkModel* tipLink = pFromSupportJntGroup->getOnlyOneEndEffectorTip();
 
@@ -531,7 +546,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   pUngraspedRobotState->setJointGroupPositions(fromSupportEefGroup, fromSupportEefGroupJntPosition);
   pUngraspedRobotState->update();
 
-  // publishRobotState(*pUngraspedRobotState);
+  m_pHyStateValidator->publishRobotState(*pUngraspedRobotState);
 
   std::vector<robot_state::RobotStatePtr> traj;
   double translationStepMax = 0.001, rotationStepMax = 0.0;
@@ -554,6 +569,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   pUngraspedRobotState->setToDefaultValues(pUngraspedRobotState->getJointModelGroup(fromSupportEefGroup),
                                            fromSupportEefGroup + "_home");
   pUngraspedRobotState->update();
+  m_pHyStateValidator->publishRobotState(*pUngraspedRobotState);
 
   JointTrajectory fromSupportGroupJntTraj;
   fromSupportGroupJntTraj.resize(traj.size());
@@ -585,24 +601,29 @@ const std::string& fromSupportGroup,
 MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
-  const robot_state::JointModelGroup* pToSupportJntGroup = pRobotToState->getJointModelGroup(fromSupportGroup);
-  const moveit::core::LinkModel* pTipLink = pToSupportJntGroup->getOnlyOneEndEffectorTip();
+  const robot_state::JointModelGroup* pFromSupportJntGroup = pRobotToState->getJointModelGroup(fromSupportGroup);
+  const moveit::core::LinkModel* pTipLink = pFromSupportJntGroup->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d toolTipPose = pRobotToState->getGlobalLinkTransform(pTipLink);
 
+  m_pHyStateValidator->publishRobotState(*pUngraspedRobotState);
   std::vector<robot_state::RobotStatePtr> traj;
   double foundCartesianPath = pUngraspedRobotState->computeCartesianPath(
-  pUngraspedRobotState->getJointModelGroup(fromSupportGroup),
-                                           traj,
-                                           pTipLink,
-                                           toolTipPose,
-                                           true,
-                                           0.001,
-                                           0.0);
+                                                                         pUngraspedRobotState->getJointModelGroup(fromSupportGroup),
+                                                                                                                  traj,
+                                                                                                                  pTipLink,
+                                                                                                                  toolTipPose,
+                                                                                                                  true,
+                                                                                                                  0.001,
+                                                                                                                  0.0);
 
   if (foundCartesianPath != 1.0)
   {
     return false;
   }
+
+  // removable
+  pUngraspedRobotState->update();
+  m_pHyStateValidator->publishRobotState(*pUngraspedRobotState);
 
   JointTrajectory fromSupportGroupJntTraj;
   fromSupportGroupJntTraj.resize(traj.size());

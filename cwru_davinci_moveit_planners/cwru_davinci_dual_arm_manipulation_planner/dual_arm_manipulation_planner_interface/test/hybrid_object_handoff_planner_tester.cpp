@@ -100,7 +100,8 @@ protected:
   );
 
 protected:
-  std::vector<ob::State *> m_SlnStates;
+  std::vector<ob::State* > m_SlnStates;
+  std::unique_ptr<og::PathGeometric> m_pPath;
 //  robot_model::RobotModelPtr m_pRobotModel;
 };
 
@@ -120,6 +121,16 @@ const robot_model::RobotModelConstPtr& pRobotModel
 )
 {
   ASSERT_TRUE(m_pHyStateSpace);
+  m_pHyStateSpace->setArmIndexBounds(1, 2);
+  ompl::base::RealVectorBounds se3Bounds(3);
+  se3Bounds.setLow(0, -0.101);
+  se3Bounds.setHigh(0, 0.101);
+  se3Bounds.setLow(1, -0.1);
+  se3Bounds.setHigh(1, 0.1);
+  se3Bounds.setLow(2, -0.03);
+  se3Bounds.setHigh(2, 0.18);
+
+  m_pHyStateSpace->setSE3Bounds(se3Bounds);
   setupSpaceInformation(m_pHyStateSpace, pRobotModel,"needle_r");
   EXPECT_TRUE(m_pSpaceInfor);
 }
@@ -129,38 +140,40 @@ void HybridObjectHandoffPlannerTester::testConnectStates()
   getSolutionPathFromData();
   EXPECT_TRUE(!m_SlnStates.empty());
 
-  const HybridObjectStateSpace::StateType* pHyState0 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[0]);
-  const HybridObjectStateSpace::StateType* pHyState1 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[1]);
-  const HybridObjectStateSpace::StateType* pHyState2 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[2]);
-  const HybridObjectStateSpace::StateType* pHyState3 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[3]);
-  const HybridObjectStateSpace::StateType* pHyState4 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[4]);
-  const HybridObjectStateSpace::StateType* pHyState5 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[5]);
-  const HybridObjectStateSpace::StateType* pHyState6 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[6]);
-  const HybridObjectStateSpace::StateType* pHyState7 = dynamic_cast<HybridObjectStateSpace::StateType*>(m_SlnStates[7]);
-  EXPECT_TRUE(pHyState0);
-  EXPECT_TRUE(pHyState1);
-  EXPECT_TRUE(pHyState2);
-  EXPECT_TRUE(pHyState3);
-  EXPECT_TRUE(pHyState4);
-  EXPECT_TRUE(pHyState5);
-  EXPECT_TRUE(pHyState6);
-  EXPECT_TRUE(pHyState7);
+  std::vector<HybridObjectStateSpace::StateType*> m_SlnHYStates;
+  m_SlnHYStates.resize(m_SlnStates.size());
 
-  EXPECT_EQ(StateDiff::PoseDiffArmAndGraspSame, m_pHyStateSpace->checkStateDiff(pHyState0, pHyState1));
-  EXPECT_EQ(StateDiff::ArmAndGraspDiffPoseSame, m_pHyStateSpace->checkStateDiff(pHyState1, pHyState2));
-  EXPECT_EQ(StateDiff::AllSame,                 m_pHyStateSpace->checkStateDiff(pHyState2, pHyState3));
-  EXPECT_EQ(StateDiff::PoseDiffArmAndGraspSame, m_pHyStateSpace->checkStateDiff(pHyState3, pHyState4));
-  EXPECT_EQ(StateDiff::PoseDiffArmAndGraspSame, m_pHyStateSpace->checkStateDiff(pHyState4, pHyState5));
-  EXPECT_EQ(StateDiff::PoseDiffArmAndGraspSame, m_pHyStateSpace->checkStateDiff(pHyState5, pHyState6));
-  EXPECT_EQ(StateDiff::PoseDiffArmAndGraspSame, m_pHyStateSpace->checkStateDiff(pHyState6, pHyState7));
+  for (std::size_t i = 0; i < m_SlnStates.size(); ++i)
+  {
+    m_SlnHYStates[i] = m_SlnStates[i]->as<HybridObjectStateSpace::StateType>();
+    EXPECT_TRUE(m_SlnHYStates[i]);
+  }
 
-  testPlanObjectTransit(pHyState0, pHyState1);
-  testPlanHandoff(pHyState1, pHyState2);
-  testPlanObjectTransit(pHyState2, pHyState3);
-  testPlanObjectTransit(pHyState3, pHyState4);
-  testPlanObjectTransit(pHyState4, pHyState5);
-  testPlanObjectTransit(pHyState5, pHyState6);
-  testPlanObjectTransit(pHyState6, pHyState7);
+  for (std::size_t i = 0; i < m_SlnStates.size() - 1; ++i)
+  {
+    switch (m_pHyStateSpace->checkStateDiff(m_SlnHYStates[i], m_SlnHYStates[i+1]))
+    {
+      case StateDiff::AllSame:
+        // progress to PoseDiffArmAndGraspSame
+      case StateDiff::PoseDiffArmAndGraspSame:
+        testPlanObjectTransit(m_SlnHYStates[i],  m_SlnHYStates[i+1]);
+        break;
+      case StateDiff::ArmAndGraspDiffPoseSame:
+        testPlanHandoff(m_SlnHYStates[i],  m_SlnHYStates[i+1]);
+        break;
+      default:
+        // should not be there
+        break;
+    }
+  }
+
+//  testPlanObjectTransit(pHyState0, pHyState1);
+//  testPlanHandoff(      pHyState1, pHyState2);
+//  testPlanObjectTransit(pHyState2, pHyState3);
+//  testPlanObjectTransit(pHyState3, pHyState4);
+//  testPlanObjectTransit(pHyState4, pHyState5);
+//  testPlanObjectTransit(pHyState5, pHyState6);
+//  testPlanObjectTransit(pHyState6, pHyState7);
 }
 
 void HybridObjectHandoffPlannerTester::testPlanObjectTransit
@@ -219,7 +232,7 @@ const HybridObjectStateSpace::StateType* pHyToState
   EXPECT_TRUE(pRobotToState);
   EXPECT_TRUE(m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyToState, pRobotToState));
 
-  std::vector<double> jointHomePosition = {0.0, 0.0, 0.016, 0.0, 0.0};
+  std::vector<double> jointHomePosition = {0.0, 0.0, 0.016, 0.0, 0.0, 0.0};
   EXPECT_EQ(jointHomePosition.size(), jntTrajectoryBtwStates[0].second.begin()->second[0].size());
   for (std::size_t i = 0; i < jointHomePosition.size(); ++i)
   {
@@ -242,21 +255,21 @@ const HybridObjectStateSpace::StateType* pHyToState
 
   std::vector<double> graspedEefPosition;
   pRobotToState->copyJointGroupPositions(toSupportGroup + "_gripper", graspedEefPosition);
-  for (std::size_t i = 0; i < jointHomePosition.size(); ++i)
+  for (std::size_t i = 0; i < graspedEefPosition.size(); ++i)
   {
-    EXPECT_EQ(jntTrajectoryBtwStates[1].second[toSupportGroup + "_gripper"].back()[i], graspedArmPosition[i]);
+    EXPECT_EQ(jntTrajectoryBtwStates[1].second[toSupportGroup + "_gripper"].back()[i], graspedEefPosition[i]);
   }
 
   std::vector<double> ungraspedArmPosition;
   pRobotFromState->copyJointGroupPositions(fromSupportGroup, ungraspedArmPosition);
   for (std::size_t i = 0; i < jointHomePosition.size(); ++i)
   {
-    EXPECT_EQ(jntTrajectoryBtwStates[2].second.begin()->second.begin()[i], ungraspedArmPosition[i]);
+    EXPECT_EQ(jntTrajectoryBtwStates[2].second.begin()->second.front()[i], ungraspedArmPosition[i]);
   }
 
   std::vector<double> ungraspedEefPosition;
   pRobotFromState->copyJointGroupPositions(fromSupportGroup + "_gripper", ungraspedEefPosition);
-  for (std::size_t i = 0; i < jointHomePosition.size(); ++i)
+  for (std::size_t i = 0; i < ungraspedEefPosition.size(); ++i)
   {
     EXPECT_EQ(jntTrajectoryBtwStates[2].second[fromSupportGroup + "_gripper"].back()[i], 0.0);
   }
@@ -353,17 +366,16 @@ void HybridObjectHandoffPlannerTester::getSolutionPathFromData()
                           distance_zero(opt.identityCost()));
 
     // Extracting the path
-    og::PathGeometric path(m_pSpaceInfor);
+    m_pPath = std::make_unique<og::PathGeometric>(m_pSpaceInfor);
     for (ob::PlannerData::Graph::Vertex pos = boost::vertex(data.getGoalIndex(0), graph);
          prev[pos] != pos;
          pos = prev[pos])
     {
-      path.append(vertices[pos]->getState());
+      m_pPath->append(vertices[pos]->getState());
     }
-    path.append(vertices[start]->getState());
-    path.reverse();
-
-    m_SlnStates = path.getStates();
+    m_pPath->append(vertices[start]->getState());
+    m_pPath->reverse();
+    m_SlnStates = m_pPath->getStates();
   }
 }
 
