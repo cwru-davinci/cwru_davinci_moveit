@@ -124,7 +124,7 @@ const robot_state::RobotState& goal_state
   EXPECT_TRUE(same_count_var);
 
   std::vector<double> rstate_home_position(variable_count);
-  for (std::size_t i = 0; i < variable_count; i++)
+  for (std::size_t i = 0; i < variable_count; ++i)
   {
     rstate_home_position[i] = start_state.getVariablePosition(start_state.getVariableNames()[i]);
   }
@@ -177,7 +177,7 @@ const robot_state::RobotState& goal_state
   same_count_var = (variable_count == start_state.getVariableNames().size()) ? true : false;
   EXPECT_TRUE(same_count_var);
 
-  for (std::size_t i = 0; i < variable_count; i++)
+  for (std::size_t i = 0; i < variable_count; ++i)
   {
     EXPECT_EQ(rstate_home_position[i], start_state.getVariablePosition(start_state.getVariableNames()[i]));
   }

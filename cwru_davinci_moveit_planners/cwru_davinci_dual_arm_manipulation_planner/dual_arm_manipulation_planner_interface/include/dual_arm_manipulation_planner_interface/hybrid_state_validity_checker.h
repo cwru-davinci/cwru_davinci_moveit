@@ -106,15 +106,15 @@ public:
     return kmodel_;
   }
 
-protected:
-  void defaultSettings();
-
-  void loadNeedleModel();
-
   void publishRobotState
   (
   const robot_state::RobotState& rstate
   ) const;
+
+protected:
+  void defaultSettings();
+
+  void loadNeedleModel();
 
 protected:
   HybridObjectStateSpace                *hyStateSpace_;

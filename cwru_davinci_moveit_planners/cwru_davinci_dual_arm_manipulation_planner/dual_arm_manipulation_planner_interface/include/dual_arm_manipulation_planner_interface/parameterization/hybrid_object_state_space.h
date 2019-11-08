@@ -300,8 +300,7 @@ public:
   void setGraspIndexBounds
   (
   int lowerBound,
-  int upperBound,
-  const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
+  int upperBound
   );
 
   bool setJointValues
