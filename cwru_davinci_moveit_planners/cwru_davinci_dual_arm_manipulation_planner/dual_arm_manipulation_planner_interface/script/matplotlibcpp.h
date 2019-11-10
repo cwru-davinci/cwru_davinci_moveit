@@ -729,7 +729,7 @@ bool bar(const std::vector<Numeric> &               y,
   using T = typename std::remove_reference<decltype(y)>::type::value_type;
 
   std::vector<T> x;
-  for (std::size_t i = 0; i < y.size(); i++) { x.push_back(i); }
+  for (std::size_t i = 0; i < y.size(); ++i) { x.push_back(i); }
 
   return bar(x, y, ec, ls, lw, keywords);
 }
@@ -1292,7 +1292,7 @@ inline void xticks(const std::vector<Numeric> &ticks, const std::vector<std::str
     } else {
         // make tuple of tick labels
         PyObject* labelstuple = PyTuple_New(labels.size());
-        for (size_t i = 0; i < labels.size(); i++)
+        for (size_t i = 0; i < labels.size(); ++i)
             PyTuple_SetItem(labelstuple, i, PyUnicode_FromString(labels[i].c_str()));
 
         // construct positional args
@@ -1339,7 +1339,7 @@ inline void yticks(const std::vector<Numeric> &ticks, const std::vector<std::str
     } else {
         // make tuple of tick labels
         PyObject* labelstuple = PyTuple_New(labels.size());
-        for (size_t i = 0; i < labels.size(); i++)
+        for (size_t i = 0; i < labels.size(); ++i)
             PyTuple_SetItem(labelstuple, i, PyUnicode_FromString(labels[i].c_str()));
 
         // construct positional args
@@ -1643,7 +1643,7 @@ inline std::vector<std::array<double, 2>> ginput(const int numClicks = 1, const 
     const size_t len = PyList_Size(res);
     std::vector<std::array<double, 2>> out;
     out.reserve(len);
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; ++i) {
         PyObject *current = PyList_GetItem(res, i);
         std::array<double, 2> position;
         position[0] = PyFloat_AsDouble(PyTuple_GetItem(current, 0));

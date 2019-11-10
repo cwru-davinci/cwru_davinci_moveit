@@ -57,7 +57,7 @@ TEST(TestHybridRRT, HybridMotionValidator)
   int test_num = 0;
   node_handle_priv.getParam("test_num", test_num);
 
-  for (std::size_t i = 0; i < test_num; i++)
+  for (std::size_t i = 0; i < test_num; ++i)
   {
     const robot_state::RobotStatePtr pRStateHome(new robot_state::RobotState(tester.getRobotModel()));
     pRStateHome->setToDefaultValues();
@@ -66,7 +66,7 @@ TEST(TestHybridRRT, HybridMotionValidator)
     EXPECT_EQ(variable_count, pRStateHome->getVariableNames().size());
 
     std::vector<double> rstate_home_position(variable_count);
-    for (std::size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; ++i)
     {
       rstate_home_position[i] = pRStateHome->getVariablePosition(pRStateHome->getVariableNames()[i]);
     }
@@ -76,12 +76,12 @@ TEST(TestHybridRRT, HybridMotionValidator)
     const robot_state::RobotStatePtr& pRdmRState = tester.sampleRobotState();
     EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
     std::vector<double> rstate_random_position(variable_count);
-    for (std::size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; ++i)
     {
       rstate_random_position[i] = pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]);
     }
 
-    for (std::size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; ++i)
     {
       EXPECT_EQ(pRdmRState->getVariableNames()[i], pRStateHome->getVariableNames()[i]);
     }
@@ -92,13 +92,13 @@ TEST(TestHybridRRT, HybridMotionValidator)
     EXPECT_TRUE(testResult);
 
     EXPECT_EQ(variable_count, pRStateHome->getVariableNames().size());
-    for (std::size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; ++i)
     {
       EXPECT_EQ(rstate_home_position[i], pRStateHome->getVariablePosition(pRStateHome->getVariableNames()[i]));
     }
 
     EXPECT_EQ(variable_count, pRdmRState->getVariableNames().size());
-    for (std::size_t i = 0; i < variable_count; i++)
+    for (std::size_t i = 0; i < variable_count; ++i)
     {
       EXPECT_EQ(rstate_random_position[i], pRdmRState->getVariablePosition(pRdmRState->getVariableNames()[i]));
     }

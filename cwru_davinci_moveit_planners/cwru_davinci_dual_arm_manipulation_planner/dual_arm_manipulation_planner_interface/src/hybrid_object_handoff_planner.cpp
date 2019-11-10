@@ -70,10 +70,12 @@ const double solveTime
   if (m_pRRTConnectPlanner && m_pRRTConnectPlanner->isSetup())
   {
     m_Solved = m_pRRTConnectPlanner->ob::Planner::solve(solveTime);
+    printf("HybridObjectHandoffPlanner: Handoff planner status is %s", m_Solved.asString().c_str());
     return m_Solved;
   }
 
   m_Solved = ob::PlannerStatus::ABORT;
+  printf("HybridObjectHandoffPlanner: Handoff planner status is %s", m_Solved.asString().c_str());
   return m_Solved;
 }
 
@@ -385,7 +387,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   std::vector<double> toSupportEefGroupJntPosition;
   pPreGraspRobotState->copyJointGroupPositions(toSupportEefGroup, toSupportEefGroupJntPosition);
 
-  for (std::size_t i = 0; i < toSupportEefGroupJntPosition.size(); i++)
+  for (std::size_t i = 0; i < toSupportEefGroupJntPosition.size(); ++i)
   {
     toSupportEefGroupJntPosition[i] = 0.5;
   }
@@ -539,7 +541,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   std::vector<double> fromSupportEefGroupJntPosition;
   pUngraspedRobotState->copyJointGroupPositions(fromSupportEefGroup, fromSupportEefGroupJntPosition);
 
-  for (std::size_t i = 0; i < fromSupportEefGroupJntPosition.size(); i++)
+  for (std::size_t i = 0; i < fromSupportEefGroupJntPosition.size(); ++i)
   {
     fromSupportEefGroupJntPosition[i] = 0.5;
   }

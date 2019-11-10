@@ -125,15 +125,16 @@ int main(int argc, char** argv)
                                                                      objectName);
 
   // Try defined grasped fist
-  if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::DEFINED, objectName))
+  if (pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::DEFINED, objectName))
   {
-    return -1;
+    ROS_INFO("Handoff planning inputs parameter: needle picked up in DEFINED way");
+    return 0;
   }
 
-  if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::FINDGOOD, objectName))
-  {
-    return -1;
-  }
+   if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::FINDGOOD, objectName))
+   {
+     return -1;
+   }
 
   // TO DO
   // execute needle grasping first

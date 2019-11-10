@@ -80,6 +80,36 @@ public:
   const HybridObjectStateSpace::StateType* pHyToState
   );
 
+  bool testSetupProblemDefinition
+  (
+  const ompl::base::State* start,
+  const ompl::base::State* goal
+  );
+
+  bool testSetupPlanner
+  (
+  );
+
+  ob::PlannerStatus::StatusType testSolve
+  (
+  const double solveTime
+  );
+
+  void testCartesianPath
+  (
+  const MoveGroupJointTrajectorySegment& jntTrajSeg
+  );
+
+  double distance
+  (
+  const Eigen::Affine3d& preTrans,
+  const Eigen::Affine3d& postTrans
+  );
+
+  const ompl::base::SpaceInformationPtr& getSpaceInformation
+  (
+  ) const;
+
 protected:
   void getSolutionPathFromData();
 
@@ -100,8 +130,8 @@ protected:
   );
 
 protected:
-  std::vector<ob::State* > m_SlnStates;
-  std::unique_ptr<og::PathGeometric> m_pPath;
+  std::vector<ob::State* >                           m_SlnStates;
+  std::unique_ptr<og::PathGeometric>                 m_pPath;
 //  robot_model::RobotModelPtr m_pRobotModel;
 };
 
@@ -133,6 +163,33 @@ const robot_model::RobotModelConstPtr& pRobotModel
   m_pHyStateSpace->setSE3Bounds(se3Bounds);
   setupSpaceInformation(m_pHyStateSpace, pRobotModel,"needle_r");
   EXPECT_TRUE(m_pSpaceInfor);
+  EXPECT_TRUE(m_pHyStateValidator);
+}
+
+bool HybridObjectHandoffPlannerTester::testSetupProblemDefinition
+(
+const ompl::base::State* start,
+const ompl::base::State* goal
+)
+{
+  setupProblemDefinition(start, goal);
+  return m_pProblemDef.get();
+}
+
+bool HybridObjectHandoffPlannerTester::testSetupPlanner
+(
+)
+{
+  setupPlanner(100.0);
+  return m_pRRTConnectPlanner.get();
+}
+
+ob::PlannerStatus::StatusType HybridObjectHandoffPlannerTester::testSolve
+(
+  const double solveTime
+)
+{
+  return solve(solveTime);
 }
 
 void HybridObjectHandoffPlannerTester::testConnectStates()
@@ -166,14 +223,6 @@ void HybridObjectHandoffPlannerTester::testConnectStates()
         break;
     }
   }
-
-//  testPlanObjectTransit(pHyState0, pHyState1);
-//  testPlanHandoff(      pHyState1, pHyState2);
-//  testPlanObjectTransit(pHyState2, pHyState3);
-//  testPlanObjectTransit(pHyState3, pHyState4);
-//  testPlanObjectTransit(pHyState4, pHyState5);
-//  testPlanObjectTransit(pHyState5, pHyState6);
-//  testPlanObjectTransit(pHyState6, pHyState7);
 }
 
 void HybridObjectHandoffPlannerTester::testPlanObjectTransit
@@ -201,6 +250,8 @@ const HybridObjectStateSpace::StateType* pHyToState
   // construct two robot state from joint values
   sameRobotState(pRobotFromState, jntTrajectoryBtwStates[0].second.begin()->second[0], supportGroup);
   sameRobotState(pRobotToState, jntTrajectoryBtwStates[0].second.begin()->second.back(), supportGroup);
+
+  testCartesianPath(jntTrajectoryBtwStates[0].second);
 }
 
 void HybridObjectHandoffPlannerTester::testPlanHandoff
@@ -223,6 +274,19 @@ const HybridObjectStateSpace::StateType* pHyToState
   EXPECT_EQ(toSupportGroup,   jntTrajectoryBtwStates[1].second.begin()->first);
   EXPECT_EQ(fromSupportGroup, jntTrajectoryBtwStates[2].second.begin()->first);
   EXPECT_EQ(fromSupportGroup, jntTrajectoryBtwStates[3].second.begin()->first);
+
+  EXPECT_EQ(1, jntTrajectoryBtwStates[0].second.size());
+  EXPECT_EQ(2, jntTrajectoryBtwStates[1].second.size());
+  EXPECT_EQ(2, jntTrajectoryBtwStates[2].second.size());
+  EXPECT_EQ(1, jntTrajectoryBtwStates[3].second.size());
+
+  std::map<MoveGroup, JointTrajectory>::const_iterator itr = jntTrajectoryBtwStates[1].second.begin();
+  ++itr;
+  EXPECT_EQ(toSupportGroup + "_gripper", itr->first);
+
+  itr = jntTrajectoryBtwStates[2].second.begin();
+  ++itr;
+  EXPECT_EQ(fromSupportGroup + "_gripper", itr->first);
 
   const robot_state::RobotStatePtr pRobotFromState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
   EXPECT_TRUE(pRobotFromState);
@@ -324,6 +388,55 @@ const std::string& supportGroup
   EXPECT_TRUE(tipPoseCopy.isApprox(tipPose, 1e-4));
 }
 
+void HybridObjectHandoffPlannerTester::testCartesianPath
+(
+const MoveGroupJointTrajectorySegment& jntTrajSeg
+)
+{
+  ASSERT_TRUE(!jntTrajSeg.empty());
+
+  const robot_state::RobotStatePtr pRobotState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
+  pRobotState->setToDefaultValues();
+  const std::string& moveGroup = jntTrajSeg.begin()->first;
+  const JointTrajectory& jntTrajectory = jntTrajSeg.begin()->second;
+
+  ASSERT_TRUE(!jntTrajectory.empty());
+
+  pRobotState->setJointGroupPositions(moveGroup, jntTrajectory[0]);
+  pRobotState->update();
+  Eigen::Affine3d headTipPose = pRobotState->getGlobalLinkTransform(
+  pRobotState->getJointModelGroup(moveGroup)->getOnlyOneEndEffectorTip());
+
+  for (std::size_t i = 1 ; i < jntTrajectory.size() - 1; ++i)
+  {
+    pRobotState->setJointGroupPositions(moveGroup, jntTrajectory[i]);
+    pRobotState->update();
+    Eigen::Affine3d postTipPose = pRobotState->getGlobalLinkTransform(
+    pRobotState->getJointModelGroup(moveGroup)->getOnlyOneEndEffectorTip());
+
+    double distDiff = distance(headTipPose, postTipPose);
+    EXPECT_LE(distDiff, 0.001);
+    headTipPose = postTipPose;
+  }
+}
+
+double HybridObjectHandoffPlannerTester::distance
+(
+const Eigen::Affine3d& preTrans,
+const Eigen::Affine3d& postTrans
+)
+{
+  Eigen::Vector3d translation = preTrans.translation() - postTrans.translation();
+  double translationDist = translation.norm();
+
+//  Eigen::Quaterniond preQua = Eigen::Quaterniond(preTrans.linear());
+//  Eigen::Quaterniond postQua = Eigen::Quaterniond(postTrans.linear());
+//  double rotationDist = fabs(postQua.angularDistance(preQua));
+
+//  return translationDist + rotationDist;
+  return translationDist;
+}
+
 void HybridObjectHandoffPlannerTester::getSolutionPathFromData()
 {
   ob::PlannerDataStorage dataStorage;
@@ -391,5 +504,11 @@ vertex_type_t>::type &plannerDataVertices
 {
   return ob::Cost(obj->costToGo(plannerDataVertices[v1]->getState(), goal));
 }
-}
 
+const ompl::base::SpaceInformationPtr& HybridObjectHandoffPlannerTester::getSpaceInformation
+(
+) const
+{
+  return m_pSpaceInfor;
+}
+}

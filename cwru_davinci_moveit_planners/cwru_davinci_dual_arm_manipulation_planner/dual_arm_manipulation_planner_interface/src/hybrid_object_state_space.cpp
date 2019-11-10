@@ -346,7 +346,7 @@ StateType* state
     return false;
   }
 
-  for (std::size_t i = 0; i < joint_space_size; i++)
+  for (std::size_t i = 0; i < joint_space_size; ++i)
   {
     joint_variable[i] = joint_values[i];
   }

@@ -304,7 +304,7 @@ const std::string& planning_group
   std::vector<double> eef_joint_position;
   pre_grasp_state->copyJointGroupPositions(eef_group_name, eef_joint_position);
 
-  for (std::size_t i = 0; i < eef_joint_position.size(); i++)
+  for (std::size_t i = 0; i < eef_joint_position.size(); ++i)
   {
     eef_joint_position[i] = 0.5;
   }
@@ -347,14 +347,14 @@ const std::string& planning_group
                           hdof_needle_body->getFixedTransforms(), hdof_needle_body->getTouchLinks(),
                           hdof_needle_body->getAttachedLinkName(), hdof_needle_body->getDetachPosture());
 
-  for (std::size_t i = 0; i < eef_joint_position.size(); i++)
+  for (std::size_t i = 0; i < eef_joint_position.size(); ++i)
   {
     eef_joint_position[i] = 0.0;
   }
   traj.back()->setJointGroupPositions(eef_group_name, eef_joint_position);
   traj.back()->update();
 
-  for (std::size_t i = 0; i < traj.size(); i++)
+  for (std::size_t i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
@@ -461,7 +461,7 @@ const std::string& planning_group
   std::vector<double> eef_joint_position;
   ungrasped_state->copyJointGroupPositions(eef_group_name, eef_joint_position);
 
-  for (std::size_t i = 0; i < eef_joint_position.size(); i++)
+  for (std::size_t i = 0; i < eef_joint_position.size(); ++i)
   {
     eef_joint_position[i] = 0.5;
   }
@@ -497,7 +497,7 @@ const std::string& planning_group
 
   ungrasped_state->setToDefaultValues(ungrasped_state->getJointModelGroup(eef_group_name), eef_group_name + "_home");
 
-  for (std::size_t i = 0; i < traj.size(); i++)
+  for (std::size_t i = 0; i < traj.size(); ++i)
   {
     setMimicJointPositions(traj[i], planning_group);
     traj[i]->update();
