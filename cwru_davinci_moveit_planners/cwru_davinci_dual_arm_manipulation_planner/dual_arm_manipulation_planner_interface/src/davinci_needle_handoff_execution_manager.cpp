@@ -327,12 +327,12 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
     for (std::size_t i = 0; i < xmlArmIndexBounds.size(); ++i)
     {
       ROS_ASSERT(xmlArmIndexBounds[i].getType() == XmlRpc::XmlRpcValue::TypeInt);
-      m_ArmIndexBounds[i] = static_cast<double>(xmlArmIndexBounds[i]);
+      m_ArmIndexBounds[i] = static_cast<int>(xmlArmIndexBounds[i]);
     }
   }
   else
   {
-    ROS_ERROR_STREAM("SE3 bounds type is not type array?");
+    ROS_ERROR_STREAM("ArmIndex bounds type is not type array?");
   }
 
   if (!m_NodeHandlePrivate.hasParam("object_name"))

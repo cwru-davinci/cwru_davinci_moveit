@@ -48,7 +48,9 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nodeHandle;
   ros::NodeHandle nodeHandlePriv("~");
+  ros::AsyncSpinner spinner(1);
   ros::Duration(3.0).sleep();
+  spinner.start();
 
   if (!nodeHandlePriv.hasParam("object_name"))
   {
@@ -127,16 +129,16 @@ int main(int argc, char** argv)
   // Try defined grasped fist
   if (pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::DEFINED, objectName))
   {
-    ROS_INFO("Handoff planning inputs parameter: needle picked up in DEFINED way");
+    ROS_INFO("%s: needle picked up in DEFINED way", nodeHandle.getNamespace());
     return 0;
   }
 
    if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::FINDGOOD, objectName))
    {
+     ROS_INFO("%s: needle picked up in FINDGOOD way", nodeHandle.getNamespace());
      return -1;
    }
 
-  // TO DO
   // execute needle grasping first
   std::vector<cwru_davinci_grasp::GraspInfo> graspPoses = pSimpleGrasp->getAllPossibleNeedleGrasps(false);
   cwru_davinci_grasp::GraspInfo initialGraspInfo = pSimpleGrasp->getSelectedGraspInfo();
