@@ -48,7 +48,7 @@ namespace dual_arm_manipulation_planner_interface
 
   bool HybridGoalState::isSatisfied(const ompl::base::State *st) const
   {
-    if(type_ == ompl::base::GoalType::GOAL_STATE)
+    if (type_ == ompl::base::GoalType::GOAL_STATE)
       hyStateSpace_->equalStates(st, as<ompl::base::State>());
     return false;
   }

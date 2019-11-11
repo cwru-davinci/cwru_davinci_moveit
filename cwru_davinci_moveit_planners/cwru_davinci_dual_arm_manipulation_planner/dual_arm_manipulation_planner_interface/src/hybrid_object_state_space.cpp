@@ -546,7 +546,7 @@ State* state
    bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
    bool do_transit = within_1Sd ? true : false;
 
-   if(do_transit)
+   if (do_transit)
    {
      components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
      components_[1]->copyState(cstate->components[1], hys_from->components[1]);

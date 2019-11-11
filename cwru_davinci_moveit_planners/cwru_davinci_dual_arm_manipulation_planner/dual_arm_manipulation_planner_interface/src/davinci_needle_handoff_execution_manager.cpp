@@ -87,7 +87,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
       m_pSupportArmGroup.reset(new MoveGroupInterface(jntTrajSeg.begin()->first));
       const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-      for(std::size_t j; j < jntTra.size(); ++j)
+      for(std::size_t j = 0; j < jntTra.size(); ++j)
       {
         m_pSupportArmGroup->setJointValueTarget(jntTra[j]);
         errorCodes = m_pSupportArmGroup->move();
@@ -106,7 +106,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
       m_pSupportArmGroup.reset(new MoveGroupInterface(safePlaceToPreGraspJntTrajSeg.begin()->first));
       {
         const JointTrajectory& jntTra = safePlaceToPreGraspJntTrajSeg.begin()->second;
-        for(std::size_t j; j < jntTra.size(); ++j)
+        for(std::size_t j = 0; j < jntTra.size(); ++j)
         {
           m_pSupportArmGroup->setJointValueTarget(jntTra[j]);
           m_pSupportArmGroup->move();
@@ -125,7 +125,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
       m_pSupportArmEefGroup.reset(new MoveGroupInterface((++preGraspToGraspedJntTrajSeg.begin())->first));
       {
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
-        for(std::size_t j; j < armJntTra.size(); ++j)
+        for(std::size_t j = 0; j < armJntTra.size(); ++j)
         {
           m_pSupportArmGroup->setJointValueTarget(armJntTra[j]);
           m_pSupportArmGroup->move();
@@ -139,7 +139,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
         }
 
         const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
-        for(std::size_t j; j < gripperJntTra.size(); ++j)
+        for(std::size_t j = 0; j < gripperJntTra.size(); ++j)
         {
           m_pSupportArmEefGroup->setJointValueTarget(gripperJntTra[j]);
           m_pSupportArmEefGroup->move();
@@ -157,7 +157,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
       m_pSupportArmGroup.reset(new MoveGroupInterface(graspToUngraspedJntSeg.begin()->first));
       {
         const JointTrajectory& jntTra = graspToUngraspedJntSeg.begin()->second;
-        for(std::size_t j; j < jntTra.size(); ++j)
+        for(std::size_t j = 0; j < jntTra.size(); ++j)
         {
           m_pSupportArmGroup->setJointValueTarget(jntTra[j]);
           m_pSupportArmGroup->move();
@@ -176,7 +176,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
       m_pSupportArmEefGroup.reset(new MoveGroupInterface((++ungraspedToSafePlaceJntTrajSeg.begin())->first));
       {
         const JointTrajectory& armJntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
-        for(std::size_t j; j < armJntTra.size(); ++j)
+        for(std::size_t j = 0; j < armJntTra.size(); ++j)
         {
           m_pSupportArmGroup->setJointValueTarget(armJntTra[j]);
           m_pSupportArmGroup->move();
@@ -190,7 +190,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
         }
 
         const JointTrajectory& gripperJntTra = (++ungraspedToSafePlaceJntTrajSeg.begin())->second;
-        for(std::size_t j; j < gripperJntTra.size(); ++j)
+        for(std::size_t j = 0; j < gripperJntTra.size(); ++j)
         {
           m_pSupportArmEefGroup->setJointValueTarget(gripperJntTra[j]);
           m_pSupportArmEefGroup->move();
@@ -244,12 +244,13 @@ bool DavinciNeedleHandoffExecutionManager::constructStartAndGoalState
 const ompl::base::SE3StateSpace::StateType* objStartPose,
 const int startSupportArmIdx,
 const int startGraspIdx,
+const std::vector<double>& startJointPosition,
 const ompl::base::SE3StateSpace::StateType* objGoalPose,
 const int goalSupportArmIdx,
 const int goalGraspIdx
 )
 {
-  if(!m_pHandoffPlanner->m_pHyStateSpace)
+  if (!m_pHandoffPlanner->m_pHyStateSpace)
   {
     ROS_ERROR("DavinciNeedleHandoffExecutionManager: invalid hybrid state space pointer");
     return false;
@@ -258,6 +259,7 @@ const int goalGraspIdx
   m_pHyStartState = m_pHandoffPlanner->m_pHyStateSpace->allocState()->as<HybridObjectStateSpace::StateType>();
   m_pHyGoalState = m_pHandoffPlanner->m_pHyStateSpace->allocState()->as<HybridObjectStateSpace::StateType>();
 
+  //  construct start state
   m_pHyStartState->se3State().setXYZ(objStartPose->getX(),
                                      objStartPose->getY(),
                                      objStartPose->getZ());
@@ -268,7 +270,11 @@ const int goalGraspIdx
 
   m_pHyStartState->armIndex().value = startSupportArmIdx;
   m_pHyStartState->graspIndex().value = startGraspIdx;
+  m_pHandoffPlanner->m_pHyStateSpace->setJointValues(startJointPosition, m_pHyStartState);
+  m_pHyStartState->setJointsComputed(true);
+  m_pHyStartState->markValid();
 
+  //  construct goal state
   m_pHyGoalState->se3State().setXYZ(objGoalPose->getX(),
                                     objGoalPose->getY(),
                                     objGoalPose->getZ());
@@ -279,6 +285,7 @@ const int goalGraspIdx
 
   m_pHyGoalState->armIndex().value = goalSupportArmIdx;
   m_pHyGoalState->graspIndex().value = goalGraspIdx;
+  m_pHyGoalState->setJointsComputed(false);
 
   return true;
 }
@@ -357,22 +364,26 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
   double maxDistance;
   m_NodeHandlePrivate.getParam("max_distance", maxDistance);
 
-  if(m_GraspInfo.empty())
+  if (m_GraspInfo.empty())
   {
     ROS_ERROR("DavinciNeedleHandoffExecutionManager: input grasp info list is empty");
     return false;
   }
 
-  if(!m_pHandoffPlanner)
+  if (!m_pHandoffPlanner)
   {
     ROS_ERROR("DavinciNeedleHandoffExecutionManager: invalid handoff planner pointer");
     return false;
   }
 
+  m_pHandoffPlanner->setupStateSpace(m_GraspInfo);
+
   if (!m_pHandoffPlanner->m_pHyStateSpace)
   {
-    m_pHandoffPlanner->setupStateSpace(m_GraspInfo);
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: failed to setup up hybrid object state space");
+    return false;
   }
+
   m_pHandoffPlanner->m_pHyStateSpace->setSE3Bounds(m_SE3Bounds[0],
                                                    m_SE3Bounds[1],
                                                    m_SE3Bounds[2],
@@ -389,6 +400,7 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
                                            m_RobotModelLoader.getModel(),
                                            objectName);
 
+  m_pHandoffPlanner->m_pHyStateSpace->enforceBounds(m_pHyGoalState);
   m_pHandoffPlanner->setupProblemDefinition(m_pHyStartState, m_pHyGoalState);
   m_pHandoffPlanner->setupPlanner(maxDistance);
   return true;

@@ -79,6 +79,7 @@ public:
   const ompl::base::SE3StateSpace::StateType* objStartPose,
   const int startSupportArmIdx,
   const int startGraspIdx,
+  const std::vector<double>& startJointPosition,
   const ompl::base::SE3StateSpace::StateType* objGoalPose,
   const int goalSupportArmIdx,
   const int goalGraspIdx

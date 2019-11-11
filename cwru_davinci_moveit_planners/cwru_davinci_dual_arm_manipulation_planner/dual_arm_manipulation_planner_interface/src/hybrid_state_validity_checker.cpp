@@ -79,7 +79,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
   hyStateSpace_->validty_check_num += 1;
 
   const auto *pHybridState = dynamic_cast<const HybridObjectStateSpace::StateType *>(state);
-  if(!pHybridState)
+  if (!pHybridState)
   {
     return false;
   }
@@ -106,7 +106,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 
     // publishRobotState(*kstate);
 
-    if(pHybridState->jointsComputed())
+    if (pHybridState->jointsComputed())
     {
       // publishRobotState(*kstate);
 
@@ -114,7 +114,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
       // check collision avoidance
       collision_detection::CollisionResult res;
       planning_scene_->checkCollision(collision_request_simple_, res, *kstate);
-      if(res.collision)
+      if (res.collision)
       {
         ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
         collision_detection::CollisionResult::ContactMap contactMap = res.contacts;
@@ -127,7 +127,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 
       kstate->clearAttachedBodies();
       is_valid = !res.collision;
-      if(res.collision == true)
+      if (res.collision == true)
       {
         const_cast<HybridObjectStateSpace::StateType*>(pHybridState)->markInvalid();
       }
@@ -149,13 +149,13 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
   double cost = 0.0;
 
   const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
-  if(!kstate)
+  if (!kstate)
   {
     return false;
   }
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
 
-  if(!hybridStateToRobotState(hs, kstate))
+  if (!hybridStateToRobotState(hs, kstate))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -178,14 +178,14 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 double HybridStateValidityChecker::clearance(const ompl::base::State* state) const
 {
   const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
-  if(!kstate)
+  if (!kstate)
   {
     return false;
   }
 
   const auto *hs = static_cast<const HybridObjectStateSpace::StateType *>(state);
 
-  if(!hybridStateToRobotState(hs, kstate))
+  if (!hybridStateToRobotState(hs, kstate))
   {
     printf("Invalid State: No IK solution.");
     return false;
@@ -205,7 +205,7 @@ const robot_state::RobotStatePtr& pRSstate,
 bool attachedObject
 ) const
 {
-  if(!pHyState || !pRSstate)
+  if (!pHyState || !pRSstate)
   {
     printf("HybridStateValidityChecker: Invalid state pointer.");
     return false;
@@ -214,7 +214,7 @@ bool attachedObject
   pRSstate->setToDefaultValues();
 
   const std::string supportGroup = (pHyState->armIndex().value == 1) ? "psm_one" : "psm_two";
-  if(!pHyState->jointsComputed())
+  if (!pHyState->jointsComputed())
   {
     // convert object pose to robot tip pose
     // this is the gripper tool tip link frame wrt /base_link
@@ -229,7 +229,7 @@ bool attachedObject
     double timeout = 0.1;
     bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
-    if(!found_ik)
+    if (!found_ik)
     {
       printf("HybridStateValidityChecker: No IK solution.");
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(false);
@@ -248,7 +248,7 @@ bool attachedObject
 
   setMimicJointPositions(pRSstate, supportGroup);
 
-  if(attachedObject)
+  if (attachedObject)
   {
     // attach object to supporting joint group of robot
     moveit::core::AttachedBody *pNeedleModel = createAttachedBody(supportGroup,
@@ -325,7 +325,7 @@ void HybridStateValidityChecker::loadNeedleModel()
     needle_mesh = shapes::createMeshFromResource("package://cwru_davinci_geometry_models/"
                                                    "props/needle_r/mesh/needle_r4.dae",
                                                  scale_vec);
-    if(!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
+    if (!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
       throw "Needle model is not loaded";
     const shapes::Shape* needle_shape = shapes::constructShapeFromMsg(mesh_msg);
     shapes::ShapeConstPtr needle_shape_ptr(needle_shape);
@@ -351,6 +351,6 @@ const std::string& planning_group
 {
   const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
   const double *joint_val = rstate->getJointPositions(outer_pitch_joint);
-  if(joint_val)
+  if (joint_val)
     rstate->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
 }

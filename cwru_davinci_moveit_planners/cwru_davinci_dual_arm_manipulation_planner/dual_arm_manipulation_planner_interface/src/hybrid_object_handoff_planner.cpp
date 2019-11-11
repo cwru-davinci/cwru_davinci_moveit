@@ -38,6 +38,7 @@
  */
 
 #include <dual_arm_manipulation_planner_interface/hybrid_object_handoff_planner.h>
+#include <ompl/base/PlannerDataStorage.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
@@ -90,6 +91,17 @@ PathJointTrajectory& handoffPathJntTraj
   }
 
   og::PathGeometric* slnPath = m_pProblemDef->getSolutionPath()->as<og::PathGeometric>();
+
+  std::string dataPath = ros::package::getPath("cwru_davinci_dual_arm_manipulation_planner");
+  std::ofstream outFile(dataPath + "/../../../" + "PathFound.txt");
+  slnPath->printAsMatrix(outFile);
+  outFile.close();
+
+  ob::PlannerData data(m_pSpaceInfor);
+  m_pRRTConnectPlanner->getPlannerData(data);
+  ob::PlannerDataStorage dataStorage;
+  dataStorage.store(data, (dataPath + "/../../../" + "HybridRRTPlannerData").c_str());
+
   const std::vector<ob::State*>& constSlnStates = slnPath->getStates();
   const size_t segments = slnPath->getStateCount() - 1;
 
@@ -201,10 +213,10 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     case StateDiff::AllSame:
       // progress to PoseDiffArmAndGraspSame
     case StateDiff::PoseDiffArmAndGraspSame:
-      hasTraj = planObjectTransit(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
+      hasTraj = planObjectTransit(pHyFromState, pHyToState, jntTrajectoryBtwStates);
       break;
     case StateDiff::ArmAndGraspDiffPoseSame:
-      hasTraj = planHandoff(pHyFromState, pHyFromState, jntTrajectoryBtwStates);
+      hasTraj = planHandoff(pHyFromState, pHyToState, jntTrajectoryBtwStates);
       break;
     default:
       // should not be there

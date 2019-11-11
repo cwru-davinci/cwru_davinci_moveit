@@ -129,13 +129,13 @@ int main(int argc, char** argv)
   // Try defined grasped fist
   if (pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::DEFINED, objectName))
   {
-    ROS_INFO("%s: needle picked up in DEFINED way", nodeHandle.getNamespace());
+    ROS_INFO("%s: needle picked up in DEFINED way", nodeHandle.getNamespace().c_str());
     return 0;
   }
 
    if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::FINDGOOD, objectName))
    {
-     ROS_INFO("%s: needle picked up in FINDGOOD way", nodeHandle.getNamespace());
+     ROS_INFO("%s: needle picked up in FINDGOOD way", nodeHandle.getNamespace().c_str());
      return -1;
    }
 
@@ -156,26 +156,28 @@ int main(int argc, char** argv)
 
   DavinciNeedleHandoffExecutionManager needleHandoffExecutor(nodeHandle,
                                                              nodeHandlePriv,
-                                                             graspPoses, objectName);
+                                                             graspPoses,
+                                                             objectName);
 
   needleHandoffExecutor.constructStartAndGoalState(startNeedlePose.get(),
                                                    (initialSupportArm == "psm_one" ? 1 : 2),
                                                    initialGraspInfo.graspParamInfo.grasp_id,
+                                                   pSimpleGrasp->graspedJointPosition(),
                                                    goalNeedlePose.get(),
-                                                   (int)goalStateAry[7],
-                                                   (int)goalStateAry[8]);
+                                                   (int) goalStateAry[7],
+                                                   (int) goalStateAry[8]);
 
-  if(!needleHandoffExecutor.initializePlanner())
+  if (!needleHandoffExecutor.initializePlanner())
   {
     return -1;
   }
 
-  if(!needleHandoffExecutor.planNeedleHandoffTraj(planningTime))
+  if (!needleHandoffExecutor.planNeedleHandoffTraj(planningTime))
   {
     return -1;
   }
 
-  if(!needleHandoffExecutor.executeNeedleHandoffTrajy())
+  if (!needleHandoffExecutor.executeNeedleHandoffTrajy())
   {
     return -1;
   }
