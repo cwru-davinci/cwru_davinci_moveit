@@ -4,7 +4,7 @@ initial_support_arm : 'psm_one'
 goal_state : [-0.0679653, -0.0513673, 0.0531317, 0.698322, 0.336106, -0.571231, -0.270323, 2.0, 147.0]
 
 # SE3 bounds: x_min, x_max, y_min, y_max, z_min, z_max wr/t /world from
-se3_bounds : [-0.101, 0.101, -0.1, 0.1, -0.03, 0.18]
+se3_bounds : [-0.2, 0.2, -0.2, 0.2, -0.03, 0.18]
 
 arm_index_bounds : [1, 2]
 
@@ -12,4 +12,4 @@ object_name : 'needle_r'
 
 max_distance : 100.0
 
-planning_time : 100.0
+planning_time : 200.0

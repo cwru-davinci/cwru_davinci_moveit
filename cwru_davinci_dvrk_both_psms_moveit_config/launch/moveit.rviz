@@ -4,8 +4,17 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
+        - /Status1
         - /MotionPlanning1
+        - /MotionPlanning1/Scene Robot1
         - /MotionPlanning1/Planning Request1
+        - /RobotState1
+        - /Axes1
+        - /Axes2
+        - /Pose1
+        - /Axes3
+        - /Axes4
       Splitter Ratio: 0.742560029
     Tree Height: 200
   - Class: rviz/Help
@@ -15,6 +24,8 @@ Panels:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
+Toolbars:
+  toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
@@ -83,6 +94,7 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+            Value: true
           PSM1_outer_pitch_front_link:
             Alpha: 1
             Show Axes: false
@@ -164,6 +176,7 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+            Value: true
           PSM2_outer_pitch_front_link:
             Alpha: 1
             Show Axes: false
@@ -314,6 +327,7 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+            Value: true
           PSM1_outer_pitch_front_link:
             Alpha: 1
             Show Axes: false
@@ -395,6 +409,7 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
+            Value: true
           PSM2_outer_pitch_front_link:
             Alpha: 1
             Show Axes: false
@@ -491,11 +506,260 @@ Visualization Manager:
         Show Robot Visual: true
       Value: true
       Velocity_Scaling_Factor: 1
+    - Attached Body Color: 150; 50; 150
+      Class: moveit_rviz_plugin/RobotState
+      Collision Enabled: false
+      Enabled: false
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        PSM1_outer_insertion_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_back_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_bottom_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_front_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM1_outer_pitch_top_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_psm_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_main_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_tip_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM1_tool_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_ee_link_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM1_tool_wrist_sca_ee_link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_ee_link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_insertion_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_back_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_bottom_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_front_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM2_outer_pitch_top_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_psm_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_main_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_tip_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM2_tool_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_ee_link_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM2_tool_wrist_sca_ee_link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_ee_link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_l:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_l_camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_r:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_r_camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        world:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+      Name: RobotState
+      Robot Alpha: 1
+      Robot Description: robot_description
+      Robot State Topic: /test_hybrid_object_handoff_planner
+      Show All Links: true
+      Show Highlights: true
+      Value: false
+      Visual Enabled: true
+    - Class: rviz/Axes
+      Enabled: false
+      Length: 1
+      Name: Axes
+      Radius: 0.00100000005
+      Reference Frame: world
+      Value: false
+    - Class: rviz/Axes
+      Enabled: false
+      Length: 0.5
+      Name: Axes
+      Radius: 0.00999999978
+      Reference Frame: davinci_endo_cam_l
+      Value: false
+    - Alpha: 1
+      Axes Length: 0.100000001
+      Axes Radius: 0.00499999989
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: false
+      Head Length: 0.300000012
+      Head Radius: 0.100000001
+      Name: Pose
+      Shaft Length: 1
+      Shaft Radius: 0.0500000007
+      Shape: Axes
+      Topic: /updated_needle_pose
+      Unreliable: false
+      Value: false
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 0.0500000007
+      Name: Axes
+      Radius: 0.00100000005
+      Reference Frame: PSM1_tool_tip_link
+      Value: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 0.0500000007
+      Name: Axes
+      Radius: 0.00100000005
+      Reference Frame: PSM2_tool_tip_link
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: world
+    Fixed Frame: davinci_endo_cam_l
     Frame Rate: 30
   Name: root
   Tools:
@@ -507,25 +771,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 1.89648211
+      Distance: 0.196773127
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.0541518629
-        Y: -0.328406394
-        Z: 1.88545391e-06
+        X: 0.0219430067
+        Y: -0.0374579765
+        Z: 1.70663998e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.620203197
+      Pitch: 0.729797244
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 0.961725116
+      Yaw: 5.10490465
     Saved: ~
 Window Geometry:
   Displays:

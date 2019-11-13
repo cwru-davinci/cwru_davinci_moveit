@@ -177,7 +177,7 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  if (!needleHandoffExecutor.executeNeedleHandoffTrajy())
+  if (!needleHandoffExecutor.executeNeedleHandoffTraj())
   {
     return -1;
   }

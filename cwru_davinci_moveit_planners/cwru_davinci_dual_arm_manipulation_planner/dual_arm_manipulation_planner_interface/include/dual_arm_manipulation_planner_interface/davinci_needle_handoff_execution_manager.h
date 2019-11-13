@@ -40,7 +40,9 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_DAVINCI_NEEDLE_HANDOFF_EXECUTION_MANAGER_H
 
 //moveit
-#include <moveit/move_group_interface/move_group_interface.h>
+//#include <moveit/move_group_interface/move_group_interface.h>
+
+#include <cwru_davinci/uv_control/psm_interface.h>
 
 //ompl
 #include <ompl/geometric/PathGeometric.h>
@@ -56,6 +58,8 @@ namespace dual_arm_manipulation_planner_interface
 class DavinciNeedleHandoffExecutionManager
 {
 public:
+  DavinciNeedleHandoffExecutionManager(){}
+
   DavinciNeedleHandoffExecutionManager
   (
   const ros::NodeHandle& nodeHandle,
@@ -72,7 +76,7 @@ public:
   const double solveTime
   );
 
-  bool executeNeedleHandoffTrajy();
+  bool executeNeedleHandoffTraj();
 
   bool constructStartAndGoalState
   (
@@ -91,16 +95,14 @@ public:
 
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
-private:
-
+protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
   HybridObjectHandoffPlannerPtr                                   m_pHandoffPlanner = nullptr;
 
   ompl::base::PlannerStatus                                       m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
-  std::unique_ptr<MoveGroupInterface>                             m_pSupportArmGroup;
 
-  std::unique_ptr<MoveGroupInterface>                             m_pSupportArmEefGroup;
+  PSMInterfacePtr                                                 m_pSupportArmGroup;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
 
@@ -118,6 +120,17 @@ private:
   int                                                             m_ArmIndexBounds[2];
   std::string                                                     m_ObjectName;
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
+
+private:
+  bool turnOnStickyFinger
+  (
+  const std::string& supportArmGroup
+  );
+
+  bool turnOffStickyFinger
+  (
+  const std::string& supportArmGroup
+  );
 };
 }
 

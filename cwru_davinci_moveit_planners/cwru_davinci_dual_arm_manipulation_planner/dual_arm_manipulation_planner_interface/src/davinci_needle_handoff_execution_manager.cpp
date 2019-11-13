@@ -37,6 +37,7 @@
  */
 
 #include <dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution_manager.h>
+#include <std_srvs/SetBool.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
@@ -62,13 +63,16 @@ DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
 (
 )
 {
-  m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyStartState);
-  m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyGoalState);
+  if (m_pHyStartState && m_pHyGoalState)
+  {
+    m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyStartState);
+    m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyGoalState);
+  }
 }
 
-bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
-  (
-  )
+bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
+(
+)
 {
   moveit_msgs::MoveItErrorCodes errorCodes;
   if (!m_PlanningStatus == ob::PlannerStatus::EXACT_SOLUTION || m_HandoffJntTraj.empty())
@@ -85,122 +89,68 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTrajy
     {
       // move
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
-      m_pSupportArmGroup.reset(new MoveGroupInterface(jntTrajSeg.begin()->first));
+      m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
+      double jawPosition = 0.0;
+      m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
       const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-      for(std::size_t j = 0; j < jntTra.size(); ++j)
+      if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
       {
-        m_pSupportArmGroup->setJointValueTarget(jntTra[j]);
-        errorCodes = m_pSupportArmGroup->move();
-        if (errorCodes.val != errorCodes.SUCCESS)
-        {
-          ROS_INFO("DavinciNeedleHandoffExecutionManager: "
-                   "Failed to execute handoff trajectories, moveit error code is %d", errorCodes.val);
-          return false;
-        }
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+        return false;
       }
+      turnOffStickyFinger(jntTrajSeg.begin()->first);
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
       // move in fashion: home to pregrasp, approach-grasp, ungrasp-retreat, back to home
       const MoveGroupJointTrajectorySegment& safePlaceToPreGraspJntTrajSeg = m_HandoffJntTraj[i][0].second;
-      m_pSupportArmGroup.reset(new MoveGroupInterface(safePlaceToPreGraspJntTrajSeg.begin()->first));
+      m_pSupportArmGroup.reset(new psm_interface(safePlaceToPreGraspJntTrajSeg.begin()->first, m_NodeHandle));
       {
+        double jawPosition = 0.0;
+        m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = safePlaceToPreGraspJntTrajSeg.begin()->second;
-        for(std::size_t j = 0; j < jntTra.size(); ++j)
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
         {
-          m_pSupportArmGroup->setJointValueTarget(jntTra[j]);
-          m_pSupportArmGroup->move();
-          errorCodes = m_pSupportArmGroup->move();
-          if (errorCodes.val != errorCodes.SUCCESS)
-          {
-            ROS_INFO("DavinciNeedleHandoffExecutionManager: "
-                     "Failed to execute handoff trajectories, moveit error code is %d", errorCodes.val);
-            return false;
-          }
+          ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+          return false;
         }
+        turnOnStickyFinger(safePlaceToPreGraspJntTrajSeg.begin()->first);
       }
 
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
-      m_pSupportArmGroup.reset(new MoveGroupInterface(preGraspToGraspedJntTrajSeg.begin()->first));
-      m_pSupportArmEefGroup.reset(new MoveGroupInterface((++preGraspToGraspedJntTrajSeg.begin())->first));
+      m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
       {
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
-        for(std::size_t j = 0; j < armJntTra.size(); ++j)
-        {
-          m_pSupportArmGroup->setJointValueTarget(armJntTra[j]);
-          m_pSupportArmGroup->move();
-          errorCodes = m_pSupportArmGroup->move();
-          if (errorCodes.val != errorCodes.SUCCESS)
-          {
-            ROS_INFO("DavinciNeedleHandoffExecutionManager: "
-                     "Failed to execute handoff trajectories, moveit error code is %d", errorCodes.val);
-            return false;
-          }
-        }
-
         const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
-        for(std::size_t j = 0; j < gripperJntTra.size(); ++j)
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, gripperJntTra, 0.1))
         {
-          m_pSupportArmEefGroup->setJointValueTarget(gripperJntTra[j]);
-          m_pSupportArmEefGroup->move();
-          errorCodes = m_pSupportArmGroup->move();
-          if (errorCodes.val != errorCodes.SUCCESS)
-          {
-            ROS_INFO("DavinciNeedleHandoffExecutionManager: "
-                     "Failed to execute handoff trajectories, moveit error code is %d", errorCodes.val);
-            return false;
-          }
+          ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+          return false;
         }
       }
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
-      m_pSupportArmGroup.reset(new MoveGroupInterface(graspToUngraspedJntSeg.begin()->first));
+      m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
       {
-        const JointTrajectory& jntTra = graspToUngraspedJntSeg.begin()->second;
-        for(std::size_t j = 0; j < jntTra.size(); ++j)
+        const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
+        const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, gripperJntTra, 0.1))
         {
-          m_pSupportArmGroup->setJointValueTarget(jntTra[j]);
-          m_pSupportArmGroup->move();
-          errorCodes = m_pSupportArmGroup->move();
-          if (errorCodes.val != errorCodes.SUCCESS)
-          {
-            ROS_INFO("DavinciNeedleHandoffExecutionManager: "
-                     "Failed to execute handoff trajectories, moveit error code is %d", errorCodes.val);
-            return false;
-          }
+          ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+          return false;
         }
       }
 
       const MoveGroupJointTrajectorySegment& ungraspedToSafePlaceJntTrajSeg = m_HandoffJntTraj[i][3].second;
-      m_pSupportArmGroup.reset(new MoveGroupInterface(ungraspedToSafePlaceJntTrajSeg.begin()->first));
-      m_pSupportArmEefGroup.reset(new MoveGroupInterface((++ungraspedToSafePlaceJntTrajSeg.begin())->first));
+      m_pSupportArmGroup.reset(new psm_interface(ungraspedToSafePlaceJntTrajSeg.begin()->first, m_NodeHandle));
       {
-        const JointTrajectory& armJntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
-        for(std::size_t j = 0; j < armJntTra.size(); ++j)
+        double jawPosition = 0.0;
+        m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
+        const JointTrajectory& jntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.1))
         {
-          m_pSupportArmGroup->setJointValueTarget(armJntTra[j]);
-          m_pSupportArmGroup->move();
-          errorCodes = m_pSupportArmGroup->move();
-          if (errorCodes.val != errorCodes.SUCCESS)
-          {
-            ROS_INFO("DavinciNeedleHandoffExecutionManager: "
-                     "Failed to execute handoff trajectories, moveit error code is %d", errorCodes.val);
-            return false;
-          }
-        }
-
-        const JointTrajectory& gripperJntTra = (++ungraspedToSafePlaceJntTrajSeg.begin())->second;
-        for(std::size_t j = 0; j < gripperJntTra.size(); ++j)
-        {
-          m_pSupportArmEefGroup->setJointValueTarget(gripperJntTra[j]);
-          m_pSupportArmEefGroup->move();
-          errorCodes = m_pSupportArmGroup->move();
-          if (errorCodes.val != errorCodes.SUCCESS)
-          {
-            ROS_INFO("DavinciNeedleHandoffExecutionManager: "
-                     "Failed to execute handoff trajectories, moveit error code is %d", errorCodes.val);
-            return false;
-          }
+          ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+          return false;
         }
       }
     }
@@ -404,4 +354,34 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
   m_pHandoffPlanner->setupProblemDefinition(m_pHyStartState, m_pHyGoalState);
   m_pHandoffPlanner->setupPlanner(maxDistance);
   return true;
+}
+
+bool DavinciNeedleHandoffExecutionManager::turnOnStickyFinger
+(
+const std::string& supportArmGroup
+)
+{
+  ros::ServiceClient stickyFingerClient;
+  (supportArmGroup == "psm_one") ?
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1") :
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2");
+
+  std_srvs::SetBool graspCommand;
+  graspCommand.request.data = true;
+  stickyFingerClient.call(graspCommand);
+}
+
+bool DavinciNeedleHandoffExecutionManager::turnOffStickyFinger
+(
+const std::string& supportArmGroup
+)
+{
+  ros::ServiceClient stickyFingerClient;
+  (supportArmGroup == "psm_one") ?
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1") :
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2");
+
+  std_srvs::SetBool graspCommand;
+  graspCommand.request.data = false;
+  stickyFingerClient.call(graspCommand);
 }

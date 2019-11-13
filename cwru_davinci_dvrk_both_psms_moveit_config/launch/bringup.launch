@@ -1,5 +1,5 @@
 <launch>
     <node name="both_psms_moveit_joint_state_publisher" pkg="cwru_davinci_dvrk_both_psms_moveit_config" type="both_psms_moveit_joint_state_publisher" respawn="false" output="screen"/>
 
-	<include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_planning_execution.launch"/>
+    <include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/moveit_planning_execution.launch"/>
 </launch>

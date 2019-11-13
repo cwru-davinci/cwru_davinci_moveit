@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   cwru_davinci_grasp
   roscpp
   tf
+  uv_control
+  std_srvs
 )
 
 ## System dependencies are found with CMake's conventions
