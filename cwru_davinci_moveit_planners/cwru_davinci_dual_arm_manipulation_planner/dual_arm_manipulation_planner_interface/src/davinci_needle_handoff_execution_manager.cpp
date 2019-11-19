@@ -98,7 +98,6 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
         return false;
       }
-      turnOffStickyFinger(jntTrajSeg.begin()->first);
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
@@ -114,11 +113,11 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
         }
-        turnOnStickyFinger(safePlaceToPreGraspJntTrajSeg.begin()->first);
       }
 
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
       m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
+      turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
         const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
@@ -131,6 +130,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
       m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
+      turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
         const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
@@ -363,8 +363,8 @@ const std::string& supportArmGroup
 {
   ros::ServiceClient stickyFingerClient;
   (supportArmGroup == "psm_one") ?
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1") :
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2");
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1") :
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2_tool_wrist_sca_ee_link_1");
 
   std_srvs::SetBool graspCommand;
   graspCommand.request.data = true;
@@ -378,8 +378,8 @@ const std::string& supportArmGroup
 {
   ros::ServiceClient stickyFingerClient;
   (supportArmGroup == "psm_one") ?
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1") :
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2");
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1") :
+  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2_tool_wrist_sca_ee_link_1");
 
   std_srvs::SetBool graspCommand;
   graspCommand.request.data = false;

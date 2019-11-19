@@ -219,7 +219,7 @@ PathJointTrajectory& handoffPathJntTraj
 
   handoffPathJntTraj.clear();
   handoffPathJntTraj.resize(segments);
-  for (size_t i = 0; i < segments; ++i)
+  for (std::size_t i = 0; i < segments; ++i)
   {
     MoveGroupJointTrajectory jntTrajectoryBtwStates;
     if (!connectStates(m_SlnHYStates[i], m_SlnHYStates[i + 1], jntTrajectoryBtwStates))

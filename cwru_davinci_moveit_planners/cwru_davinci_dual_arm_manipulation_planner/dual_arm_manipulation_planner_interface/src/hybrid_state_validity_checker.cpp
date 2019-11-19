@@ -317,12 +317,12 @@ void HybridStateValidityChecker::defaultSettings()
 
 void HybridStateValidityChecker::loadNeedleModel()
 {
-  Eigen::Vector3d scale_vec(0.025, 0.025, 0.025);
+  Eigen::Vector3d scale_vec(0.0254, 0.0254, 0.0254);
   shapes::Mesh *needle_mesh;
   shapes::ShapeMsg mesh_msg;
   try
   {
-    needle_mesh = shapes::createMeshFromResource("package://cwru_davinci_geometry_models/"
+    needle_mesh = shapes::createMeshFromResource("package://sim_gazebo/"
                                                    "props/needle_r/mesh/needle_r4.dae",
                                                  scale_vec);
     if (!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
