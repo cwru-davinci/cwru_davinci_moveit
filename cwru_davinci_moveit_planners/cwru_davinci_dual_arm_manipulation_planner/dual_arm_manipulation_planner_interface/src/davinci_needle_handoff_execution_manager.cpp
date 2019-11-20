@@ -101,6 +101,9 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
+      m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(m_HandoffJntTraj[i][2].second.begin()->first));
+      m_pMoveItSupportArmGroupInterf->detachObject(m_ObjectName);
+
       // move in fashion: home to pregrasp, approach-grasp, ungrasp-retreat, back to home
       const MoveGroupJointTrajectorySegment& safePlaceToPreGraspJntTrajSeg = m_HandoffJntTraj[i][0].second;
       m_pSupportArmGroup.reset(new psm_interface(safePlaceToPreGraspJntTrajSeg.begin()->first, m_NodeHandle));
@@ -117,7 +120,8 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
       m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
-      turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
+      m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(preGraspToGraspedJntTrajSeg.begin()->first));
+//      turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
         const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
@@ -126,11 +130,12 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
         }
+        m_pMoveItSupportArmGroupInterf->attachObject(m_ObjectName);
       }
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
       m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
-      turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
+//      turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
         const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;

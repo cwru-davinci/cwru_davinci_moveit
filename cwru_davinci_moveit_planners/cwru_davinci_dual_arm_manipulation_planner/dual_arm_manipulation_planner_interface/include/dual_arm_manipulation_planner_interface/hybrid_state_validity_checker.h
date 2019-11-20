@@ -116,6 +116,11 @@ protected:
 
   void loadNeedleModel();
 
+  bool noCollision
+  (
+  const robot_state::RobotState& rstate
+  ) const;
+
 protected:
   HybridObjectStateSpace                *hyStateSpace_;
 

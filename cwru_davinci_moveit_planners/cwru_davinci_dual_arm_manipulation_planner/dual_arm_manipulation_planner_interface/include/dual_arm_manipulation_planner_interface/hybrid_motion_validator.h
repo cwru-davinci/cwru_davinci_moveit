@@ -145,13 +145,6 @@ protected:
   const std::string& planning_group
   ) const;
 
-  bool noCollision(const robot_state::RobotState& rstate) const;
-
-  void setMimicJointPositions
-  (
-  const robot_state::RobotStatePtr& rstate,
-  const std::string& planning_group
-  ) const;
 protected:
   ros::NodeHandle                           node_priv_;
 };

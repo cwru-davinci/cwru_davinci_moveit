@@ -104,6 +104,8 @@ protected:
 
   PSMInterfacePtr                                                 m_pSupportArmGroup;
 
+  std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf;
+
   ros::Subscriber                                                 m_NeedlePoseSub;
 
   geometry_msgs::PoseStamped                                      m_NeedlePose;

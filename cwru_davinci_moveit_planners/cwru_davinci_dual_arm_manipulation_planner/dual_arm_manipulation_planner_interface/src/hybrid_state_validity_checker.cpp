@@ -108,26 +108,9 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 
     if (pHybridState->jointsComputed())
     {
-      // publishRobotState(*kstate);
-
-      planning_scene_->setCurrentState(*kstate);
-      // check collision avoidance
-      collision_detection::CollisionResult res;
-      planning_scene_->checkCollision(collision_request_simple_, res, *kstate);
-      if (res.collision)
-      {
-        ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-        collision_detection::CollisionResult::ContactMap contactMap = res.contacts;
-        for(collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
-        {
-          ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-        }
-        // publishRobotState(*kstate);
-      }
-
+      is_valid = noCollision(*kstate);
       kstate->clearAttachedBodies();
-      is_valid = !res.collision;
-      if (res.collision == true)
+      if (!is_valid)
       {
         const_cast<HybridObjectStateSpace::StateType*>(pHybridState)->markInvalid();
       }
@@ -353,4 +336,36 @@ const std::string& planning_group
   const double *joint_val = rstate->getJointPositions(outer_pitch_joint);
   if (joint_val)
     rstate->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
+}
+
+bool HybridStateValidityChecker::noCollision
+(
+const robot_state::RobotState& rstate
+) const
+{
+  auto start_ik = std::chrono::high_resolution_clock::now();
+
+  planning_scene_->setCurrentState(rstate);
+  collision_detection::CollisionRequest collision_request;
+  collision_request.contacts = true;
+  collision_detection::CollisionResult collision_result;
+  planning_scene_->checkCollision(collision_request, collision_result, rstate);
+  bool no_collision = !collision_result.collision;
+
+  auto finish_ik = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = finish_ik - start_ik;
+  hyStateSpace_->collision_checking_duration_ += elapsed;
+
+  if (collision_result.collision)
+  {
+    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+//    publishRobotState(rstate);
+  }
+  return no_collision;
 }

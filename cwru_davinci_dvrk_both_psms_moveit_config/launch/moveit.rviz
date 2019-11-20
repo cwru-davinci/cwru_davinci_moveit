@@ -16,7 +16,7 @@ Panels:
         - /Axes3
         - /Axes4
       Splitter Ratio: 0.742560029
-    Tree Height: 119
+    Tree Height: 200
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -133,7 +133,6 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-            Value: true
           PSM1_tool_wrist_link:
             Alpha: 1
             Show Axes: false
@@ -216,7 +215,6 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-            Value: true
           PSM2_tool_wrist_link:
             Alpha: 1
             Show Axes: false
@@ -368,7 +366,6 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-            Value: true
           PSM1_tool_wrist_link:
             Alpha: 1
             Show Axes: false
@@ -451,7 +448,6 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-            Value: true
           PSM2_tool_wrist_link:
             Alpha: 1
             Show Axes: false
@@ -518,20 +514,208 @@ Visualization Manager:
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: false
+      Enabled: true
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        PSM1_outer_insertion_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_back_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_bottom_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_front_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM1_outer_pitch_top_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_outer_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_psm_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_main_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_tip_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM1_tool_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_ee_link_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM1_tool_wrist_sca_ee_link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_ee_link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_sca_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM1_tool_wrist_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_insertion_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_back_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_bottom_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_front_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM2_outer_pitch_top_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_outer_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_psm_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_main_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_tip_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM2_tool_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_ee_link_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        PSM2_tool_wrist_sca_ee_link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_ee_link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_sca_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        PSM2_tool_wrist_shaft_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_l:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_l_camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_r:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        davinci_endo_cam_r_camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        world:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: RobotState
       Robot Alpha: 1
       Robot Description: robot_description
-      Robot State Topic: /test_hybrid_object_handoff_planner
+      Robot State Topic: /davinci_needle_handoff_execution_main
       Show All Links: true
       Show Highlights: true
-      Value: false
+      Value: true
       Visual Enabled: true
     - Class: rviz/Axes
       Enabled: false
@@ -607,10 +791,10 @@ Visualization Manager:
       Invert Z Axis: true
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: -0.820202708
+      Pitch: -0.0402037576
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 5.08990479
+      Yaw: 0.559905231
     Saved: ~
 Window Geometry:
   Displays:
@@ -624,7 +808,7 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000002ad000003befc0200000008fb000000100044006900730070006c006100790073010000002800000103000000d700fffffffb0000000800480065006c00700000000342000000bb0000007300fffffffb0000000a0056006900650077007300000003b0000000b0000000ad00fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004a00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000131000001d20000018300fffffffb0000000a005600690065007700730100000309000000dd000000ad00ffffff00000450000003be00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000200000000000002ad000003befc0200000007fb000000100044006900730070006c006100790073010000002800000154000000d700fffffffb0000000800480065006c00700000000342000000bb0000007300fffffffb0000000a0056006900650077007300000003b0000000b0000000ad00fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004a00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000182000002640000018300ffffff000000010000015c000003befc0200000001fb0000000a005600690065007700730100000028000003be000000ad00ffffff000002ee000003be00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
   Width: 1795

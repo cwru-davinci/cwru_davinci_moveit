@@ -12,4 +12,4 @@ object_name : 'needle_r'
 
 max_distance : 100.0
 
-planning_time : 200.0
+planning_time : 2000.0
