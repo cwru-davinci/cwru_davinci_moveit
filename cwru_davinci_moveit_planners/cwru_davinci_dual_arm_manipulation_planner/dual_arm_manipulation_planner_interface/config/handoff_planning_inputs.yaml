@@ -4,7 +4,10 @@ initial_support_arm : 'psm_one'
 goal_state : [-0.0679653, -0.0513673, 0.0531317, 0.698322, 0.336106, -0.571231, -0.270323, 2.0, 147.0]
 
 # SE3 bounds: x_min, x_max, y_min, y_max, z_min, z_max wr/t /world from
-se3_bounds : [-0.2, 0.2, -0.2, 0.2, -0.03, 0.18]
+se3_bounds : [-0.2, 0.2, -0.2, 0.2, 0.0, 0.18]
+
+# SE3 bounds for physical robot
+#se3_bounds : [-0.012, 0.079, -0.036, 0.049, 0.139, 0.174]
 
 arm_index_bounds : [1, 2]
 
@@ -12,4 +15,4 @@ object_name : 'needle_r'
 
 max_distance : 100.0
 
-planning_time : 2000.0
+planning_time : 200.0

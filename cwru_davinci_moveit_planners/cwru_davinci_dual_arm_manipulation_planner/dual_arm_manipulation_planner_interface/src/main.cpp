@@ -73,15 +73,37 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
   // construct an instance of space information from this state space
   auto si(std::make_shared<ob::SpaceInformation>(hystsp));
 
-  ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.101);
-  se3_xyz_bounds.setHigh(0, 0.101);
-  se3_xyz_bounds.setLow(1, -0.1);
-  se3_xyz_bounds.setHigh(1, 0.1);
-  se3_xyz_bounds.setLow(2, -0.03);
-  se3_xyz_bounds.setHigh(2, 0.18);
+  double se3Bounds[6];
+  if (!node_handle_priv.hasParam("se3_bounds"))
+  {
+    ROS_ERROR_STREAM("Handoff planning inputs parameter `se3_bounds` missing "
+                     "from rosparam server. "
+                     "Searching in namespace: "
+                     << node_handle_priv.getNamespace());
+    return;
+  }
 
-  hystsp->setSE3Bounds(se3_xyz_bounds);
+  XmlRpc::XmlRpcValue xmlSE3BoundsArray;
+  node_handle_priv.getParam("se3_bounds", xmlSE3BoundsArray);
+  if (xmlSE3BoundsArray.getType() == XmlRpc::XmlRpcValue::TypeArray)
+  {
+    for (std::size_t i = 0; i < xmlSE3BoundsArray.size(); ++i)
+    {
+      ROS_ASSERT(xmlSE3BoundsArray[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+      se3Bounds[i] = static_cast<double>(xmlSE3BoundsArray[i]);
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("SE3 bounds type is not type array?");
+  }
+
+  hystsp->setSE3Bounds(se3Bounds[0],
+                       se3Bounds[1],
+                       se3Bounds[2],
+                       se3Bounds[3],
+                       se3Bounds[4],
+                       se3Bounds[5]);
 
   si->setStateValidityChecker(
   std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
@@ -129,9 +151,8 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
   {
     stateSampler->sampleUniform(goal.get());
     goal->graspIndex().value = 147;
+    goal->armIndex().value = 2;
     is_gs_valid = si->isValid(goal.get());
-    if (!is_gs_valid)
-      continue;
   }
 
   // create a problem instance
@@ -217,7 +238,6 @@ int main(int argc, char** argv)
   boost::make_shared<cwru_davinci_grasp::DavinciNeedleGrasperBase>(node_handle_priv,
                                                                    "psm_one",
                                                                    "psm_one_gripper");
-
 
   std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
 
