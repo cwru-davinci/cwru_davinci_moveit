@@ -155,6 +155,27 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
     is_gs_valid = si->isValid(goal.get());
   }
 
+  std::string packPath;
+  node_handle_priv.getParam("packPath", packPath);
+
+  {
+    std::ofstream outFile(packPath + "/../../../" + "SampledGoalState.txt");
+    outFile << std::setprecision(15) << goal->se3State().getX() << ", "
+                                     << goal->se3State().getY() << ", "
+                                     << goal->se3State().getZ() << ", "
+                                     << goal->se3State().rotation().x << ", "
+                                     << goal->se3State().rotation().y << ", "
+                                     << goal->se3State().rotation().z << ", "
+                                     << goal->se3State().rotation().w << "\n";
+    outFile << std::setprecision(15) << goal->jointVariables()[0] << ", "
+                                     << goal->jointVariables()[1] << ", "
+                                     << goal->jointVariables()[2] << ", "
+                                     << goal->jointVariables()[3] << ", "
+                                     << goal->jointVariables()[4] << ", "
+                                     << goal->jointVariables()[5] << "\n";
+    outFile.close();
+  }
+
   // create a problem instance
   auto pdef(std::make_shared<ob::ProblemDefinition>(si));
 
@@ -196,8 +217,6 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
                 << " states and length " << slnPath.length() << std::endl;
       // print the path to screen
 
-      std::string packPath;
-      node_handle_priv.getParam("packPath", packPath);
       std::ofstream outFile(packPath + "/../../../" + "PathFound.txt");
       slnPath.printAsMatrix(outFile);
       outFile.close();

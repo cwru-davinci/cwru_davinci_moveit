@@ -86,7 +86,8 @@ public:
   const std::vector<double>& startJointPosition,
   const ompl::base::SE3StateSpace::StateType* objGoalPose,
   const int goalSupportArmIdx,
-  const int goalGraspIdx
+  const int goalGraspIdx,
+  const std::vector<double>& goalJointPosition
   );
 
   bool initializePlanner

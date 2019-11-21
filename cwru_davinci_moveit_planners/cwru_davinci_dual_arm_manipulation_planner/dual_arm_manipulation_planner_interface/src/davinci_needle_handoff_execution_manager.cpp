@@ -202,7 +202,8 @@ const int startGraspIdx,
 const std::vector<double>& startJointPosition,
 const ompl::base::SE3StateSpace::StateType* objGoalPose,
 const int goalSupportArmIdx,
-const int goalGraspIdx
+const int goalGraspIdx,
+const std::vector<double>& goalJointPosition
 )
 {
   if (!m_pHandoffPlanner->m_pHyStateSpace)
@@ -240,7 +241,9 @@ const int goalGraspIdx
 
   m_pHyGoalState->armIndex().value = goalSupportArmIdx;
   m_pHyGoalState->graspIndex().value = goalGraspIdx;
-  m_pHyGoalState->setJointsComputed(false);
+  m_pHandoffPlanner->m_pHyStateSpace->setJointValues(goalJointPosition, m_pHyGoalState);
+  m_pHyGoalState->setJointsComputed(true);
+  m_pHyGoalState->markValid();
 
   return true;
 }

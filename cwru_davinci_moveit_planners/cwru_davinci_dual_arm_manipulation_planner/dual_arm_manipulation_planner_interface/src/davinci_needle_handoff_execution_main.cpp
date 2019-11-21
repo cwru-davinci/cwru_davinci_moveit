@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     return false;
   }
 
-  double goalStateAry[9];
+  double goalStateAry[15];
   XmlRpc::XmlRpcValue xmlGoalStateArray;
   nodeHandlePriv.getParam("goal_state", xmlGoalStateArray);
   if (xmlGoalStateArray.getType() == XmlRpc::XmlRpcValue::TypeArray)
@@ -119,6 +119,9 @@ int main(int argc, char** argv)
   goalNeedlePose->rotation().y = goalStateAry[4];
   goalNeedlePose->rotation().z = goalStateAry[5];
   goalNeedlePose->rotation().w = goalStateAry[6];
+
+  const std::vector<double> goalJointPosition = {goalStateAry[7], goalStateAry[8], goalStateAry[9],
+                                                 goalStateAry[10], goalStateAry[11], goalStateAry[12]};
 
   cwru_davinci_grasp::DavinciSimpleNeedleGrasperPtr pSimpleGrasp =
   boost::make_shared<cwru_davinci_grasp::DavinciSimpleNeedleGrasper>(nodeHandle,
@@ -164,8 +167,9 @@ int main(int argc, char** argv)
                                                    initialGraspInfo.graspParamInfo.grasp_id,
                                                    pSimpleGrasp->graspedJointPosition(),
                                                    goalNeedlePose.get(),
-                                                   (int) goalStateAry[7],
-                                                   (int) goalStateAry[8]);
+                                                   (int) goalStateAry[13],
+                                                   (int) goalStateAry[14],
+                                                   goalJointPosition);
 
   if (!needleHandoffExecutor.initializePlanner())
   {
