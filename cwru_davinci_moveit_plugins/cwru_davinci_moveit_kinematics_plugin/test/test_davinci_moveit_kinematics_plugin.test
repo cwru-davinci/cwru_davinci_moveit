@@ -7,6 +7,13 @@
     <test test-name="test_davinci_moveit_kinematics_plugin" pkg="cwru_davinci_moveit_plugins" type="test_davinci_moveit_kinematics_plugin"
           time-limit="1.0" args="--gtest_repeat=1">
         <param name="time_out" value="0.1" />
-        <param name="test_num" value="1" />
+        <param name="test_num" value="10000" />
+        <param name="tip_name" value="PSM1_tool_tip_link" />
+        <param name="root_name" value="world" />
+        <param name="search_discretization" value="0.025" />
+        <param name="plugin_name" value="trac_ik_kinematics_plugin/TRAC_IKKinematicsPlugin"/>
     </test>
 </launch>
+
+<!--<param name="plugin_name" value="davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin"/>-->
+<!--<param name="plugin_name" value="trac_ik_kinematics_plugin/TRAC_IKKinematicsPlugin"/>-->

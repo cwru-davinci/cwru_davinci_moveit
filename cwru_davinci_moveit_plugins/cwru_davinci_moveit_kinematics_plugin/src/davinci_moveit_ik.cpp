@@ -208,7 +208,7 @@ namespace davinci_moveit_kinematics
     moveit_msgs::JointLimits limit;
     info.joint_names.push_back(joint->name);  // Joints are coming in reverse order
 
-    ROS_INFO_STREAM("Added joints name %s " << joint->name.c_str() << " and its joint type %d " << joint->type);
+    ROS_INFO_STREAM("Added joints name " << joint->name.c_str() << " and its joint type " << joint->type);
 
     if(joint->type != urdf::Joint::CONTINUOUS)
     {
