@@ -540,20 +540,25 @@ State* state
   const auto* hys_from = static_cast<const StateType*>(from);
   const auto* hys_to = static_cast<const StateType*>(to);
 
-   ompl::RNG randNum;
-   double random_num = randNum.gaussian01();
-   bool bound = 0.40;
-   bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
-   bool do_transit = within_1Sd ? true : false;
+  if (components_[0]->distance(hys_from->components[0], hys_to->components[0]) < 0.001)
+  {
+    return;
+  }
 
-   if (do_transit)
-   {
-     components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
-     components_[1]->copyState(cstate->components[1], hys_from->components[1]);
-     components_[2]->copyState(cstate->components[2], hys_from->components[2]);
-     components_[3]->copyState(cstate->components[3], hys_from->components[3]);
-     return;
-   }
+  ompl::RNG randNum;
+  double random_num = randNum.gaussian01();
+  bool bound = 0.40;
+  bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
+  bool do_transit = within_1Sd ? true : false;
+
+  if (do_transit)
+  {
+    components_[0]->interpolate(hys_from->components[0], hys_to->components[0], t, cstate->components[0]);
+    components_[1]->copyState(cstate->components[1], hys_from->components[1]);
+    components_[2]->copyState(cstate->components[2], hys_from->components[2]);
+    components_[3]->copyState(cstate->components[3], hys_from->components[3]);
+    return;
+  }
 
   switch (checkStateDiff(hys_from, hys_to))
   {

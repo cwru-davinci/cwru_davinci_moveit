@@ -90,7 +90,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
     {
       // move
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
-      m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface_calibration(jntTrajSeg.begin()->first, m_NodeHandle));
       double jawPosition = 0.0;
       m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
       const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
@@ -108,7 +108,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 
       // move in fashion: home to pregrasp, approach-grasp, ungrasp-retreat, back to home
       const MoveGroupJointTrajectorySegment& safePlaceToPreGraspJntTrajSeg = m_HandoffJntTraj[i][0].second;
-      m_pSupportArmGroup.reset(new psm_interface(safePlaceToPreGraspJntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface_calibration(safePlaceToPreGraspJntTrajSeg.begin()->first, m_NodeHandle));
       {
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
@@ -121,7 +121,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       }
 
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
-      m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface_calibration(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
       m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(preGraspToGraspedJntTrajSeg.begin()->first));
       turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
@@ -136,7 +136,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       }
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
-      m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface_calibration(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
       turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
@@ -149,7 +149,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       }
 
       const MoveGroupJointTrajectorySegment& ungraspedToSafePlaceJntTrajSeg = m_HandoffJntTraj[i][3].second;
-      m_pSupportArmGroup.reset(new psm_interface(ungraspedToSafePlaceJntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface_calibration(ungraspedToSafePlaceJntTrajSeg.begin()->first, m_NodeHandle));
       {
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
