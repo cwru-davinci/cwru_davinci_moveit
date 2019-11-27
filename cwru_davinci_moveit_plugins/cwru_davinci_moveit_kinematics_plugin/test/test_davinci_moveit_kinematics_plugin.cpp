@@ -372,8 +372,8 @@ TEST(ArmIKPlugin, DISABLED_TestMimicJoints)
   EXPECT_EQ(psm_one_base_active_joints_name[5], "PSM1_outer_wrist_yaw");
 }
 
-//TEST(ArmIKPlugin, DISABLED_TestKDLKinematics)
-TEST(ArmIKPlugin, TestKDLKinematics)
+TEST(ArmIKPlugin, DISABLED_TestKDLKinematics)
+// TEST(ArmIKPlugin, TestKDLKinematics)
 {
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   const robot_model::RobotModelConstPtr pKModel = robotModelLoader.getModel();
@@ -548,6 +548,46 @@ TEST(ArmIKPlugin, DISABLED_TestFK)
   ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
 }
 
+TEST(ArmIKPlugin, TestCompareUncalibratedFK)
+{
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
+  const robot_model::RobotModelConstPtr pKModelRobotDes = robotModelLoader.getModel();
+  robot_state::RobotStatePtr pRState(new robot_state::RobotState(pKModelRobotDes));
+
+  ROS_INFO("Model frame: %s", pKModelRobotDes->getModelFrame().c_str());
+  const robot_state::JointModelGroup * pJointModelGroup = pRState->getJointModelGroup("psm_one");
+
+  int test_num = 1000;
+  int success = 0;
+
+  for(int i = 0; i < test_num; ++i)
+  {
+    pRState->setToRandomPositions(pJointModelGroup);  // populate psm one joints with random values
+    std::vector<double> fkJointStateByMoveIt;
+    pRState->copyJointGroupPositions(pJointModelGroup, fkJointStateByMoveIt);
+    pRState->update();
+    fkJointStateByMoveIt.push_back(0.0);
+  
+    davinci_kinematics::Forward davinci_fk;
+  
+    Eigen::Affine3d tipPoseWrtBase = davinci_fk.fwd_kin_solve(fkJointStateByMoveIt);
+    Eigen::Affine3d baseWrtWorld = pRState->getFrameTransform("PSM1_psm_base_link");
+    Eigen::Affine3d tipPoseWrtWorld = baseWrtWorld * tipPoseWrtBase;
+  
+    Eigen::Affine3d tipPoseWrtWorldByMoveIt = pRState->getGlobalLinkTransform("PSM1_tool_tip_link");
+    bool result = tipPoseWrtWorldByMoveIt.isApprox(tipPoseWrtWorld, 1e-4);
+    EXPECT_TRUE(result);
+    if(result)
+    {
+      success += 1;
+    }
+  }
+
+  double correct_rate = (double)(success / test_num);
+  ROS_INFO("Success Rate: %f", correct_rate);
+  bool success_count = (success > 0.9999 * test_num) ? true : false;
+  EXPECT_TRUE(success_count);
+}
 
 //TEST(ArmIKPlugin, TestCompareFK)
 TEST(ArmIKPlugin, DISABLED_TestCompareFK)
@@ -590,7 +630,7 @@ TEST(ArmIKPlugin, DISABLED_TestCompareFK)
 
     kinematic_state->setToRandomPositions(joint_model_group);  // populate psm one joints with random values
     kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
-
+    kinematic_state->update();
     poses.resize(1);
     bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, fk_values, poses);
     ASSERT_TRUE(result_fk);
@@ -629,689 +669,689 @@ TEST(ArmIKPlugin, DISABLED_TestCompareFK)
 }
 
 
-//TEST(ArmIKPlugin, TestSearchIK)
-TEST(ArmIKPlugin, DISABLED_TestSearchIK)
-{
-  //  ASSERT_TRUE(ik_plugin_test.initialize());
-  rdf_loader::RDFLoader rdf_loader;
-  const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
-  const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
-  const robot_model::RobotModelPtr pKinematicModel(new robot_model::RobotModel(urdf_model, srdf));
-  robot_model::JointModelGroup *joint_model_group = pKinematicModel->getJointModelGroup(
-    ik_plugin_test.m_pKinematicsSolver->getGroupName());
-
-  //Test inverse kinematics
-  std::vector<double> seed, fk_values, solution;
-  double timeout = 2.0;
-  moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-  std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
-
-  const robot_state::RobotStatePtr pKinematicState(new robot_state::RobotState(pKinematicModel));
-  pKinematicState->setToDefaultValues();
-
-  ros::NodeHandle nh("~");
-  int number_ik_tests = 3000;
-  int acctual_test_num = 0;
-  unsigned int ik_found_success = 0;
-  unsigned int ik_correct_success = 0;
-  unsigned int fk_found_success = 0;
-
-  const char *path = "/home/sulu/failed_joint_angle_sets.txt";
-  std::ofstream output(path);
-  if(!output)
-  {
-    // Print an error and exit
-    ROS_ERROR("file could not be opened for writing!");
-    std::exit(1);
-  }
-
-  std::vector<geometry_msgs::Pose> failed_ik_pose;
-  failed_ik_pose.clear();
-
-  std::vector< std::vector<double> > failed_ik_joint_sets;
-  failed_ik_joint_sets.clear();
-
-  ros::WallTime start_time = ros::WallTime::now();
-  for(unsigned int i = 0; i < (unsigned int) number_ik_tests; ++i)
-  {
-    Eigen::Affine3d affine_base_wrt_world = pKinematicState->getFrameTransform("PSM1_psm_base_link");
-
-    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-    pKinematicState->setToRandomPositions(joint_model_group);
-    pKinematicState->copyJointGroupPositions(joint_model_group, fk_values);
-
-    acctual_test_num++;
-
-    std::vector<geometry_msgs::Pose> poses_wrt_world;
-    poses_wrt_world.resize(1);
-    bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, fk_values, poses_wrt_world);
-    if(result_fk)
-    {
-      fk_found_success++;
-    }
-
-    // transform pose wrt world to pose wrt base frame
-    Eigen::Affine3d affine_poses_wrt_world;
-    tf::poseMsgToEigen(poses_wrt_world[0], affine_poses_wrt_world);
-
-    Eigen::Affine3d affine_poses_wrt_base;
-    affine_poses_wrt_base = affine_base_wrt_world.inverse() * affine_poses_wrt_world;
-
-    std::vector<geometry_msgs::Pose> poses_wrt_base;
-    poses_wrt_base.resize(1);
-    tf::poseEigenToMsg(affine_poses_wrt_base, poses_wrt_base[0]);
-
-    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
-                                                                        error_code);
-    if(result_ik)
-    {
-      ik_found_success++;
-      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
-      if(result_ik)
-      {
-        std::vector<geometry_msgs::Pose> new_poses_wrt_world;
-//        new_poses_wrt_world.resize(1);
-//        result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
-
-        if(isJointSetEqual(fk_values, solution))
-        {
-          ik_correct_success++;
-        }
-      }
-    }
-    else
-    {
-      std::vector<geometry_msgs::Pose> new_poses_wrt_world;
-      new_poses_wrt_world.resize(1);
-      result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
-      if(result_fk)
-      {
-        failed_ik_pose.push_back(new_poses_wrt_world[0]);
-        failed_ik_joint_sets.push_back(fk_values);
-      }
-      ROS_INFO("The random joints angle results in IK failure: \n");
-      davinci_kinematics::Forward davinci_fk;
-      davinci_kinematics::Vectorq7x1 q_vec;
-      // copy failed to find ik solution joint list
-      for(int i = 0; i < fk_values.size(); i++)
-      {
-        q_vec(i) = fk_values[i];
-      }
-
-      Eigen::Affine3d affine_fk_pose_wrt_base = davinci_fk.fwd_kin_solve(q_vec);
-
-      //      Eigen::Affine3d affine_base_wrt_world = pKinematicState->getFrameTransform("PSM1_psm_base_link");
-
-      //      Eigen::Affine3d affine_fk_pose_wrt_world = affine_base_wrt_world * affine_fk_pose_wrt_base;
-
-      //      geometry_msgs::Pose fk_pose_wrt_base;
-      //
-      //      tf::poseEigenToMsg(affine_fk_pose_wrt_base, fk_pose_wrt_base);
-
-      davinci_kinematics::Inverse davinci_ik;
-
-      int ik_solve_return_val = davinci_ik.ik_solve(affine_fk_pose_wrt_base);
-
-      switch(ik_solve_return_val)
-      {
-        case -6 :
-        {
-          //          ROS_INFO("davinci ik solver has no solution");
-          for(int i = 0; i < fk_values.size(); i++)
-          {
-            output << fk_values[i] << "\n";
-          }
-          output << "\n";
-          break;
-        }
-        case 1 :
-        {
-          ROS_INFO("davinci ik solver has one solution");
-          std::vector<double> solution_ik;
-          davinci_kinematics::Vectorq7x1 vectorq = davinci_ik.get_soln();
-          solution_ik.resize(davinci_moveit_kinematics::NUM_JOINTS_ARM7DOF, 0.0);
-          for(int i = 0; i < solution_ik.size(); i++)
-          {
-            solution_ik[i] = vectorq(i);
-          }
-          //          davinci_moveit_kinematics::convertVectorq7x1ToStdVector(davinci_ik.get_soln(), solution_ik);
-          //          solution.push_back(solution_ik);
-          ik_found_success++;
-          if(isJointSetEqual(fk_values, solution_ik))
-          {
-            ik_correct_success++;
-          }
-          break;
-        }
-
-        default:
-        {
-          ROS_INFO("davinci ik solver has multiple solutions which is not allowed");
-          break;
-        }
-      }
-    }
-  }
-  output << "There are " << (acctual_test_num - ik_found_success)
-         << " sets of joint values failed to have IK solution."
-         << "\n";
-  output.close();
-  ROS_INFO_STREAM(
-    "There are " << (number_ik_tests - acctual_test_num) << " sets of joint values out of joint limits." << "\n");
-  ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / acctual_test_num);
-  ROS_INFO("IK Found and Correct Success Rate: %f", (double) ik_correct_success / ik_found_success);
-  bool success_count = (ik_found_success > 0.99 * acctual_test_num);
-  EXPECT_TRUE(success_count);
-  ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
-
-  // The :move_group_interface:`MoveGroup` class can be easily
-  // setup using just the name of the planning group you would like to control and plan for.
-  moveit::planning_interface::MoveGroupInterface move_group(ik_plugin_test.m_pKinematicsSolver->getGroupName());
-  moveit::planning_interface::MoveGroupInterface::Plan my_plan;
-  bool success = false;
-  for(int i = 0; i < failed_ik_joint_sets.size(); i++)
-  {
-    pKinematicState->setToDefaultValues();
-    move_group.setJointValueTarget(failed_ik_joint_sets[i]);
-    success = (bool) move_group.plan(my_plan);
-    ROS_INFO_NAMED("IK search test", "(joint space goal) %s", success ? "" : "FAILED");
-    ros::Duration(1.0).sleep();
-  }
-
-
-//  ros::Publisher vis_pub = nh.advertise<visualization_msgs::Marker>( "visualization_for_failed_ik_pose", 0 );
-//  visualization_msgs::Marker marker;
-//  marker.header.frame_id = "/world";
-//  marker.header.stamp = ros::Time();
-//  marker.ns = "my_namespace";
-//  marker.id = 0;
-//  marker.type = visualization_msgs::Marker::SPHERE;
-//  marker.action = visualization_msgs::Marker::ADD;
-////  marker.pose.position.x = 0;
-////  marker.pose.position.y = 0;
-////  marker.pose.position.z = 0;
-//  marker.pose.orientation.x = 0.0;
-//  marker.pose.orientation.y = 0.0;
-//  marker.pose.orientation.z = 0.0;
-//  marker.pose.orientation.w = 1.0;
-//  marker.scale.x = 0.01;
-//  marker.scale.y = 0.01;
-//  marker.scale.z = 0.01;
-//  marker.color.a = 1.0;
-//  marker.color.r = 1.0;
-//  marker.color.g = 0.0;
-//  marker.color.b = 0.0;
-
-//  for(int i = 0; i < 100; i++)
-//  {
-//    marker.header.stamp = ros::Time();
-//    marker.points.clear(); // clear out this vector
-//    for(int i = 0; i < failed_ik_pose.size(); i++)
-//    {
-//      geometry_msgs::Point point;
-//      point.x = failed_ik_pose[i].position.x;
-//      point.y = failed_ik_pose[i].position.y;
-//      point.z = failed_ik_pose[i].position.z;
-//      marker.points.push_back(point);
-//    }
-
-//    ros::Duration(0.5).sleep();
-//    vis_pub.publish( marker );
-//    ros::spinOnce();
-//  }
-
-}
-
-TEST(ArmIKPlugin, DISABLED_moveAlongWorldXTest)
-//TEST(ArmIKPlugin, moveAlongWorldXTest)
-{
-  rdf_loader::RDFLoader rdf_loader;
-  robot_model::RobotModelPtr kinematic_model;
-  const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
-  const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
-  kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
-  robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.m_pKinematicsSolver->getGroupName());
-
-  //Test inverse kinematics
-  std::vector<double> seed, fk_values, solution;
-  double timeout = 2.0;
-  moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-  std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
-
-  robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
-  kinematic_state->setToDefaultValues();
-
-  Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1_tool_tip_link");
-  double init_tip_offset_wrt_world = fabs(affine_tool_tip_pose_wrt_world.matrix()(0, 3));
-  double move_x_dist = 0.15;
-  double final_tip_offset_wrt_world = init_tip_offset_wrt_world - move_x_dist;
-  double traveled_dist = 0.0;
-  double resolution = 0.01;
-
-  ros::NodeHandle nh("~");
-  int number_ik_tests = 0;
-  int failed_tool_tip_sets_num = 0;
-  //  int acctual_test_num = 0;
-  //  nh.param("number_ik_tests", number_ik_tests, 3000);
-  unsigned int ik_found_success = 0;
-  //  unsigned int ik_correct_success = 0;
-  //  unsigned int fk_found_success = 0;
-
-  const char *path1 = "/home/sulu/failed_tool_tip_pose.txt";
-  std::ofstream output(path1);
-  if(!output)
-  {
-    // Print an error and exit
-    std::exit(1);
-    ROS_ERROR("file could not be opened for writing!");
-  }
-
-  const char *path2 = "/home/sulu/joint_angle_sets.txt";
-  std::ofstream output2(path2);
-  if(!output2)
-  {
-    // Print an error and exit
-    std::exit(1);
-    ROS_ERROR("file could not be opened for writing!");
-  }
-
-  ros::WallTime start_time = ros::WallTime::now();
-  while((init_tip_offset_wrt_world - traveled_dist) > final_tip_offset_wrt_world)
-  {
-//    number_ik_tests++;
-//    affine_tool_tip_pose_wrt_world.linear() << 0, 0, 1,
-//                                              -1, 0, 0,
-//                                               0, -1, 0;
-
-//    affine_tool_tip_pose_wrt_world.matrix()(2, 3) = 0.30;
-
-//    affine_tool_tip_pose_wrt_world.matrix()(0, 3) = -(init_tip_offset_wrt_world - (number_ik_tests *
-//                                                                                   resolution));  // subtraction means tool tip is going to insert
-
-
-
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
-    ROS_INFO_STREAM(affine_base_wrt_world.matrix());
-    Eigen::Affine3d affine_tool_tip_goal_wrt_base = affine_base_wrt_world.inverse() * affine_tool_tip_pose_wrt_world;
-
-    std::cout << affine_tool_tip_goal_wrt_base.matrix() << "\n";
-    std::vector<geometry_msgs::Pose> poses_wrt_base;
-    poses_wrt_base.resize(1);
-    tf::poseEigenToMsg(affine_tool_tip_goal_wrt_base, poses_wrt_base[0]);
-
-    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
-                                                                        error_code);
-    if(result_ik)
-    {
-      ik_found_success++;
-      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
-      if(result_ik)
-      {
-        output2 << "ik solution joint set:" << "\n";
-        for(int i = 0; i < solution.size(); i++)
-        {
-          output2 << solution[i] << "\n";
-        }
-      }
-      output2 << "\n";
-    }
-    else
-    {
-      davinci_kinematics::Inverse davinci_ik;
-
-      int ik_solve_return_val = davinci_ik.ik_solve(affine_tool_tip_goal_wrt_base);
-
-      switch(ik_solve_return_val)
-      {
-        case -6 :
-        {
-          failed_tool_tip_sets_num++;
-          ROS_INFO("davinci ik solver still has no solution");
-          output << "tool tip pose goal set: " << failed_tool_tip_sets_num << "\n";
-          output << "rotation part:" << "\n" << affine_tool_tip_goal_wrt_base.linear() << "\n";
-          output << "\n";
-          output << "translation part:" << "\n" << affine_tool_tip_goal_wrt_base.translation() << "\n";
-          output << "\n";
-
-          kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
-          output2 << "The joint set which has no corresponding ik solution:" << "\n";
-          for(int i = 0; i < fk_values.size(); i++)
-          {
-            output2 << fk_values[i] << "\n";
-          }
-          output2 << "\n";
-
-          break;
-        }
-        case 1 :
-        {
-          ROS_INFO("davinci ik solver has one solution");
-          //          std::vector<double> solution_ik;
-          //          convertVectorq7x1ToStdVector(davinci_inverse_.get_soln(), solution_ik);
-          //          solution.push_back(solution_ik);
-          ik_found_success++;
-          //          correct_success++;
-          break;
-        }
-
-        default:
-        {
-          ROS_INFO("davinci ik solver has multiple solutions which is not allowed");
-          break;
-        }
-      }
-    }
-    traveled_dist += resolution;
-  }
-  output << "There are " << (number_ik_tests - ik_found_success)
-         << " sets of tool tip pose failed to have IK solution."
-         << "\n";
-  output.close();
-  output2.close();
-  ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / number_ik_tests);
-  bool success_count = (ik_found_success > 0.99 * number_ik_tests);
-  EXPECT_TRUE(success_count);
-  ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
-}
-
-TEST(ArmIKPlugin, DISABLED_specificJointSetIkTest)
-//TEST(ArmIKPlugin, specificJointSetIkTest)
-{
-  rdf_loader::RDFLoader rdf_loader;
-  robot_model::RobotModelPtr kinematic_model;
-  const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
-  const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
-  kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
-  robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.m_pKinematicsSolver->getGroupName());
-
-  //Test inverse kinematics
-  std::vector<double> seed, fk_values, solution;
-  double timeout = 2.0;
-  moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-  std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
-
-  robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
-  kinematic_state->setToDefaultValues();
-
-  std::vector<std::vector<double> > joint_sets;
-  joint_sets.clear();
-  fk_values.clear();
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.015);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  joint_sets.push_back(fk_values);
-
-  fk_values.clear();
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.014);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  joint_sets.push_back(fk_values);
-
-  fk_values.clear();
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.013);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  joint_sets.push_back(fk_values);
-
-  fk_values.clear();
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.012);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  joint_sets.push_back(fk_values);
-
-  fk_values.clear();
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.011);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  fk_values.push_back(0.0);
-  joint_sets.push_back(fk_values);
-
-  ros::NodeHandle nh("~");
-  int number_ik_tests = joint_sets.size();
-//  int failed_tool_tip_sets_num = 0;
-  //  int acctual_test_num = 0;
-  //  nh.param("number_ik_tests", number_ik_tests, 3000);
-  unsigned int ik_found_success = 0;
-  unsigned int ik_correct_success = 0;
-  //  unsigned int fk_found_success = 0;
-
-  ros::WallTime start_time = ros::WallTime::now();
-  for(int i = 0; i < joint_sets.size(); i++)
-  {
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
-
-    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-    //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1_psm_base_link");
-    std::vector<geometry_msgs::Pose> poses_wrt_world;
-    poses_wrt_world.resize(1);
-    bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, joint_sets[i], poses_wrt_world);
-    ASSERT_TRUE(result_fk);
-
-    // transform pose wrt world to pose wrt base frame
-    Eigen::Affine3d affine_poses_wrt_world;
-    tf::poseMsgToEigen(poses_wrt_world[0], affine_poses_wrt_world);
-
-    Eigen::Affine3d affine_poses_wrt_base;
-    affine_poses_wrt_base = affine_base_wrt_world.inverse() * affine_poses_wrt_world;
-
-    std::vector<geometry_msgs::Pose> poses_wrt_base;
-    poses_wrt_base.resize(1);
-    tf::poseEigenToMsg(affine_poses_wrt_base, poses_wrt_base[0]);
-
-    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
-                                                                        error_code);
-    if(result_ik)
-    {
-      ik_found_success++;
-      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
-      if(result_ik)
-      {
-        if(isJointSetEqual(fk_values, solution))
-        {
-          ik_correct_success++;
-        }
-      }
-
-    }
-  }
-//  output << "There are " << (acctual_test_num - ik_found_success)
-//         << " sets of joint values failed to have IK solution."
-//         << "\n";
-//  output.close();
-//  ROS_INFO_STREAM(
-//    "There are " << (number_ik_tests - acctual_test_num) << " sets of joint values out of joint limits." << "\n");
-  ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / number_ik_tests);
-  ROS_INFO("IK Found and Correct Success Rate: %f", (double) ik_correct_success / ik_found_success);
-  bool success_count = (ik_found_success > 0.99 * number_ik_tests);
-  EXPECT_TRUE(success_count);
-  ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
-}
-
-TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
-//TEST(ArmIKPlugin, verticalInsertionTest)
-{
-  //  ASSERT_TRUE(ik_plugin_test.initialize());
-  rdf_loader::RDFLoader rdf_loader;
-  robot_model::RobotModelPtr kinematic_model;
-  const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
-  const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
-  kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
-  robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
-    ik_plugin_test.m_pKinematicsSolver->getGroupName());
-
-  //Test inverse kinematics
-  std::vector<double> seed, fk_values, solution;
-  double timeout = 2.0;
-  moveit_msgs::MoveItErrorCodes error_code;
-  solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-  std::vector<std::string> fk_names;
-  fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
-
-  robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
-  kinematic_state->setToDefaultValues();
-
-  Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1_tool_tip_link");
-  double init_tip_height_wrt_world = affine_tool_tip_pose_wrt_world.matrix()(2, 3);
-  double insertion_dist = 0.15;
-  double final_tip_height_wrt_world = init_tip_height_wrt_world - insertion_dist;
-  double traveled_dist = 0.0;
-  double resolution = 0.001;
-
-  ros::NodeHandle nh("~");
-  int number_ik_tests = 0;
-  int failed_tool_tip_sets_num = 0;
-  //  int acctual_test_num = 0;
-  //  nh.param("number_ik_tests", number_ik_tests, 3000);
-  unsigned int ik_found_success = 0;
-  //  unsigned int ik_correct_success = 0;
-  //  unsigned int fk_found_success = 0;
-
-  const char *path1 = "/home/sulu/failed_tool_tip_pose.txt";
-  std::ofstream output(path1);
-  if(!output)
-  {
-    // Print an error and exit
-    std::exit(1);
-    ROS_ERROR("file could not be opened for writing!");
-  }
-
-  const char *path2 = "/home/sulu/joint_angle_sets.txt";
-  std::ofstream output2(path2);
-  if(!output2)
-  {
-    // Print an error and exit
-    std::exit(1);
-    ROS_ERROR("file could not be opened for writing!");
-  }
-
-  ros::WallTime start_time = ros::WallTime::now();
-  while((init_tip_height_wrt_world - traveled_dist) > final_tip_height_wrt_world)
-  {
-    number_ik_tests++;
-    affine_tool_tip_pose_wrt_world.matrix()(2, 3) =
-      init_tip_height_wrt_world - (number_ik_tests * resolution);  // subtraction means tool tip is going to insert
-
-    Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
-    Eigen::Affine3d affine_tool_tip_goal_wrt_base = affine_base_wrt_world.inverse() * affine_tool_tip_pose_wrt_world;
-
-    std::vector<geometry_msgs::Pose> poses_wrt_base;
-    poses_wrt_base.resize(1);
-    tf::poseEigenToMsg(affine_tool_tip_goal_wrt_base, poses_wrt_base[0]);
-
-    seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-    fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
-
-    bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
-                                                                        error_code);
-    if(result_ik)
-    {
-      ik_found_success++;
-      result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
-      output2 << "ik solution joint set:" << "\n";
-      for(int i = 0; i < solution.size(); i++)
-      {
-        output2 << solution[i] << "\n";
-      }
-      output2 << "\n";
-    }
-    else
-    {
-      davinci_kinematics::Inverse davinci_ik;
-
-      int ik_solve_return_val = davinci_ik.ik_solve(affine_tool_tip_goal_wrt_base);
-
-      switch(ik_solve_return_val)
-      {
-        case -6 :
-        {
-          failed_tool_tip_sets_num++;
-          ROS_INFO("davinci ik solver still has no solution");
-          output << "tool tip pose goal set: " << failed_tool_tip_sets_num << "\n";
-          output << "rotation part:" << "\n" << affine_tool_tip_goal_wrt_base.linear() << "\n";
-          output << "\n";
-          output << "translation part:" << "\n" << affine_tool_tip_goal_wrt_base.translation() << "\n";
-          output << "\n";
-
-          kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
-          output2 << "The joint set which has no corresponding ik solution:" << "\n";
-          for(int i = 0; i < fk_values.size(); i++)
-          {
-            output2 << fk_values[i] << "\n";
-          }
-          output2 << "\n";
-
-          break;
-        }
-        case 1 :
-        {
-          ROS_INFO("davinci ik solver has one solution");
-          //          std::vector<double> solution_ik;
-          //          convertVectorq7x1ToStdVector(davinci_inverse_.get_soln(), solution_ik);
-          //          solution.push_back(solution_ik);
-          ik_found_success++;
-          //          correct_success++;
-          break;
-        }
-
-        default:
-        {
-          ROS_INFO("davinci ik solver has multiple solutions which is not allowed");
-          break;
-        }
-      }
-    }
-    traveled_dist += resolution;
-  }
-  output << "There are " << (number_ik_tests - ik_found_success)
-         << " sets of tool tip pose failed to have IK solution."
-         << "\n";
-  output.close();
-
-//  output2 << "There are " << (number_ik_tests - ik_found_success)
-//         << " sets of tool tip pose failed to have IK solution."
-//         << "\n";
-  output2.close();
-  ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / number_ik_tests);
-  bool success_count = (ik_found_success > 0.99 * number_ik_tests);
-  EXPECT_TRUE(success_count);
-  ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
-}
+// //TEST(ArmIKPlugin, TestSearchIK)
+// TEST(ArmIKPlugin, DISABLED_TestSearchIK)
+// {
+//   //  ASSERT_TRUE(ik_plugin_test.initialize());
+//   rdf_loader::RDFLoader rdf_loader;
+//   const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
+//   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
+//   const robot_model::RobotModelPtr pKinematicModel(new robot_model::RobotModel(urdf_model, srdf));
+//   robot_model::JointModelGroup *joint_model_group = pKinematicModel->getJointModelGroup(
+//     ik_plugin_test.m_pKinematicsSolver->getGroupName());
+
+//   //Test inverse kinematics
+//   std::vector<double> seed, fk_values, solution;
+//   double timeout = 2.0;
+//   moveit_msgs::MoveItErrorCodes error_code;
+//   solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//   std::vector<std::string> fk_names;
+//   fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
+
+//   const robot_state::RobotStatePtr pKinematicState(new robot_state::RobotState(pKinematicModel));
+//   pKinematicState->setToDefaultValues();
+
+//   ros::NodeHandle nh("~");
+//   int number_ik_tests = 3000;
+//   int acctual_test_num = 0;
+//   unsigned int ik_found_success = 0;
+//   unsigned int ik_correct_success = 0;
+//   unsigned int fk_found_success = 0;
+
+//   const char *path = "/home/sulu/failed_joint_angle_sets.txt";
+//   std::ofstream output(path);
+//   if(!output)
+//   {
+//     // Print an error and exit
+//     ROS_ERROR("file could not be opened for writing!");
+//     std::exit(1);
+//   }
+
+//   std::vector<geometry_msgs::Pose> failed_ik_pose;
+//   failed_ik_pose.clear();
+
+//   std::vector< std::vector<double> > failed_ik_joint_sets;
+//   failed_ik_joint_sets.clear();
+
+//   ros::WallTime start_time = ros::WallTime::now();
+//   for(unsigned int i = 0; i < (unsigned int) number_ik_tests; ++i)
+//   {
+//     Eigen::Affine3d affine_base_wrt_world = pKinematicState->getFrameTransform("PSM1_psm_base_link");
+
+//     seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+//     fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//     pKinematicState->setToRandomPositions(joint_model_group);
+//     pKinematicState->copyJointGroupPositions(joint_model_group, fk_values);
+
+//     acctual_test_num++;
+
+//     std::vector<geometry_msgs::Pose> poses_wrt_world;
+//     poses_wrt_world.resize(1);
+//     bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, fk_values, poses_wrt_world);
+//     if(result_fk)
+//     {
+//       fk_found_success++;
+//     }
+
+//     // transform pose wrt world to pose wrt base frame
+//     Eigen::Affine3d affine_poses_wrt_world;
+//     tf::poseMsgToEigen(poses_wrt_world[0], affine_poses_wrt_world);
+
+//     Eigen::Affine3d affine_poses_wrt_base;
+//     affine_poses_wrt_base = affine_base_wrt_world.inverse() * affine_poses_wrt_world;
+
+//     std::vector<geometry_msgs::Pose> poses_wrt_base;
+//     poses_wrt_base.resize(1);
+//     tf::poseEigenToMsg(affine_poses_wrt_base, poses_wrt_base[0]);
+
+//     bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+//                                                                         error_code);
+//     if(result_ik)
+//     {
+//       ik_found_success++;
+//       result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+//       if(result_ik)
+//       {
+//         std::vector<geometry_msgs::Pose> new_poses_wrt_world;
+// //        new_poses_wrt_world.resize(1);
+// //        result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
+
+//         if(isJointSetEqual(fk_values, solution))
+//         {
+//           ik_correct_success++;
+//         }
+//       }
+//     }
+//     else
+//     {
+//       std::vector<geometry_msgs::Pose> new_poses_wrt_world;
+//       new_poses_wrt_world.resize(1);
+//       result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, solution, new_poses_wrt_world);
+//       if(result_fk)
+//       {
+//         failed_ik_pose.push_back(new_poses_wrt_world[0]);
+//         failed_ik_joint_sets.push_back(fk_values);
+//       }
+//       ROS_INFO("The random joints angle results in IK failure: \n");
+//       davinci_kinematics::Forward davinci_fk;
+//       davinci_kinematics::Vectorq7x1 q_vec;
+//       // copy failed to find ik solution joint list
+//       for(int i = 0; i < fk_values.size(); i++)
+//       {
+//         q_vec(i) = fk_values[i];
+//       }
+
+//       Eigen::Affine3d affine_fk_pose_wrt_base = davinci_fk.fwd_kin_solve(q_vec);
+
+//       //      Eigen::Affine3d affine_base_wrt_world = pKinematicState->getFrameTransform("PSM1_psm_base_link");
+
+//       //      Eigen::Affine3d affine_fk_pose_wrt_world = affine_base_wrt_world * affine_fk_pose_wrt_base;
+
+//       //      geometry_msgs::Pose fk_pose_wrt_base;
+//       //
+//       //      tf::poseEigenToMsg(affine_fk_pose_wrt_base, fk_pose_wrt_base);
+
+//       davinci_kinematics::Inverse davinci_ik;
+
+//       int ik_solve_return_val = davinci_ik.ik_solve(affine_fk_pose_wrt_base);
+
+//       switch(ik_solve_return_val)
+//       {
+//         case -6 :
+//         {
+//           //          ROS_INFO("davinci ik solver has no solution");
+//           for(int i = 0; i < fk_values.size(); i++)
+//           {
+//             output << fk_values[i] << "\n";
+//           }
+//           output << "\n";
+//           break;
+//         }
+//         case 1 :
+//         {
+//           ROS_INFO("davinci ik solver has one solution");
+//           std::vector<double> solution_ik;
+//           davinci_kinematics::Vectorq7x1 vectorq = davinci_ik.get_soln();
+//           solution_ik.resize(davinci_moveit_kinematics::NUM_JOINTS_ARM7DOF, 0.0);
+//           for(int i = 0; i < solution_ik.size(); i++)
+//           {
+//             solution_ik[i] = vectorq(i);
+//           }
+//           //          davinci_moveit_kinematics::convertVectorq7x1ToStdVector(davinci_ik.get_soln(), solution_ik);
+//           //          solution.push_back(solution_ik);
+//           ik_found_success++;
+//           if(isJointSetEqual(fk_values, solution_ik))
+//           {
+//             ik_correct_success++;
+//           }
+//           break;
+//         }
+
+//         default:
+//         {
+//           ROS_INFO("davinci ik solver has multiple solutions which is not allowed");
+//           break;
+//         }
+//       }
+//     }
+//   }
+//   output << "There are " << (acctual_test_num - ik_found_success)
+//          << " sets of joint values failed to have IK solution."
+//          << "\n";
+//   output.close();
+//   ROS_INFO_STREAM(
+//     "There are " << (number_ik_tests - acctual_test_num) << " sets of joint values out of joint limits." << "\n");
+//   ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / acctual_test_num);
+//   ROS_INFO("IK Found and Correct Success Rate: %f", (double) ik_correct_success / ik_found_success);
+//   bool success_count = (ik_found_success > 0.99 * acctual_test_num);
+//   EXPECT_TRUE(success_count);
+//   ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
+
+//   // The :move_group_interface:`MoveGroup` class can be easily
+//   // setup using just the name of the planning group you would like to control and plan for.
+//   moveit::planning_interface::MoveGroupInterface move_group(ik_plugin_test.m_pKinematicsSolver->getGroupName());
+//   moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+//   bool success = false;
+//   for(int i = 0; i < failed_ik_joint_sets.size(); i++)
+//   {
+//     pKinematicState->setToDefaultValues();
+//     move_group.setJointValueTarget(failed_ik_joint_sets[i]);
+//     success = (bool) move_group.plan(my_plan);
+//     ROS_INFO_NAMED("IK search test", "(joint space goal) %s", success ? "" : "FAILED");
+//     ros::Duration(1.0).sleep();
+//   }
+
+
+// //  ros::Publisher vis_pub = nh.advertise<visualization_msgs::Marker>( "visualization_for_failed_ik_pose", 0 );
+// //  visualization_msgs::Marker marker;
+// //  marker.header.frame_id = "/world";
+// //  marker.header.stamp = ros::Time();
+// //  marker.ns = "my_namespace";
+// //  marker.id = 0;
+// //  marker.type = visualization_msgs::Marker::SPHERE;
+// //  marker.action = visualization_msgs::Marker::ADD;
+// ////  marker.pose.position.x = 0;
+// ////  marker.pose.position.y = 0;
+// ////  marker.pose.position.z = 0;
+// //  marker.pose.orientation.x = 0.0;
+// //  marker.pose.orientation.y = 0.0;
+// //  marker.pose.orientation.z = 0.0;
+// //  marker.pose.orientation.w = 1.0;
+// //  marker.scale.x = 0.01;
+// //  marker.scale.y = 0.01;
+// //  marker.scale.z = 0.01;
+// //  marker.color.a = 1.0;
+// //  marker.color.r = 1.0;
+// //  marker.color.g = 0.0;
+// //  marker.color.b = 0.0;
+
+// //  for(int i = 0; i < 100; i++)
+// //  {
+// //    marker.header.stamp = ros::Time();
+// //    marker.points.clear(); // clear out this vector
+// //    for(int i = 0; i < failed_ik_pose.size(); i++)
+// //    {
+// //      geometry_msgs::Point point;
+// //      point.x = failed_ik_pose[i].position.x;
+// //      point.y = failed_ik_pose[i].position.y;
+// //      point.z = failed_ik_pose[i].position.z;
+// //      marker.points.push_back(point);
+// //    }
+
+// //    ros::Duration(0.5).sleep();
+// //    vis_pub.publish( marker );
+// //    ros::spinOnce();
+// //  }
+
+// }
+
+// TEST(ArmIKPlugin, DISABLED_moveAlongWorldXTest)
+// //TEST(ArmIKPlugin, moveAlongWorldXTest)
+// {
+//   rdf_loader::RDFLoader rdf_loader;
+//   robot_model::RobotModelPtr kinematic_model;
+//   const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
+//   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
+//   kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
+//   robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
+//     ik_plugin_test.m_pKinematicsSolver->getGroupName());
+
+//   //Test inverse kinematics
+//   std::vector<double> seed, fk_values, solution;
+//   double timeout = 2.0;
+//   moveit_msgs::MoveItErrorCodes error_code;
+//   solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//   std::vector<std::string> fk_names;
+//   fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
+
+//   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
+//   kinematic_state->setToDefaultValues();
+
+//   Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1_tool_tip_link");
+//   double init_tip_offset_wrt_world = fabs(affine_tool_tip_pose_wrt_world.matrix()(0, 3));
+//   double move_x_dist = 0.15;
+//   double final_tip_offset_wrt_world = init_tip_offset_wrt_world - move_x_dist;
+//   double traveled_dist = 0.0;
+//   double resolution = 0.01;
+
+//   ros::NodeHandle nh("~");
+//   int number_ik_tests = 0;
+//   int failed_tool_tip_sets_num = 0;
+//   //  int acctual_test_num = 0;
+//   //  nh.param("number_ik_tests", number_ik_tests, 3000);
+//   unsigned int ik_found_success = 0;
+//   //  unsigned int ik_correct_success = 0;
+//   //  unsigned int fk_found_success = 0;
+
+//   const char *path1 = "/home/sulu/failed_tool_tip_pose.txt";
+//   std::ofstream output(path1);
+//   if(!output)
+//   {
+//     // Print an error and exit
+//     std::exit(1);
+//     ROS_ERROR("file could not be opened for writing!");
+//   }
+
+//   const char *path2 = "/home/sulu/joint_angle_sets.txt";
+//   std::ofstream output2(path2);
+//   if(!output2)
+//   {
+//     // Print an error and exit
+//     std::exit(1);
+//     ROS_ERROR("file could not be opened for writing!");
+//   }
+
+//   ros::WallTime start_time = ros::WallTime::now();
+//   while((init_tip_offset_wrt_world - traveled_dist) > final_tip_offset_wrt_world)
+//   {
+// //    number_ik_tests++;
+// //    affine_tool_tip_pose_wrt_world.linear() << 0, 0, 1,
+// //                                              -1, 0, 0,
+// //                                               0, -1, 0;
+
+// //    affine_tool_tip_pose_wrt_world.matrix()(2, 3) = 0.30;
+
+// //    affine_tool_tip_pose_wrt_world.matrix()(0, 3) = -(init_tip_offset_wrt_world - (number_ik_tests *
+// //                                                                                   resolution));  // subtraction means tool tip is going to insert
+
+
+
+//     Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
+//     ROS_INFO_STREAM(affine_base_wrt_world.matrix());
+//     Eigen::Affine3d affine_tool_tip_goal_wrt_base = affine_base_wrt_world.inverse() * affine_tool_tip_pose_wrt_world;
+
+//     std::cout << affine_tool_tip_goal_wrt_base.matrix() << "\n";
+//     std::vector<geometry_msgs::Pose> poses_wrt_base;
+//     poses_wrt_base.resize(1);
+//     tf::poseEigenToMsg(affine_tool_tip_goal_wrt_base, poses_wrt_base[0]);
+
+//     seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+//     fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//     bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+//                                                                         error_code);
+//     if(result_ik)
+//     {
+//       ik_found_success++;
+//       result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+//       if(result_ik)
+//       {
+//         output2 << "ik solution joint set:" << "\n";
+//         for(int i = 0; i < solution.size(); i++)
+//         {
+//           output2 << solution[i] << "\n";
+//         }
+//       }
+//       output2 << "\n";
+//     }
+//     else
+//     {
+//       davinci_kinematics::Inverse davinci_ik;
+
+//       int ik_solve_return_val = davinci_ik.ik_solve(affine_tool_tip_goal_wrt_base);
+
+//       switch(ik_solve_return_val)
+//       {
+//         case -6 :
+//         {
+//           failed_tool_tip_sets_num++;
+//           ROS_INFO("davinci ik solver still has no solution");
+//           output << "tool tip pose goal set: " << failed_tool_tip_sets_num << "\n";
+//           output << "rotation part:" << "\n" << affine_tool_tip_goal_wrt_base.linear() << "\n";
+//           output << "\n";
+//           output << "translation part:" << "\n" << affine_tool_tip_goal_wrt_base.translation() << "\n";
+//           output << "\n";
+
+//           kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
+//           output2 << "The joint set which has no corresponding ik solution:" << "\n";
+//           for(int i = 0; i < fk_values.size(); i++)
+//           {
+//             output2 << fk_values[i] << "\n";
+//           }
+//           output2 << "\n";
+
+//           break;
+//         }
+//         case 1 :
+//         {
+//           ROS_INFO("davinci ik solver has one solution");
+//           //          std::vector<double> solution_ik;
+//           //          convertVectorq7x1ToStdVector(davinci_inverse_.get_soln(), solution_ik);
+//           //          solution.push_back(solution_ik);
+//           ik_found_success++;
+//           //          correct_success++;
+//           break;
+//         }
+
+//         default:
+//         {
+//           ROS_INFO("davinci ik solver has multiple solutions which is not allowed");
+//           break;
+//         }
+//       }
+//     }
+//     traveled_dist += resolution;
+//   }
+//   output << "There are " << (number_ik_tests - ik_found_success)
+//          << " sets of tool tip pose failed to have IK solution."
+//          << "\n";
+//   output.close();
+//   output2.close();
+//   ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / number_ik_tests);
+//   bool success_count = (ik_found_success > 0.99 * number_ik_tests);
+//   EXPECT_TRUE(success_count);
+//   ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
+// }
+
+// TEST(ArmIKPlugin, DISABLED_specificJointSetIkTest)
+// //TEST(ArmIKPlugin, specificJointSetIkTest)
+// {
+//   rdf_loader::RDFLoader rdf_loader;
+//   robot_model::RobotModelPtr kinematic_model;
+//   const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
+//   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
+//   kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
+//   robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
+//     ik_plugin_test.m_pKinematicsSolver->getGroupName());
+
+//   //Test inverse kinematics
+//   std::vector<double> seed, fk_values, solution;
+//   double timeout = 2.0;
+//   moveit_msgs::MoveItErrorCodes error_code;
+//   solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//   std::vector<std::string> fk_names;
+//   fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
+
+//   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
+//   kinematic_state->setToDefaultValues();
+
+//   std::vector<std::vector<double> > joint_sets;
+//   joint_sets.clear();
+//   fk_values.clear();
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.015);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   joint_sets.push_back(fk_values);
+
+//   fk_values.clear();
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.014);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   joint_sets.push_back(fk_values);
+
+//   fk_values.clear();
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.013);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   joint_sets.push_back(fk_values);
+
+//   fk_values.clear();
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.012);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   joint_sets.push_back(fk_values);
+
+//   fk_values.clear();
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.011);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   fk_values.push_back(0.0);
+//   joint_sets.push_back(fk_values);
+
+//   ros::NodeHandle nh("~");
+//   int number_ik_tests = joint_sets.size();
+// //  int failed_tool_tip_sets_num = 0;
+//   //  int acctual_test_num = 0;
+//   //  nh.param("number_ik_tests", number_ik_tests, 3000);
+//   unsigned int ik_found_success = 0;
+//   unsigned int ik_correct_success = 0;
+//   //  unsigned int fk_found_success = 0;
+
+//   ros::WallTime start_time = ros::WallTime::now();
+//   for(int i = 0; i < joint_sets.size(); i++)
+//   {
+//     Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
+
+//     seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//     //    affine_base_wrt_world= kinematic_state->getFrameTransform("PSM1_psm_base_link");
+//     std::vector<geometry_msgs::Pose> poses_wrt_world;
+//     poses_wrt_world.resize(1);
+//     bool result_fk = ik_plugin_test.m_pKinematicsSolver->getPositionFK(fk_names, joint_sets[i], poses_wrt_world);
+//     ASSERT_TRUE(result_fk);
+
+//     // transform pose wrt world to pose wrt base frame
+//     Eigen::Affine3d affine_poses_wrt_world;
+//     tf::poseMsgToEigen(poses_wrt_world[0], affine_poses_wrt_world);
+
+//     Eigen::Affine3d affine_poses_wrt_base;
+//     affine_poses_wrt_base = affine_base_wrt_world.inverse() * affine_poses_wrt_world;
+
+//     std::vector<geometry_msgs::Pose> poses_wrt_base;
+//     poses_wrt_base.resize(1);
+//     tf::poseEigenToMsg(affine_poses_wrt_base, poses_wrt_base[0]);
+
+//     bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+//                                                                         error_code);
+//     if(result_ik)
+//     {
+//       ik_found_success++;
+//       result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+//       if(result_ik)
+//       {
+//         if(isJointSetEqual(fk_values, solution))
+//         {
+//           ik_correct_success++;
+//         }
+//       }
+
+//     }
+//   }
+// //  output << "There are " << (acctual_test_num - ik_found_success)
+// //         << " sets of joint values failed to have IK solution."
+// //         << "\n";
+// //  output.close();
+// //  ROS_INFO_STREAM(
+// //    "There are " << (number_ik_tests - acctual_test_num) << " sets of joint values out of joint limits." << "\n");
+//   ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / number_ik_tests);
+//   ROS_INFO("IK Found and Correct Success Rate: %f", (double) ik_correct_success / ik_found_success);
+//   bool success_count = (ik_found_success > 0.99 * number_ik_tests);
+//   EXPECT_TRUE(success_count);
+//   ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
+// }
+
+// TEST(ArmIKPlugin, DISABLED_verticalInsertionTest)
+// //TEST(ArmIKPlugin, verticalInsertionTest)
+// {
+//   //  ASSERT_TRUE(ik_plugin_test.initialize());
+//   rdf_loader::RDFLoader rdf_loader;
+//   robot_model::RobotModelPtr kinematic_model;
+//   const boost::shared_ptr<srdf::Model> &srdf = rdf_loader.getSRDF();
+//   const boost::shared_ptr<urdf::ModelInterface> &urdf_model = rdf_loader.getURDF();
+//   kinematic_model.reset(new robot_model::RobotModel(urdf_model, srdf));
+//   robot_model::JointModelGroup *joint_model_group = kinematic_model->getJointModelGroup(
+//     ik_plugin_test.m_pKinematicsSolver->getGroupName());
+
+//   //Test inverse kinematics
+//   std::vector<double> seed, fk_values, solution;
+//   double timeout = 2.0;
+//   moveit_msgs::MoveItErrorCodes error_code;
+//   solution.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//   std::vector<std::string> fk_names;
+//   fk_names.push_back(ik_plugin_test.m_pKinematicsSolver->getTipFrame());
+
+//   robot_state::RobotStatePtr kinematic_state(new robot_state::RobotState(kinematic_model));
+//   kinematic_state->setToDefaultValues();
+
+//   Eigen::Affine3d affine_tool_tip_pose_wrt_world = kinematic_state->getFrameTransform("PSM1_tool_tip_link");
+//   double init_tip_height_wrt_world = affine_tool_tip_pose_wrt_world.matrix()(2, 3);
+//   double insertion_dist = 0.15;
+//   double final_tip_height_wrt_world = init_tip_height_wrt_world - insertion_dist;
+//   double traveled_dist = 0.0;
+//   double resolution = 0.001;
+
+//   ros::NodeHandle nh("~");
+//   int number_ik_tests = 0;
+//   int failed_tool_tip_sets_num = 0;
+//   //  int acctual_test_num = 0;
+//   //  nh.param("number_ik_tests", number_ik_tests, 3000);
+//   unsigned int ik_found_success = 0;
+//   //  unsigned int ik_correct_success = 0;
+//   //  unsigned int fk_found_success = 0;
+
+//   const char *path1 = "/home/sulu/failed_tool_tip_pose.txt";
+//   std::ofstream output(path1);
+//   if(!output)
+//   {
+//     // Print an error and exit
+//     std::exit(1);
+//     ROS_ERROR("file could not be opened for writing!");
+//   }
+
+//   const char *path2 = "/home/sulu/joint_angle_sets.txt";
+//   std::ofstream output2(path2);
+//   if(!output2)
+//   {
+//     // Print an error and exit
+//     std::exit(1);
+//     ROS_ERROR("file could not be opened for writing!");
+//   }
+
+//   ros::WallTime start_time = ros::WallTime::now();
+//   while((init_tip_height_wrt_world - traveled_dist) > final_tip_height_wrt_world)
+//   {
+//     number_ik_tests++;
+//     affine_tool_tip_pose_wrt_world.matrix()(2, 3) =
+//       init_tip_height_wrt_world - (number_ik_tests * resolution);  // subtraction means tool tip is going to insert
+
+//     Eigen::Affine3d affine_base_wrt_world = kinematic_state->getFrameTransform("PSM1_psm_base_link");
+//     Eigen::Affine3d affine_tool_tip_goal_wrt_base = affine_base_wrt_world.inverse() * affine_tool_tip_pose_wrt_world;
+
+//     std::vector<geometry_msgs::Pose> poses_wrt_base;
+//     poses_wrt_base.resize(1);
+//     tf::poseEigenToMsg(affine_tool_tip_goal_wrt_base, poses_wrt_base[0]);
+
+//     seed.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+//     fk_values.resize(ik_plugin_test.m_pKinematicsSolver->getJointNames().size(), 0.0);
+
+//     bool result_ik = ik_plugin_test.m_pKinematicsSolver->searchPositionIK(poses_wrt_base[0], seed, timeout, solution,
+//                                                                         error_code);
+//     if(result_ik)
+//     {
+//       ik_found_success++;
+//       result_ik = ik_plugin_test.m_pKinematicsSolver->getPositionIK(poses_wrt_base[0], seed, solution, error_code);
+//       output2 << "ik solution joint set:" << "\n";
+//       for(int i = 0; i < solution.size(); i++)
+//       {
+//         output2 << solution[i] << "\n";
+//       }
+//       output2 << "\n";
+//     }
+//     else
+//     {
+//       davinci_kinematics::Inverse davinci_ik;
+
+//       int ik_solve_return_val = davinci_ik.ik_solve(affine_tool_tip_goal_wrt_base);
+
+//       switch(ik_solve_return_val)
+//       {
+//         case -6 :
+//         {
+//           failed_tool_tip_sets_num++;
+//           ROS_INFO("davinci ik solver still has no solution");
+//           output << "tool tip pose goal set: " << failed_tool_tip_sets_num << "\n";
+//           output << "rotation part:" << "\n" << affine_tool_tip_goal_wrt_base.linear() << "\n";
+//           output << "\n";
+//           output << "translation part:" << "\n" << affine_tool_tip_goal_wrt_base.translation() << "\n";
+//           output << "\n";
+
+//           kinematic_state->copyJointGroupPositions(joint_model_group, fk_values);
+//           output2 << "The joint set which has no corresponding ik solution:" << "\n";
+//           for(int i = 0; i < fk_values.size(); i++)
+//           {
+//             output2 << fk_values[i] << "\n";
+//           }
+//           output2 << "\n";
+
+//           break;
+//         }
+//         case 1 :
+//         {
+//           ROS_INFO("davinci ik solver has one solution");
+//           //          std::vector<double> solution_ik;
+//           //          convertVectorq7x1ToStdVector(davinci_inverse_.get_soln(), solution_ik);
+//           //          solution.push_back(solution_ik);
+//           ik_found_success++;
+//           //          correct_success++;
+//           break;
+//         }
+
+//         default:
+//         {
+//           ROS_INFO("davinci ik solver has multiple solutions which is not allowed");
+//           break;
+//         }
+//       }
+//     }
+//     traveled_dist += resolution;
+//   }
+//   output << "There are " << (number_ik_tests - ik_found_success)
+//          << " sets of tool tip pose failed to have IK solution."
+//          << "\n";
+//   output.close();
+
+// //  output2 << "There are " << (number_ik_tests - ik_found_success)
+// //         << " sets of tool tip pose failed to have IK solution."
+// //         << "\n";
+//   output2.close();
+//   ROS_INFO("IK Found Success Rate: %f", (double) ik_found_success / number_ik_tests);
+//   bool success_count = (ik_found_success > 0.99 * number_ik_tests);
+//   EXPECT_TRUE(success_count);
+//   ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
+// }
 
 //TEST(ArmIKPlugin, searchIK)
 //{

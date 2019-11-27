@@ -268,7 +268,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                     pTipLink,
                                                                     toolTipPose,
                                                                     true,
-                                                                    0.003,
+                                                                    0.001,
                                                                     0.0);
 
   if (foundCartesianPath != 1.0)
@@ -485,7 +485,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                     pTipLink,
                                                                     toolTipPose,
                                                                     true,
-                                                                    0.003,
+                                                                    0.001,
                                                                     0.0);
 
   if (foundCartesianPath != 1.0)
@@ -633,7 +633,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                                                                   pTipLink,
                                                                                                                   toolTipPose,
                                                                                                                   true,
-                                                                                                                  0.003,
+                                                                                                                  0.001,
                                                                                                                   0.0);
 
   if (foundCartesianPath != 1.0)

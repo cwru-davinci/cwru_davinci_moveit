@@ -83,6 +83,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
     return false;
   }
 
+  ROS_INFO("DavinciNeedleHandoffExecutionManager: total number of trajectories is %d", m_HandoffJntTraj.size());
   for (std::size_t i = 0; i < m_HandoffJntTraj.size(); ++i)
   {
     if (m_HandoffJntTraj[i].size() == 1)  // object Transit
@@ -98,6 +99,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
         return false;
       }
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", i);
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
@@ -158,6 +160,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           return false;
         }
       }
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", i);
     }
   }
 

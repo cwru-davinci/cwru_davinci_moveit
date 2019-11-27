@@ -26,8 +26,8 @@ target_link_libraries(hybrid_motion_validator_tester ${OMPL_LIBRARIES} ${catkin_
 add_library(hybrid_object_state_space_tester test/hybrid_object_state_space_tester.cpp)
 target_link_libraries(hybrid_object_state_space_tester ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
-add_executable(main src/main.cpp)
-target_link_libraries(main ${DUAL_ARM_PLANNER_LIB} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(handoff_main src/handoff_main.cpp)
+target_link_libraries(handoff_main ${DUAL_ARM_PLANNER_LIB} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(davinci_needle_handoff_performance_test test/davinci_needle_handoff_performance_test.cpp)
 target_link_libraries(davinci_needle_handoff_performance_test ${DUAL_ARM_PLANNER_LIB} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})

@@ -94,9 +94,9 @@ TEST(TestHybridRRT, HybridObjectHandoffPlanner)
                                           robotModelLoader.getModel());
 
   DavinciNeedleHandoffExecutionManagerTester managerTester(objectName);
+  // tester.testConnectStates();
   PathJointTrajectory handoffPathJntTraj;
   tester.testGetSolutionPathJointTrajectory(handoffPathJntTraj);
-//  tester.testConnectStates();
   EXPECT_TRUE(managerTester.testExecuteNeedleHandoffTraj(handoffPathJntTraj));
 
 //  const ompl::base::SpaceInformationPtr& si = tester.getSpaceInformation();
