@@ -332,7 +332,7 @@ const std::string& planning_group
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
   bool clear_path = false;
-  if (found_cartesian_path != 1.0)
+  if (!((found_cartesian_path - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
   }
@@ -400,7 +400,7 @@ const std::string& planning_group
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
   bool clear_path = false;
-  if (found_cartesian_path != 1.0)
+  if (!((found_cartesian_path - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
   }
@@ -490,7 +490,7 @@ const std::string& planning_group
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
   bool clear_path = false;
-  if (found_cartesian_path != 1.0)
+  if (!((found_cartesian_path - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
   }
@@ -547,7 +547,7 @@ const std::string& planning_group
 
 
   bool clear_path = false;
-  if (found_cartesian_path != 1.0)
+  if (!((found_cartesian_path - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
   }
@@ -600,7 +600,7 @@ const std::string& planning_group
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
   bool clear_path = false;
-  if (found_cartesian_path != 1.0)
+  if (!((found_cartesian_path - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
   }

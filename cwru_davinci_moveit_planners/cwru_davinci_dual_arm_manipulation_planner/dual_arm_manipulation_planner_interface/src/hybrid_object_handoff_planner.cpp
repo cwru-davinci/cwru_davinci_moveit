@@ -271,7 +271,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                     0.001,
                                                                     0.0);
 
-  if (foundCartesianPath != 1.0)
+  if (!((foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }
@@ -428,7 +428,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                         jumpThreshold);
 
 
-  if (foundCartesianPath != 1.0)
+  if (!((foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }
@@ -485,10 +485,10 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                     pTipLink,
                                                                     toolTipPose,
                                                                     true,
-                                                                    0.001,
+                                                                    0.003,
                                                                     0.0);
 
-  if (foundCartesianPath != 1.0)
+  if (!((foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }
@@ -580,7 +580,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                          maxStep,
                                                                          jumpThreshold);
 
-  if (foundCartesianPath != 1.0)
+  if (!((foundCartesianPath - 0.9) >= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }
@@ -633,10 +633,10 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                                                                   pTipLink,
                                                                                                                   toolTipPose,
                                                                                                                   true,
-                                                                                                                  0.001,
+                                                                                                                  0.003,
                                                                                                                   0.0);
 
-  if (foundCartesianPath != 1.0)
+  if (!((foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }

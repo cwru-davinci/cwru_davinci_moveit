@@ -83,14 +83,14 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
     return false;
   }
 
-  ROS_INFO("DavinciNeedleHandoffExecutionManager: total number of trajectories is %d", m_HandoffJntTraj.size());
+  ROS_INFO("DavinciNeedleHandoffExecutionManager: total number of trajectories is %d", (int)m_HandoffJntTraj.size());
   for (std::size_t i = 0; i < m_HandoffJntTraj.size(); ++i)
   {
     if (m_HandoffJntTraj[i].size() == 1)  // object Transit
     {
       // move
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
-      m_pSupportArmGroup.reset(new psm_interface_calibration(jntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
       double jawPosition = 0.0;
       m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
       const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
@@ -99,7 +99,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
         return false;
       }
-      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", i);
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
@@ -108,7 +108,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 
       // move in fashion: home to pregrasp, approach-grasp, ungrasp-retreat, back to home
       const MoveGroupJointTrajectorySegment& safePlaceToPreGraspJntTrajSeg = m_HandoffJntTraj[i][0].second;
-      m_pSupportArmGroup.reset(new psm_interface_calibration(safePlaceToPreGraspJntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface(safePlaceToPreGraspJntTrajSeg.begin()->first, m_NodeHandle));
       {
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
@@ -121,7 +121,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       }
 
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
-      m_pSupportArmGroup.reset(new psm_interface_calibration(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
       m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(preGraspToGraspedJntTrajSeg.begin()->first));
       turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
@@ -132,11 +132,12 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
         }
+        ros::Duration(1.0).sleep();
         m_pMoveItSupportArmGroupInterf->attachObject(m_ObjectName);
       }
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
-      m_pSupportArmGroup.reset(new psm_interface_calibration(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
       turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
@@ -149,7 +150,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       }
 
       const MoveGroupJointTrajectorySegment& ungraspedToSafePlaceJntTrajSeg = m_HandoffJntTraj[i][3].second;
-      m_pSupportArmGroup.reset(new psm_interface_calibration(ungraspedToSafePlaceJntTrajSeg.begin()->first, m_NodeHandle));
+      m_pSupportArmGroup.reset(new psm_interface(ungraspedToSafePlaceJntTrajSeg.begin()->first, m_NodeHandle));
       {
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
@@ -160,7 +161,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           return false;
         }
       }
-      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", i);
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
     }
   }
 

@@ -151,7 +151,8 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
   {
     stateSampler->sampleUniform(goal.get());
     goal->graspIndex().value = 147;
-    goal->armIndex().value = 2;
+    goal->armIndex().value = 1;
+    goal->setJointsComputed(false);
     is_gs_valid = si->isValid(goal.get());
   }
 
@@ -166,13 +167,13 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
                                      << goal->se3State().rotation().x << ", "
                                      << goal->se3State().rotation().y << ", "
                                      << goal->se3State().rotation().z << ", "
-                                     << goal->se3State().rotation().w << "\n";
+                                     << goal->se3State().rotation().w << ",\n";
     outFile << std::setprecision(15) << goal->jointVariables()[0] << ", "
                                      << goal->jointVariables()[1] << ", "
                                      << goal->jointVariables()[2] << ", "
                                      << goal->jointVariables()[3] << ", "
                                      << goal->jointVariables()[4] << ", "
-                                     << goal->jointVariables()[5] << "\n";
+                                     << goal->jointVariables()[5] << ",\n";
     outFile.close();
   }
 

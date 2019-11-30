@@ -3,7 +3,7 @@
         <arg name="load_robot_description" value="true"/>
     </include>
 
-    <node name="main" pkg="cwru_davinci_dual_arm_manipulation_planner" type="main" respawn="false" output="screen">
+    <node name="handoff_main" pkg="cwru_davinci_dual_arm_manipulation_planner" type="handoff_main" respawn="false" output="screen">
         <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
         <rosparam command="load" file="$(find cwru_davinci_dual_arm_manipulation_planner)/dual_arm_manipulation_planner_interface/config/hardware_handoff_planning_inputs.yaml"/>
         <param name="packPath" value="$(find cwru_davinci_dual_arm_manipulation_planner)"/>
