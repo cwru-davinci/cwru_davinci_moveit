@@ -257,7 +257,6 @@ int num_test
     pdef->print(std::cout);
     // attempt to solve the problem within one second of planning time
     auto start_ts = std::chrono::high_resolution_clock::now();
-    si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
     ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
 
     auto finish = std::chrono::high_resolution_clock::now();
@@ -269,10 +268,7 @@ int num_test
       {
         std::cout << "Has exact solution" << std::endl;
         succeeded_num += 1;
-        double* total_time = new double;
-        si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
-        running_time.push_back(*total_time);
-        delete total_time;
+        running_time.push_back(planning_time.count());
       }
       else
       {
@@ -409,7 +405,6 @@ int num_test
     pdef->print(std::cout);
     // attempt to solve the problem within one second of planning time
     auto start_ts = std::chrono::high_resolution_clock::now();
-    si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
     ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
 
     auto finish = std::chrono::high_resolution_clock::now();
@@ -421,10 +416,7 @@ int num_test
       {
         std::cout << "Has exact solution" << std::endl;
         succeeded_num += 1;
-        double* total_time = new double;
-        si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
-        running_time.push_back(*total_time);
-        delete total_time;
+        running_time.push_back(planning_time.count());
       }
       else
       {
@@ -561,7 +553,6 @@ int num_test
     pdef->print(std::cout);
     // attempt to solve the problem within one second of planning time
     auto start_ts = std::chrono::high_resolution_clock::now();
-    si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
     ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
 
     auto finish = std::chrono::high_resolution_clock::now();
@@ -573,10 +564,7 @@ int num_test
       {
         std::cout << "Has exact solution" << std::endl;
         succeeded_num += 1;
-        double* total_time = new double;
-        si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
-        running_time.push_back(*total_time);
-        delete total_time;
+        running_time.push_back(planning_time.count());
       }
       else
       {

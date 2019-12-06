@@ -51,8 +51,6 @@
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/SpaceInformation.h>
 
-#include <chrono>  // for high_resolution_clock
-
 namespace dual_arm_manipulation_planner_interface
 {
 

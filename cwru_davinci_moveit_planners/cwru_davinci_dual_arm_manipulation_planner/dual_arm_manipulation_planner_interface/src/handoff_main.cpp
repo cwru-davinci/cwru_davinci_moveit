@@ -196,7 +196,6 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
   pdef->print(std::cout);
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
-  si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
   ob::PlannerStatus solved = planner->ob::Planner::solve(500.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
@@ -207,9 +206,6 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
     if (pdef->hasExactSolution())
     {
       std::cout << "Has exact solution" << std::endl;
-      double* total_time = new double;
-      si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
-      delete total_time;
 
       og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
       // print the path to screen

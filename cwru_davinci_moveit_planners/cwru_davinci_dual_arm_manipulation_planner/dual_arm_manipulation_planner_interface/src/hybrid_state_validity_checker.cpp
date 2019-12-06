@@ -64,10 +64,6 @@ const std::string& objectName
   collision_request_simple_.contacts = true;
   collision_request_simple_.max_contacts = 1000;
 
-  hyStateSpace_->validity_checking_duration_ = std::chrono::duration<double>::zero();
-
-  hyStateSpace_->validty_check_num = 0;
-
   visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
   visual_tools_->loadRobotStatePub("/davinci");
   loadNeedleModel();
@@ -75,9 +71,6 @@ const std::string& objectName
 
 bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 {
-  auto start = std::chrono::high_resolution_clock::now();
-  hyStateSpace_->validty_check_num += 1;
-
   const auto *pHybridState = dynamic_cast<const HybridObjectStateSpace::StateType *>(state);
   if (!pHybridState)
   {
@@ -92,7 +85,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
   bool is_valid = false;
   if (!si_->satisfiesBounds(state))
   {
-    printf("Invalid State: Out of bound.");
+    return is_valid;
   }
   else
   {
@@ -103,8 +96,6 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
     {
       return is_valid;
     }
-
-    // publishRobotState(*kstate);
 
     if (pHybridState->jointsComputed())
     {
@@ -121,9 +112,6 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
     }
   }
 
-  auto finish = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed = finish - start;
-  hyStateSpace_->validity_checking_duration_ += elapsed;
   return is_valid;
 }
 
@@ -140,7 +128,6 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
   if (!hybridStateToRobotState(hs, kstate))
   {
-    printf("Invalid State: No IK solution.");
     return false;
   }
 
@@ -170,7 +157,6 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 
   if (!hybridStateToRobotState(hs, kstate))
   {
-    printf("Invalid State: No IK solution.");
     return false;
   }
 
@@ -190,7 +176,6 @@ bool attachedObject
 {
   if (!pHyState || !pRSstate)
   {
-    printf("HybridStateValidityChecker: Invalid state pointer.");
     return false;
   }
 
@@ -214,7 +199,6 @@ bool attachedObject
 
     if (!found_ik)
     {
-      printf("HybridStateValidityChecker: No IK solution.");
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(false);
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->markInvalid();
       return found_ik;
@@ -343,8 +327,6 @@ bool HybridStateValidityChecker::noCollision
 const robot_state::RobotState& rstate
 ) const
 {
-  auto start_ik = std::chrono::high_resolution_clock::now();
-
   planning_scene_->setCurrentState(rstate);
   collision_detection::CollisionRequest collision_request;
   collision_request.contacts = true;
@@ -352,20 +334,5 @@ const robot_state::RobotState& rstate
   planning_scene_->checkCollision(collision_request, collision_result, rstate);
   bool no_collision = !collision_result.collision;
 
-  auto finish_ik = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed = finish_ik - start_ik;
-  hyStateSpace_->collision_checking_duration_ += elapsed;
-
-  if (collision_result.collision)
-  {
-    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
-         it != contactMap.end(); ++it)
-    {
-      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-    }
-//    publishRobotState(rstate);
-  }
   return no_collision;
 }
