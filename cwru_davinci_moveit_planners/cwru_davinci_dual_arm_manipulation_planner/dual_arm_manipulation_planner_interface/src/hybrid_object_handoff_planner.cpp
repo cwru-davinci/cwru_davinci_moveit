@@ -70,8 +70,21 @@ const double solveTime
 {
   if (m_pRRTConnectPlanner && m_pRRTConnectPlanner->isSetup())
   {
+    auto startTs = std::chrono::high_resolution_clock::now();
+
     m_Solved = m_pRRTConnectPlanner->ob::Planner::solve(solveTime);
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> timeUsed = finish - startTs;
+
     printf("HybridObjectHandoffPlanner: Handoff planner status is %s", m_Solved.asString().c_str());
+    ob::PlannerData data(m_pSpaceInfor);
+    m_pRRTConnectPlanner->getPlannerData(data);
+    data.computeEdgeWeights();
+
+    std::cout << "Found " << data.numVertices() << " vertices " << "\n";
+    std::cout << "Found " << data.numEdges() << " edges " << "\n";
+    std::cout << "Actual Planning Time is: " << timeUsed.count() << std::endl;
+
     return m_Solved;
   }
 
