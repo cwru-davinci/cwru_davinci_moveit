@@ -1,0 +1,7 @@
+<launch>
+    <test test-name="test_hybrid_object_handoff_planner" pkg="cwru_davinci_dual_arm_manipulation_planner" type="test_hybrid_object_handoff_planner"
+          time-limit="1.0" args="--gtest_repeat=1">
+        <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
+        <rosparam command="load" file="$(find cwru_davinci_dual_arm_manipulation_planner)/dual_arm_manipulation_planner_interface/config/hardware_handoff_planning_inputs.yaml"/>
+    </test>
+</launch>
