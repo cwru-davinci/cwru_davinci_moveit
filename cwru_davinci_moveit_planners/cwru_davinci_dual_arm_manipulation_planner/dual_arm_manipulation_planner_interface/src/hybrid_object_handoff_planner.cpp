@@ -457,6 +457,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   JointTrajectory toSupportEefGroupJntTraj;
   toSupportEefGroupJntTraj.resize(traj.size());
   pHandoffRobotState->copyJointGroupPositions(toSupportEefGroup, toSupportEefGroupJntTraj[traj.size() - 1]);
+  toSupportEefGroupJntTraj[traj.size() - 1][0] = - 0.5;
 
   for (std::size_t i = 0; i < traj.size() - 1; ++i)
   {
@@ -611,6 +612,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   JointTrajectory fromSupportEefGroupJntTraj;
   fromSupportEefGroupJntTraj.resize(traj.size());
   pUngraspedRobotState->copyJointGroupPositions(fromSupportEefGroup, fromSupportEefGroupJntTraj[traj.size() - 1]);
+  fromSupportEefGroupJntTraj[traj.size() - 1][0] = - 0.5;
 
   for (std::size_t i = 0; i < traj.size() - 1; ++i)
   {
