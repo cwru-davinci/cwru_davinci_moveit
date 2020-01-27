@@ -48,6 +48,10 @@
 #include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
 
+#include <cwru_davinci/uv_control/psm_interface.h>
+
+#include <functional>
+
 namespace dual_arm_manipulation_planner_interface
 {
 
@@ -93,6 +97,33 @@ public:
   PathJointTrajectory& handoffPathJntTraj
   );
 
+  bool correctObjectTransit
+  (
+  const Eigen::Affine3d& needlePose,
+  const int ithTraj,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
+  );
+
+  bool correctObjectTransfer
+  (
+  const Eigen::Affine3d& needlePose,
+  const int targetState,
+  const PSMInterfacePtr& pSupportArmGroup,
+  std::function<const Eigen::Affine3d&()> updateNdlPoseFcn
+  );
+
+  int stepsBtwStates
+  (
+  const Eigen::Affine3d& needlePose,
+  const Eigen::Affine3d& targetPose
+  );
+
+  double distanceBtwPoses
+  (
+  const Eigen::Affine3d& currentPose,
+  const Eigen::Affine3d& targetPose
+  );
+
 protected:
   HybridObjectStateSpacePtr                    m_pHyStateSpace;
 
@@ -107,6 +138,9 @@ protected:
   ompl::base::PlannerStatus                    m_Solved;
 
   bool                                         m_Verbose;
+
+  ompl::geometric::PathGeometric*              m_pSlnPath;
+
 protected:
   void setupStateSpace
   (
@@ -198,6 +232,22 @@ protected:
   const robot_state::RobotStateConstPtr& pRobotToState,
   const std::string& fromSupportGroup,
   MoveGroupJointTrajectory& jntTrajectoryBtwStates
+  );
+
+  bool localPlanObjectTransit
+  (
+  const Eigen::Affine3d& needlePose,
+  const int ithTraj,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
+  );
+
+  bool localPlanObjectTransfer
+  (
+  const Eigen::Affine3d& currentPose,
+  const Eigen::Affine3d& targetPose,
+  const std::string& supportGroup,
+  const std::vector<double>& currentJointPosition,
+  MoveGroupJointTrajectorySegment& jntTrajSeg
   );
 
 protected:

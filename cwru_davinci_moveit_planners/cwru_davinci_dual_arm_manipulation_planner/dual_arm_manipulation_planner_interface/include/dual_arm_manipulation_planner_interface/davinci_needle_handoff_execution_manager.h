@@ -96,6 +96,9 @@ public:
 
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
+
+  bool m_FreshNeedlePose;
+
 protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
@@ -108,8 +111,7 @@ protected:
   std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
-
-  geometry_msgs::PoseStamped                                      m_NeedlePose;
+  Eigen::Affine3d                                                 m_NeedlePose;
 
   PathJointTrajectory                                             m_HandoffJntTraj;
 
@@ -124,6 +126,11 @@ protected:
   std::string                                                     m_ObjectName;
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
 
+public:
+  const Eigen::Affine3d updateNeedlePose
+  (
+  );
+
 private:
   bool turnOnStickyFinger
   (
@@ -133,6 +140,11 @@ private:
   bool turnOffStickyFinger
   (
   const std::string& supportArmGroup
+  );
+
+  void needlePoseCallBack
+  (
+  const geometry_msgs::PoseStamped& needlePose
   );
 };
 }

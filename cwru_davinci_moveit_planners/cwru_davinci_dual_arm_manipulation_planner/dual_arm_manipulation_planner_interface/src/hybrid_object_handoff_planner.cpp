@@ -103,11 +103,16 @@ PathJointTrajectory& handoffPathJntTraj
     return false;
   }
 
-  og::PathGeometric* slnPath = m_pProblemDef->getSolutionPath()->as<og::PathGeometric>();
+  m_pSlnPath = m_pProblemDef->getSolutionPath()->as<og::PathGeometric>();
+
+  if(!m_pSlnPath)
+  {
+    return false;
+  }
 
   std::string dataPath = ros::package::getPath("cwru_davinci_dual_arm_manipulation_planner");
   std::ofstream outFile(dataPath + "/../../../" + "PathFound.txt");
-  slnPath->printAsMatrix(outFile);
+  m_pSlnPath->printAsMatrix(outFile);
   outFile.close();
 
   ob::PlannerData data(m_pSpaceInfor);
@@ -115,14 +120,14 @@ PathJointTrajectory& handoffPathJntTraj
   ob::PlannerDataStorage dataStorage;
   dataStorage.store(data, (dataPath + "/../../../" + "HybridRRTPlannerData").c_str());
 
-  const std::vector<ob::State*>& constSlnStates = slnPath->getStates();
-  for (std::size_t i = 0; i < slnPath->getStateCount(); i++)
+  const std::vector<ob::State*>& constSlnStates = m_pSlnPath->getStates();
+  for (std::size_t i = 0; i < m_pSlnPath->getStateCount(); i++)
   {
     (constSlnStates[i]->as<HybridObjectStateSpace::StateType>())->markValid();
     (constSlnStates[i]->as<HybridObjectStateSpace::StateType>())->setJointsComputed(true);
   }
 
-  const size_t segments = slnPath->getStateCount() - 1;
+  const size_t segments = m_pSlnPath->getStateCount() - 1;
 
   handoffPathJntTraj.clear();
   handoffPathJntTraj.resize(segments);
@@ -136,6 +141,122 @@ PathJointTrajectory& handoffPathJntTraj
     handoffPathJntTraj[i] = jntTrajectoryBtwStates;
   }
   return true;
+}
+
+bool HybridObjectHandoffPlanner::correctObjectTransit
+(
+const Eigen::Affine3d& needlePose,
+const int ithTraj,
+MoveGroupJointTrajectory& jntTrajectoryBtwStates
+)
+{
+  //Take in and compare the snapshot of the needle with planned needle pose
+  Eigen::Affine3d desNeedlePose;
+  m_pHyStateSpace->se3ToEigen3d(
+    m_pSlnPath->getState(ithTraj + 1)->as<HybridObjectStateSpace::StateType>(), desNeedlePose);
+
+  if (needlePose.isApprox(desNeedlePose, 1e-4))
+  {
+    return true;
+  }
+
+  return localPlanObjectTransit(needlePose, ithTraj, jntTrajectoryBtwStates);
+}
+
+bool HybridObjectHandoffPlanner::correctObjectTransfer
+(
+const Eigen::Affine3d& needlePose,
+const int targetState,
+const PSMInterfacePtr& pSupportArmGroup,
+std::function<const Eigen::Affine3d&()> updateNdlPoseFcn
+)
+{
+  const HybridObjectStateSpace::StateType* targetHyState = m_pSlnPath->getState(targetState)->as<HybridObjectStateSpace::StateType>();
+
+  if (!targetHyState)
+  {
+    return false;
+  }
+
+  Eigen::Affine3d targetPose;
+  m_pHyStateSpace->se3ToEigen3d(targetHyState, targetPose);
+  int steps = stepsBtwStates(needlePose, targetPose);
+
+  int i = 0;
+  while (i < steps)
+  {
+    const Eigen::Affine3d& currentNeedlePose = updateNdlPoseFcn();
+
+    double distance = distanceBtwPoses(currentNeedlePose, targetPose);
+
+    if (distance < 0.0001)
+    {
+      return true;
+    }
+    else
+    {
+      i += 1;
+      std::vector<double> currentJointPosition;
+      pSupportArmGroup->get_fresh_position(currentJointPosition);
+      MoveGroupJointTrajectorySegment jntTrajSeg;
+      bool moveForward = localPlanObjectTransfer(currentNeedlePose,
+                                                 targetPose,
+                                                 pSupportArmGroup->get_psm_name(),
+                                                 currentJointPosition,
+                                                 jntTrajSeg);
+      if (!moveForward)
+      {
+        return false;
+      }
+
+      double jawPosition = 0.0;
+      pSupportArmGroup->get_gripper_fresh_position(jawPosition);
+      const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
+      if (!pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.5))
+      {
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+        return false;
+      }
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
+    }
+  }
+
+  return true;
+}
+
+int HybridObjectHandoffPlanner::stepsBtwStates
+(
+const Eigen::Affine3d& needlePose,
+const Eigen::Affine3d& targetPose
+)
+{
+  Eigen::Quaterniond currentQua(needlePose.linear());
+  Eigen::Quaterniond targetQua(targetPose.linear());
+
+  double rotDistance = currentQua.angularDistance(targetQua);
+  double transDistance = (targetPose.translation() - needlePose.translation()).norm();
+
+  std::size_t transSteps = floor(transDistance / 0.001);
+  std::size_t rotSteps = 0;
+
+  std::size_t steps = std::max(transSteps, rotSteps) + 1;
+
+  return steps;
+}
+
+double HybridObjectHandoffPlanner::distanceBtwPoses
+(
+const Eigen::Affine3d& currentPose,
+const Eigen::Affine3d& targetPose
+)
+{
+  Eigen::Quaterniond currentQua(currentPose.linear());
+  Eigen::Quaterniond targetQua(targetPose.linear());
+
+  double rotDistance = currentQua.angularDistance(targetQua);
+  double transDistance = (targetPose.translation() - currentPose.translation()).norm();
+
+  return rotDistance + transDistance;
 }
 
 void HybridObjectHandoffPlanner::setupStateSpace
@@ -672,5 +793,88 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 
   MoveGroupJointTrajectorySegment ungraspedToSafePlaceJntTrajSeg = {{fromSupportGroup, fromSupportGroupJntTraj}};
   jntTrajectoryBtwStates[3] = std::make_pair(TrajectoryType::UngrasedToSafePlace, ungraspedToSafePlaceJntTrajSeg);
+  return true;
+}
+
+bool HybridObjectHandoffPlanner::localPlanObjectTransit
+(
+const Eigen::Affine3d& needlePose,
+const int ithTraj,
+MoveGroupJointTrajectory& jntTrajectoryBtwStates
+)
+{
+  //Decide new collision free plan by partial planning
+  ob::ScopedState<HybridObjectStateSpace> pHyFromState(m_pHyStateSpace);  // make a copy otherwise local modification will apply globally
+  m_pHyStateSpace->copyState(pHyFromState.get(), m_pSlnPath->getState(ithTraj));
+  m_pHyStateSpace->eigen3dToSE3(needlePose, pHyFromState.get());
+
+  ob::ScopedState<HybridObjectStateSpace> pHyToState(m_pHyStateSpace);
+  m_pHyStateSpace->copyState(pHyToState.get(), m_pSlnPath->getState(ithTraj + 1));
+  m_pHyStateSpace->eigen3dToSE3(needlePose, pHyToState.get());
+  pHyToState->clearKnownInformation();
+
+  // first use local planner to check collision
+  if (!m_pSpaceInfor->checkMotion(pHyFromState.get(), pHyToState.get()))
+  {
+    return false;
+  }
+
+  // if have new plan, then generate new handoff trajectories
+  if (!planHandoff(pHyFromState.get(), pHyToState.get(), jntTrajectoryBtwStates))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool HybridObjectHandoffPlanner::localPlanObjectTransfer
+(
+const Eigen::Affine3d& currentPose,
+const Eigen::Affine3d& targetPose,
+const std::string& supportGroup,
+const std::vector<double>& currentJointPosition,
+MoveGroupJointTrajectorySegment& jntTrajSeg
+)
+{
+  const robot_state::RobotStatePtr pCurrentRobotState;
+  const moveit::core::LinkModel* pTipLink = pCurrentRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip();
+
+  pCurrentRobotState->setJointGroupPositions(supportGroup, currentJointPosition);
+  pCurrentRobotState->update();
+
+  Eigen::Quaterniond currentQua(currentPose.linear());
+  Eigen::Quaterniond targetQua(targetPose.linear());
+
+  double percentage = 0.15;
+  Eigen::Affine3d toolTipPose(currentQua.slerp(percentage, targetQua));
+  toolTipPose.translation() = percentage * targetPose.translation() + (1 - percentage) * currentPose.translation();
+
+  std::vector<robot_state::RobotStatePtr> traj;
+  double foundCartesianPath = pCurrentRobotState->computeCartesianPath(pCurrentRobotState->getJointModelGroup(supportGroup),
+                                                                       traj,
+                                                                       pTipLink,
+                                                                       toolTipPose,
+                                                                       true,
+                                                                       0.001,
+                                                                       0.0);
+
+  if (!((foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
+  {
+    return false;
+  }
+
+  JointTrajectory supportGroupJntTraj;
+  supportGroupJntTraj.resize(traj.size());
+  pCurrentRobotState->copyJointGroupPositions(supportGroup, supportGroupJntTraj[traj.size() - 1]);
+
+  for (std::size_t i = 0; i < traj.size() - 1; ++i)
+  {
+    traj[i]->update();
+    traj[i]->copyJointGroupPositions(supportGroup, supportGroupJntTraj[i]);
+  }
+
+  jntTrajSeg = {{supportGroup, supportGroupJntTraj}};
+
   return true;
 }

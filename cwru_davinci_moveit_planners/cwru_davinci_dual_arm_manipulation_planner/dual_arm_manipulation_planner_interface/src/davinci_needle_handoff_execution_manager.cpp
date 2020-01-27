@@ -38,6 +38,7 @@
 
 #include <dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution_manager.h>
 #include <std_srvs/SetBool.h>
+#include <functional>
 
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
@@ -57,6 +58,9 @@ const std::string& robotDescription
    m_RobotModelLoader(robotDescription)
 {
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
+
+  m_NeedlePoseSub =
+    m_NodeHandle.subscribe("/updated_needle_pose", 1, &DavinciNeedleHandoffExecutionManager::needlePoseCallBack, this);
 }
 
 DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
@@ -88,21 +92,35 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
   {
     if (m_HandoffJntTraj[i].size() == 1)  // object Transit
     {
-      // move
+      updateNeedlePose();
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
       m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
-      double jawPosition = 0.0;
-      m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
-      const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-      if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.5))
-      {
-        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
-        return false;
-      }
-      ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
+      return m_pHandoffPlanner->correctObjectTransfer(m_NeedlePose, i + 1, m_pSupportArmGroup,
+                                                      std::bind(&DavinciNeedleHandoffExecutionManager::updateNeedlePose, this));
+      // else
+      // {
+      //   // move
+      //   const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
+      //   m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
+      //   double jawPosition = 0.0;
+      //   m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
+      //   const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
+      //   if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.5))
+      //   {
+      //     ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+      //     return false;
+      //   }
+      //   ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
+      // }
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
+      updateNeedlePose();
+      if (!m_pHandoffPlanner->correctObjectTransit(m_NeedlePose, i, m_HandoffJntTraj[i]))
+      {
+        return false;
+      }
+
       m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(m_HandoffJntTraj[i][2].second.begin()->first));
       m_pMoveItSupportArmGroupInterf->detachObject(m_ObjectName);
 
@@ -368,6 +386,20 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
   return true;
 }
 
+const Eigen::Affine3d DavinciNeedleHandoffExecutionManager::updateNeedlePose
+(
+)
+{
+  while (!m_FreshNeedlePose)
+  {
+    ros::spinOnce();
+    ros::Duration(0.1).sleep();
+  }
+  m_FreshNeedlePose = false;
+
+  return m_NeedlePose;
+}
+
 bool DavinciNeedleHandoffExecutionManager::turnOnStickyFinger
 (
 const std::string& supportArmGroup
@@ -396,4 +428,17 @@ const std::string& supportArmGroup
   std_srvs::SetBool graspCommand;
   graspCommand.request.data = false;
   stickyFingerClient.call(graspCommand);
+}
+
+void DavinciNeedleHandoffExecutionManager::needlePoseCallBack
+(
+const geometry_msgs::PoseStamped& needlePose
+)
+{
+  m_FreshNeedlePose = true;
+  m_NeedlePose.translation().x() = needlePose.pose.position.x;
+  m_NeedlePose.translation().y() = needlePose.pose.position.y;
+  m_NeedlePose.translation().z() = needlePose.pose.position.z;
+
+  tf::poseMsgToEigen(needlePose.pose, m_NeedlePose);
 }
