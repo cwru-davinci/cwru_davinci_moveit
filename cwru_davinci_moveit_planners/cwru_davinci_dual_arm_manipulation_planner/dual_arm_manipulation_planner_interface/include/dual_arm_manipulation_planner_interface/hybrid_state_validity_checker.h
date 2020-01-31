@@ -95,6 +95,13 @@ public:
   const int grasp_pose_id
   ) const;
 
+  moveit::core::AttachedBody* createAttachedBody
+  (
+  const std::string& supportGroup,
+  const std::string& objectName,
+  const Eigen::Affine3d& grasp_pose
+  ) const;
+
   void setMimicJointPositions
   (
   const robot_state::RobotStatePtr& rstate,
@@ -111,15 +118,15 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-protected:
-  void defaultSettings();
-
-  void loadNeedleModel();
-
   bool noCollision
   (
   const robot_state::RobotState& rstate
   ) const;
+
+protected:
+  void defaultSettings();
+
+  void loadNeedleModel();
 
 protected:
   HybridObjectStateSpace                *hyStateSpace_;

@@ -291,6 +291,34 @@ const int grasp_pose_id
                                         dettach_posture);
 }
 
+moveit::core::AttachedBody*
+HybridStateValidityChecker::createAttachedBody
+(
+const std::string& supportGroup,
+const std::string& objectName,
+const Eigen::Affine3d& grasp_pose
+) const
+{
+  const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(supportGroup);
+  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+
+  EigenSTL::vector_Affine3d attach_trans = {grasp_pose};
+
+  const robot_state::JointModelGroup *eef_group = kmodel_->getJointModelGroup(
+    arm_joint_group->getAttachedEndEffectorNames()[0]);
+
+  std::vector<std::string> touch_links_list = eef_group->getLinkModelNames();
+  std::set<std::string> touch_links(touch_links_list.begin(), touch_links_list.end());
+
+  trajectory_msgs::JointTrajectory dettach_posture;
+  return new moveit::core::AttachedBody(tip_link,
+                                        objectName,
+                                        needleShapes_,
+                                        attach_trans,
+                                        touch_links,
+                                        dettach_posture);
+}
+
 void HybridStateValidityChecker::defaultSettings()
 {
   hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();

@@ -241,12 +241,13 @@ protected:
   MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
+  // based on current needle pose move it towards to 
+  // target pose half way
   bool localPlanObjectTransfer
   (
-  const Eigen::Affine3d& currentPose,
-  const Eigen::Affine3d& targetPose,
-  const std::string& supportGroup,
-  const std::vector<double>& currentJointPosition,
+  const Eigen::Affine3d& currentNeedlePose,
+  const HybridObjectStateSpace::StateType* pTargetHyState,
+  const PSMInterfacePtr& pSupportArmGroup,
   MoveGroupJointTrajectorySegment& jntTrajSeg
   );
 
