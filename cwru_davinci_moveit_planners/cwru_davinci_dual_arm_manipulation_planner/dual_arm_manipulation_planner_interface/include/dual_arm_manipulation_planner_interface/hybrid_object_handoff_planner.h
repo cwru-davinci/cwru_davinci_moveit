@@ -246,7 +246,8 @@ protected:
   bool localPlanObjectTransfer
   (
   const Eigen::Affine3d& currentNeedlePose,
-  const HybridObjectStateSpace::StateType* pTargetHyState,
+  const Eigen::Affine3d& targetTipPose,
+  const std::string& supportGroup,
   const PSMInterfacePtr& pSupportArmGroup,
   MoveGroupJointTrajectorySegment& jntTrajSeg
   );

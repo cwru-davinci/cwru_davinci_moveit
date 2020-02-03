@@ -182,11 +182,19 @@ std::function<const Eigen::Affine3d&()> updateNdlPoseFcn
   m_pHyStateSpace->se3ToEigen3d(pTargetHyState, targetNeedlePose);
   Eigen::Affine3d currentNeedlePose = updateNdlPoseFcn();
 
+  const robot_state::RobotStatePtr pTargetRobotState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
+  const std::string& supportGroup = pSupportArmGroup->get_psm_name();
+  pTargetRobotState->setJointGroupPositions(supportGroup, pTargetHyState->jointVariables().values);
+  pTargetRobotState->update();
+  const Eigen::Affine3d targetTipPose = 
+    pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
+
   while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
   {
     MoveGroupJointTrajectorySegment jntTrajSeg;
     bool moveForward = localPlanObjectTransfer(currentNeedlePose,
-                                               pTargetHyState,
+                                               targetTipPose,
+                                               supportGroup,
                                                pSupportArmGroup,
                                                jntTrajSeg);
     if (!moveForward)
@@ -791,16 +799,21 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 bool HybridObjectHandoffPlanner::localPlanObjectTransfer
 (
 const Eigen::Affine3d& currentNeedlePose,
-const HybridObjectStateSpace::StateType* pTargetHyState,
+const Eigen::Affine3d& targetTipPose,
+const std::string& supportGroup,
 const PSMInterfacePtr& pSupportArmGroup,
 MoveGroupJointTrajectorySegment& jntTrajSeg
 )
 {
   std::vector<double> currentJointPosition;
   pSupportArmGroup->get_fresh_position(currentJointPosition);
-  const std::string& supportGroup = pSupportArmGroup->get_psm_name();
 
-  const robot_state::RobotStatePtr pCurrentRobotState;
+  const robot_state::RobotStatePtr pCurrentRobotState(new robot_state::RobotState(m_pHyStateValidator->robotModel()));
+  if (!pCurrentRobotState)
+  {
+    return false;
+  }
+
   const moveit::core::LinkModel* pTipLink = pCurrentRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip();
   pCurrentRobotState->setToDefaultValues();
   pCurrentRobotState->setJointGroupPositions(supportGroup, currentJointPosition);
@@ -809,16 +822,11 @@ MoveGroupJointTrajectorySegment& jntTrajSeg
   const Eigen::Affine3d currentToolTipPose = pCurrentRobotState->getGlobalLinkTransform(pTipLink);
   const Eigen::Affine3d currentGrasp = currentToolTipPose.inverse() * currentNeedlePose;
 
-  const robot_state::RobotStatePtr pTargetRobotState;
-  pTargetRobotState->setJointGroupPositions(supportGroup, pTargetHyState->jointVariables().values);
-  pTargetRobotState->update();
-  const Eigen::Affine3d targetTipPose = 
-    pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
-
   Eigen::Quaterniond currentQua(currentToolTipPose.linear());
   Eigen::Quaterniond targetQua(targetTipPose.linear());
 
-  double percentage = 0.5;
+  double percentage = (distanceBtwPoses(currentToolTipPose, targetTipPose) <= 0.001) ? 1.0 : 0.5;
+
   Eigen::Affine3d toolTipPose(currentQua.slerp(percentage, targetQua));
   toolTipPose.translation() = percentage * targetTipPose.translation() + (1 - percentage) * currentToolTipPose.translation();
 
