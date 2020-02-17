@@ -205,7 +205,7 @@ std::function<const Eigen::Affine3d&()> updateNdlPoseFcn
     double jawPosition = 0.0;
     pSupportArmGroup->get_gripper_fresh_position(jawPosition);
     const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-    if (!pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.5))
+    if (!pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, 1.5))
     {
       ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
       return false;
