@@ -111,6 +111,8 @@ protected:
   std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
+  ros::ServiceClient                                              m_PfGraspClient;
+
   Eigen::Affine3d                                                 m_NeedlePose;
 
   PathJointTrajectory                                             m_HandoffJntTraj;
@@ -145,6 +147,11 @@ private:
   void needlePoseCallBack
   (
   const geometry_msgs::PoseStamped& needlePose
+  );
+
+  bool changeNeedleTrackerMode
+  (
+  int ithState
   );
 };
 }

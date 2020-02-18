@@ -39,6 +39,7 @@
 #include <dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution_manager.h>
 #include <std_srvs/SetBool.h>
 #include <functional>
+#include <uv_msgs/pf_grasp.h>
 
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
@@ -61,6 +62,8 @@ const std::string& robotDescription
 
   m_NeedlePoseSub =
     m_NodeHandle.subscribe("/updated_needle_pose", 1, &DavinciNeedleHandoffExecutionManager::needlePoseCallBack, this);
+
+  m_PfGraspClient = m_NodeHandle.serviceClient<uv_msgs::pf_grasp>("/pf_grasp");
 }
 
 DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
@@ -138,6 +141,8 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         ros::Duration(1.0).sleep();
         m_pMoveItSupportArmGroupInterf->attachObject(m_ObjectName);
       }
+
+      changeNeedleTrackerMode(i + 1);
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
       m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
@@ -375,6 +380,7 @@ const Eigen::Affine3d DavinciNeedleHandoffExecutionManager::updateNeedlePose
 (
 )
 {
+  ros::Duration(2.0).sleep();
   while (!m_FreshNeedlePose)
   {
     ros::spinOnce();
@@ -426,4 +432,30 @@ const geometry_msgs::PoseStamped& needlePose
   m_NeedlePose.translation().z() = needlePose.pose.position.z;
 
   tf::poseMsgToEigen(needlePose.pose, m_NeedlePose);
+}
+
+bool DavinciNeedleHandoffExecutionManager::changeNeedleTrackerMode
+(
+int ithState
+)
+{
+  const HybridObjectStateSpace::StateType* pHyState = 
+    m_pHandoffPlanner->m_pSlnPath->getState(ithState)->as<HybridObjectStateSpace::StateType>();
+
+  if (!pHyState)
+  {
+    return false;
+  }
+
+  uv_msgs::pf_grasp pfGraspSrv;
+  pfGraspSrv.request.psm = m_pSupportArmGroup->get_psm();
+  tf::transformEigenToMsg(m_GraspInfo[pHyState->graspIndex().value].grasp_pose, pfGraspSrv.request.grasp_transform);
+
+  if(!m_PfGraspClient.call(pfGraspSrv))
+  {
+    ROS_WARN("Failed to call pf_grasp service.");
+    ros::spinOnce();
+  }
+
+  return true;
 }
