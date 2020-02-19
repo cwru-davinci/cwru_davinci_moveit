@@ -129,7 +129,7 @@ protected:
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
 
 public:
-  const Eigen::Affine3d updateNeedlePose
+  const Eigen::Affine3d& updateNeedlePose
   (
   );
 
@@ -152,6 +152,17 @@ private:
   bool changeNeedleTrackerMode
   (
   int ithState
+  );
+
+  bool correctObjectTransit
+  (
+  const int ithTraj,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
+  );
+
+  bool correctObjectTransfer
+  (
+  const int targetState
   );
 };
 }

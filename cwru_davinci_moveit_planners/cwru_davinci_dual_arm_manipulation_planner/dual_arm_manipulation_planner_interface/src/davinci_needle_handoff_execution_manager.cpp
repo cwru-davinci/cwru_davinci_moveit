@@ -95,16 +95,13 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
   {
     if (m_HandoffJntTraj[i].size() == 1)  // object Transit
     {
-      updateNeedlePose();
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
       m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
-      return m_pHandoffPlanner->correctObjectTransfer(m_NeedlePose, i + 1, m_pSupportArmGroup,
-                                                      std::bind(&DavinciNeedleHandoffExecutionManager::updateNeedlePose, this));
+      return correctObjectTransfer(i + 1);
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
-      updateNeedlePose();
-      if (!m_pHandoffPlanner->correctObjectTransit(m_NeedlePose, i, m_HandoffJntTraj[i]))
+      if (!correctObjectTransit(i, m_HandoffJntTraj[i]))
       {
         return false;
       }
@@ -376,7 +373,7 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
   return true;
 }
 
-const Eigen::Affine3d DavinciNeedleHandoffExecutionManager::updateNeedlePose
+const Eigen::Affine3d& DavinciNeedleHandoffExecutionManager::updateNeedlePose
 (
 )
 {
@@ -458,4 +455,74 @@ int ithState
   }
 
   return true;
+}
+
+bool DavinciNeedleHandoffExecutionManager::correctObjectTransfer
+(
+const int targetState
+)
+{
+  const HybridObjectStateSpace::StateType* pTargetHyState = m_pHandoffPlanner->m_pSlnPath->getState(targetState)->as<HybridObjectStateSpace::StateType>();
+
+  if (!pTargetHyState)
+  {
+    return false;
+  }
+
+  Eigen::Affine3d targetNeedlePose;
+  m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pTargetHyState, targetNeedlePose);
+  Eigen::Affine3d currentNeedlePose = updateNeedlePose();
+
+  const robot_state::RobotStatePtr pTargetRobotState(new robot_state::RobotState(m_pHandoffPlanner->m_pHyStateValidator->robotModel()));
+  const std::string& supportGroup = m_pSupportArmGroup->get_psm_name();
+  pTargetRobotState->setJointGroupPositions(supportGroup, pTargetHyState->jointVariables().values);
+  pTargetRobotState->update();
+  const Eigen::Affine3d targetTipPose = 
+    pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
+
+  while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
+  {
+    MoveGroupJointTrajectorySegment jntTrajSeg;
+    bool moveForward = m_pHandoffPlanner->localPlanObjectTransfer(currentNeedlePose,
+                                                                  targetTipPose,
+                                                                  supportGroup,
+                                                                  m_pSupportArmGroup,
+                                                                  jntTrajSeg);
+    if (!moveForward)
+    {
+      return false;
+    }
+
+    double jawPosition = 0.0;
+    m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
+    const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
+    if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, 1.5))
+    {
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+      return false;
+    }
+    currentNeedlePose = updateNeedlePose();
+  }
+
+  return true;
+}
+
+bool DavinciNeedleHandoffExecutionManager::correctObjectTransit
+(
+const int ithTraj,
+MoveGroupJointTrajectory& jntTrajectoryBtwStates
+)
+{
+  //Take in and compare the snapshot of the needle with planned needle pose
+  Eigen::Affine3d desNeedlePose;
+  m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(
+    m_pHandoffPlanner->m_pSlnPath->getState(ithTraj + 1)->as<HybridObjectStateSpace::StateType>(), desNeedlePose);
+
+  const Eigen::Affine3d& currentNeedlePose = updateNeedlePose();
+  if (currentNeedlePose.isApprox(desNeedlePose, 1e-4))
+  {
+    return true;
+  }
+
+  return m_pHandoffPlanner->localPlanObjectTransit(currentNeedlePose, ithTraj, jntTrajectoryBtwStates);
 }
