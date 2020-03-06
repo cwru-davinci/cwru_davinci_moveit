@@ -729,7 +729,8 @@ const Eigen::Affine3d& currentNeedlePose,
 const Eigen::Affine3d& targetTipPose,
 const std::string& supportGroup,
 const PSMInterfacePtr& pSupportArmGroup,
-MoveGroupJointTrajectorySegment& jntTrajSeg
+MoveGroupJointTrajectorySegment& jntTrajSeg,
+double& time
 )
 {
   std::vector<double> currentJointPosition;
@@ -752,11 +753,13 @@ MoveGroupJointTrajectorySegment& jntTrajSeg
   Eigen::Quaterniond currentQua(currentToolTipPose.linear());
   Eigen::Quaterniond targetQua(targetTipPose.linear());
 
-  double percentage = (distanceBtwPoses(currentToolTipPose, targetTipPose) <= 0.001) ? 1.0 : 0.5;
+  double percentage = (distanceBtwPoses(currentToolTipPose, targetTipPose) <= 0.005) ? 1.0 : 0.5;
 
   Eigen::Affine3d toolTipPose(currentQua.slerp(percentage, targetQua));
   toolTipPose.translation() = percentage * targetTipPose.translation() + (1 - percentage) * currentToolTipPose.translation();
 
+  Eigen::Vector3d vec = (currentToolTipPose.translation() - toolTipPose.translation());
+  time = (((currentToolTipPose.translation() - toolTipPose.translation()).norm()) / 0.001) * 0.2;
   moveit::core::AttachedBody *pNeedleModel = m_pHyStateValidator->createAttachedBody(supportGroup, "needle_r", currentGrasp);
   pCurrentRobotState->attachBody(pNeedleModel);
   pCurrentRobotState->update();
@@ -776,6 +779,7 @@ MoveGroupJointTrajectorySegment& jntTrajSeg
 
   JointTrajectory supportGroupJntTraj;
   supportGroupJntTraj.resize(traj.size());
+  traj.back()->update();
   if (!m_pHyStateValidator->noCollision(*traj.back()))
   {
     return false;

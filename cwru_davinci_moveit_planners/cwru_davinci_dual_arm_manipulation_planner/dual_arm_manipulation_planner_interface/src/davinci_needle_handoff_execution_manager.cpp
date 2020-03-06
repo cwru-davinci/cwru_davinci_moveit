@@ -480,14 +480,16 @@ const int targetState
   const Eigen::Affine3d targetTipPose = 
     pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
 
-  while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
+  while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-2))
   {
     MoveGroupJointTrajectorySegment jntTrajSeg;
+    double time = 0.0;
     bool moveForward = m_pHandoffPlanner->localPlanObjectTransfer(currentNeedlePose,
                                                                   targetTipPose,
                                                                   supportGroup,
                                                                   m_pSupportArmGroup,
-                                                                  jntTrajSeg);
+                                                                  jntTrajSeg,
+                                                                  time);
     if (!moveForward)
     {
       return false;
@@ -496,7 +498,7 @@ const int targetState
     double jawPosition = 0.0;
     m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
     const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-    if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, 1.5))
+    if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, time))
     {
       ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
       return false;
@@ -519,7 +521,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     m_pHandoffPlanner->m_pSlnPath->getState(ithTraj + 1)->as<HybridObjectStateSpace::StateType>(), desNeedlePose);
 
   const Eigen::Affine3d& currentNeedlePose = updateNeedlePose();
-  if (currentNeedlePose.isApprox(desNeedlePose, 1e-4))
+  if (currentNeedlePose.isApprox(desNeedlePose, 1e-2))
   {
     return true;
   }

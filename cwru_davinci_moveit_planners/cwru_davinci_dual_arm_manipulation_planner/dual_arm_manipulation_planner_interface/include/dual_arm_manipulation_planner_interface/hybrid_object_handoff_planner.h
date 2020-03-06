@@ -249,7 +249,8 @@ protected:
   const Eigen::Affine3d& targetTipPose,
   const std::string& supportGroup,
   const PSMInterfacePtr& pSupportArmGroup,
-  MoveGroupJointTrajectorySegment& jntTrajSeg
+  MoveGroupJointTrajectorySegment& jntTrajSeg,
+  double& time
   );
 
 protected:

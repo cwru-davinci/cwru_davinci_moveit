@@ -48,9 +48,10 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nodeHandle;
   ros::NodeHandle nodeHandlePriv("~");
+
   ros::AsyncSpinner spinner(1);
-  ros::Duration(3.0).sleep();
   spinner.start();
+  ros::Duration(3.0).sleep();
 
   if (!nodeHandlePriv.hasParam("object_name"))
   {
@@ -142,6 +143,8 @@ int main(int argc, char** argv)
     return -1;
   }
 
+  ros::Duration(10.0).sleep();
+  ros::spinOnce();
   // execute needle grasping first
   std::vector<cwru_davinci_grasp::GraspInfo> graspPoses = pSimpleGrasp->getAllPossibleNeedleGrasps(false);
   cwru_davinci_grasp::GraspInfo initialGraspInfo = pSimpleGrasp->getSelectedGraspInfo();
@@ -186,5 +189,6 @@ int main(int argc, char** argv)
     return -1;
   }
 
+  ros::waitForShutdown();
   return 0;
 }
