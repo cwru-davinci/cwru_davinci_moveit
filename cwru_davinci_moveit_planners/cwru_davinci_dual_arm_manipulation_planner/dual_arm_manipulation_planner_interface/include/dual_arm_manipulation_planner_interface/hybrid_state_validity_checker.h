@@ -42,7 +42,7 @@
 #include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
 // moveit
-#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/collision_detection/collision_common.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
