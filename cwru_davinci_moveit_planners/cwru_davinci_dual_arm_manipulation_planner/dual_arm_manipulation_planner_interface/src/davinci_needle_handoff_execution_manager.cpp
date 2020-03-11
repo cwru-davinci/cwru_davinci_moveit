@@ -38,7 +38,6 @@
 
 #include <dual_arm_manipulation_planner_interface/davinci_needle_handoff_execution_manager.h>
 #include <std_srvs/SetBool.h>
-#include <functional>
 #include <uv_msgs/pf_grasp.h>
 
 using namespace dual_arm_manipulation_planner_interface;

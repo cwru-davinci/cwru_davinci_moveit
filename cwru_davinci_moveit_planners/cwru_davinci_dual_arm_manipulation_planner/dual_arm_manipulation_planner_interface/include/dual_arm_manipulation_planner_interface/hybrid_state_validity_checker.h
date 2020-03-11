@@ -41,6 +41,7 @@
 
 #include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
+
 // moveit
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>

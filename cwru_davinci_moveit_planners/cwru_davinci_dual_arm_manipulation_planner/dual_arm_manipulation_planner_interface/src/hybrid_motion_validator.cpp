@@ -37,10 +37,9 @@
  */
 
 #include <dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
+
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/robot_state/conversions.h>
-
-// collision
 #include <moveit/collision_detection/collision_tools.h>
 
 using namespace dual_arm_manipulation_planner_interface;

@@ -40,17 +40,14 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_HANDOFF_PLANNER_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_OBJECT_HANDOFF_PLANNER_H
 
+#include <dual_arm_manipulation_planner_interface/hybrid_motion_validator.h>
+
+// ompl
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/ProblemDefinition.h>
-
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 
-#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-#include <dual_arm_manipulation_planner_interface//hybrid_motion_validator.h>
-
 #include <cwru_davinci/uv_control/psm_interface.h>
-
-#include <functional>
 
 namespace dual_arm_manipulation_planner_interface
 {

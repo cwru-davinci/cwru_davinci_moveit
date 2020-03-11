@@ -40,7 +40,6 @@
 
 #include <moveit/robot_state/conversions.h>
 
-
 using namespace dual_arm_manipulation_planner_interface;
 
 HybridStateValidityChecker::HybridStateValidityChecker

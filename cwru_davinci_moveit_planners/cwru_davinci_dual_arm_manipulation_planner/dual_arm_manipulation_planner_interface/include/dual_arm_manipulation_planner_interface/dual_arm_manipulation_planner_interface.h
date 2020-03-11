@@ -51,7 +51,6 @@
 #include <map>
 #include <ros/ros.h>
 
-
 /**
  * @brief The MoveIt! interface to dual_arm_manipulation_planner_interface
  */
