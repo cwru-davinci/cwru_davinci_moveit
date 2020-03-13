@@ -131,13 +131,13 @@ int main(int argc, char** argv)
                                                                      objectName);
 
   // Try defined grasped fist
-  if (pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::DEFINED, objectName))
+  if (pSimpleGrasp->pickNeedle(objectName, cwru_davinci_grasp::NeedlePickMode::DEFINED))
   {
     ROS_INFO("%s: needle picked up in DEFINED way", nodeHandle.getNamespace().c_str());
     return 0;
   }
 
-  if (!pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::FINDGOOD, objectName))
+  if (!pSimpleGrasp->pickNeedle(objectName, cwru_davinci_grasp::NeedlePickMode::FINDGOOD))
   {
     ROS_INFO("%s: needle picked up in FINDGOOD way", nodeHandle.getNamespace().c_str());
     return -1;
