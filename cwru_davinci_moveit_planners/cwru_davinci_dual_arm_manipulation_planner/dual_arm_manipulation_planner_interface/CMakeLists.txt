@@ -1,4 +1,5 @@
 set(DUAL_ARM_PLANNER_LIB dual_arm_manipulation_planner_interface)
+find_package(GTest REQUIRED)
 
 add_library(${DUAL_ARM_PLANNER_LIB}
   src/hybrid_object_state_space.cpp
