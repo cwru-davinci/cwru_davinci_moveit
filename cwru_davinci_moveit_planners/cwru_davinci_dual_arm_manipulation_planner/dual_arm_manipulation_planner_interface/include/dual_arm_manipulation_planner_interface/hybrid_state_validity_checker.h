@@ -124,6 +124,12 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
+  void noCollisionThread
+  (
+  uint8_t& noCollision,
+  const robot_state::RobotState& rstate
+  ) const;
+
 protected:
   void defaultSettings();
 
@@ -148,6 +154,8 @@ protected:
 
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
+
+  mutable std::mutex planning_scene_mutex_;
 };
 
 }
