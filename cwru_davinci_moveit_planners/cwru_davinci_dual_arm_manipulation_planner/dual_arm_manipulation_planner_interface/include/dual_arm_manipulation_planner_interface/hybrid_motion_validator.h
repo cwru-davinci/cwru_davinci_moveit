@@ -40,20 +40,13 @@
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_HYBRID_MOTION_VALIDATOR_H
 
 #include <dual_arm_manipulation_planner_interface/hybrid_state_validity_checker.h>
-#include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
-
-// moveit
-#include <moveit/planning_interface/planning_interface.h>
-#include <moveit_visual_tools/moveit_visual_tools.h>
 
 // ompl
-#include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/MotionValidator.h>
-#include <ompl/base/SpaceInformation.h>
 
 // eigen
-#include <Eigen/Core>
-#include <fstream>
+//#include <Eigen/Core>
+//#include <fstream>
 
 namespace dual_arm_manipulation_planner_interface
 {

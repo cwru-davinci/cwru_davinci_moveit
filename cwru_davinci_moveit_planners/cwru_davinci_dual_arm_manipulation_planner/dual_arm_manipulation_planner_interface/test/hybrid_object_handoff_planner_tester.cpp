@@ -587,8 +587,10 @@ void HybridObjectHandoffPlannerTester::getSolutionPathFromData()
          pos = prev[pos])
     {
       m_pPath->append(vertices[pos]->getState());
+      printf("Vertex index along the solution path: %u\n", data.vertexIndex(*vertices[pos]));
     }
     m_pPath->append(vertices[start]->getState());
+    printf("Start vertex index along the solution path: %u\n", data.vertexIndex(*vertices[start]));
     m_pPath->reverse();
     m_SlnStates = m_pPath->getStates();
   }

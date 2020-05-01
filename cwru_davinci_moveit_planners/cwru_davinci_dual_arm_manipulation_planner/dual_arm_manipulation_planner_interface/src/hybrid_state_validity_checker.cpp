@@ -40,7 +40,6 @@
 
 #include <moveit/robot_state/conversions.h>
 
-
 using namespace dual_arm_manipulation_planner_interface;
 
 HybridStateValidityChecker::HybridStateValidityChecker
@@ -275,6 +274,34 @@ const int grasp_pose_id
                                         dettach_posture);
 }
 
+moveit::core::AttachedBody*
+HybridStateValidityChecker::createAttachedBody
+(
+const std::string& supportGroup,
+const std::string& objectName,
+const Eigen::Affine3d& grasp_pose
+) const
+{
+  const robot_state::JointModelGroup *arm_joint_group = kmodel_->getJointModelGroup(supportGroup);
+  const moveit::core::LinkModel *tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
+
+  EigenSTL::vector_Affine3d attach_trans = {grasp_pose};
+
+  const robot_state::JointModelGroup *eef_group = kmodel_->getJointModelGroup(
+    arm_joint_group->getAttachedEndEffectorNames()[0]);
+
+  std::vector<std::string> touch_links_list = eef_group->getLinkModelNames();
+  std::set<std::string> touch_links(touch_links_list.begin(), touch_links_list.end());
+
+  trajectory_msgs::JointTrajectory dettach_posture;
+  return new moveit::core::AttachedBody(tip_link,
+                                        objectName,
+                                        needleShapes_,
+                                        attach_trans,
+                                        touch_links,
+                                        dettach_posture);
+}
+
 void HybridStateValidityChecker::defaultSettings()
 {
   hyStateSpace_ = si_->getStateSpace().get()->as<HybridObjectStateSpace>();
@@ -284,13 +311,13 @@ void HybridStateValidityChecker::defaultSettings()
 
 void HybridStateValidityChecker::loadNeedleModel()
 {
-  Eigen::Vector3d scale_vec(0.0254, 0.0254, 0.0254);
+  Eigen::Vector3d scale_vec(1.0, 1.0, 1.0);
   shapes::Mesh *needle_mesh;
   shapes::ShapeMsg mesh_msg;
   try
   {
     needle_mesh = shapes::createMeshFromResource("package://sim_gazebo/"
-                                                   "props/needle_r/mesh/needle_r4.dae",
+                                                 "props/needle_pf/mesh/needle_pf.dae",
                                                  scale_vec);
     if (!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
       throw "Needle model is not loaded";
@@ -335,4 +362,20 @@ const robot_state::RobotState& rstate
   bool no_collision = !collision_result.collision;
 
   return no_collision;
+}
+
+void HybridStateValidityChecker::noCollisionThread
+(
+uint8_t& noCollision,
+const robot_state::RobotState& rstate
+) const
+{
+  std::lock_guard<std::mutex> guard(planning_scene_mutex_);
+
+  planning_scene_->setCurrentState(rstate);
+  collision_detection::CollisionRequest collision_request;
+  collision_request.contacts = true;
+  collision_detection::CollisionResult collision_result;
+  planning_scene_->checkCollision(collision_request, collision_result, rstate);
+  noCollision = (!collision_result.collision) ? 1 : 0;
 }

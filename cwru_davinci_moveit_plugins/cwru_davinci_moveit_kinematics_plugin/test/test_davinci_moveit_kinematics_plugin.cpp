@@ -59,8 +59,8 @@
 #include <iostream>
 #include <cstdlib> // for exit()
 
-#define IK_NEAR_ORIENTATION 1e-5
-#define IK_NEAR_TRANSLATE 1e-5
+#define IK_NEAR_ORIENTATION 1e-4
+#define IK_NEAR_TRANSLATE 1e-4
 
 bool isWithinJointLimit(const std::vector<double> &joint_angles)
 {
@@ -131,12 +131,11 @@ void isEqual(const double &a, const double &b, const double &tol, int &count)
   }
 }
 
-bool isTwoVectorEqual(const Eigen::Vector3d &a, const Eigen::Vector3d &b)
+bool isTwoVectorEqual(const Eigen::Vector3d &a, const Eigen::Vector3d &b, double tol)
 {
   Eigen::Vector3d diff_vec = a - b;
-  //  diff_vec = diff_vec.normalized();
-  double diff = diff_vec.norm();
-  if(diff <= IK_NEAR_TRANSLATE)
+
+  if(diff_vec.norm() < tol)
   {
     return true;
   }
@@ -146,13 +145,11 @@ bool isTwoVectorEqual(const Eigen::Vector3d &a, const Eigen::Vector3d &b)
   }
 }
 
-bool isTwoRotationEqual(const Eigen::Matrix3d &a, const Eigen::Matrix3d &b)
+bool isTwoRotationEqual(const Eigen::Matrix3d &a, const Eigen::Matrix3d &b, double tol)
 {
   Eigen::Matrix3d diff = a * b.inverse() - Eigen::Matrix3d::Identity();
 
-  //  ROS_INFO_STREAM(diff);
-
-  if(diff.norm() < IK_NEAR_ORIENTATION)
+  if(diff.norm() < tol)
   {
     return true;
   }
@@ -162,7 +159,7 @@ bool isTwoRotationEqual(const Eigen::Matrix3d &a, const Eigen::Matrix3d &b)
   }
 }
 
-bool isTwoPoseEqual(const Eigen::Affine3d &pose_1, const Eigen::Affine3d &pose_2)
+bool isTwoPoseEqual(const Eigen::Affine3d &pose_1, const Eigen::Affine3d &pose_2, double tol)
 {
   Eigen::Vector3d pose_1_vec = pose_1.translation();
   Eigen::Vector3d pose_2_vec = pose_2.translation();
@@ -170,7 +167,7 @@ bool isTwoPoseEqual(const Eigen::Affine3d &pose_1, const Eigen::Affine3d &pose_2
   Eigen::Matrix3d rot_1 = pose_1.linear();
   Eigen::Matrix3d rot_2 = pose_2.linear();
 
-  if(isTwoVectorEqual(pose_1_vec, pose_2_vec) && isTwoRotationEqual(rot_1, rot_2))
+  if(isTwoVectorEqual(pose_1_vec, pose_2_vec, tol) && isTwoRotationEqual(rot_1, rot_2, tol))
   {
     return true;
   }
@@ -180,7 +177,7 @@ bool isTwoPoseEqual(const Eigen::Affine3d &pose_1, const Eigen::Affine3d &pose_2
   }
 }
 
-bool isTwoPoseEqual(const geometry_msgs::Pose &pose_1, const geometry_msgs::Pose &pose_2)
+bool isTwoPoseEqual(const geometry_msgs::Pose &pose_1, const geometry_msgs::Pose &pose_2, double tol)
 {
   Eigen::Affine3d affine_pose_1;
   Eigen::Affine3d affine_pose_2;
@@ -188,7 +185,7 @@ bool isTwoPoseEqual(const geometry_msgs::Pose &pose_1, const geometry_msgs::Pose
   tf::poseMsgToEigen(pose_1, affine_pose_1);
   tf::poseMsgToEigen(pose_2, affine_pose_2);
 
-  return isTwoPoseEqual(affine_pose_1, affine_pose_2);
+  return isTwoPoseEqual(affine_pose_1, affine_pose_2, tol);
 }
 
 class DavinciMoveitKinematicsPluginTest
@@ -533,7 +530,7 @@ TEST(ArmIKPlugin, DISABLED_TestFK)
     Eigen::Affine3d ik_tip_wrt_world = pKinematicState->getGlobalLinkTransform(
       ik_plugin_test.m_pKinematicsSolver->getTipFrame());
 
-    bool result = isTwoPoseEqual(ik_tip_wrt_world, fk_tip_wrt_world);
+    bool result = isTwoPoseEqual(ik_tip_wrt_world, fk_tip_wrt_world, 1e-4);
     EXPECT_TRUE(result);
     if(result)
     {
@@ -548,7 +545,7 @@ TEST(ArmIKPlugin, DISABLED_TestFK)
   ROS_INFO("Elapsed time: %f", (ros::WallTime::now() - start_time).toSec());
 }
 
-TEST(ArmIKPlugin, TestCompareUncalibratedFK)
+TEST(ArmIKPlugin, TestCompareUncalibratedFKWithNoDH)
 {
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
   const robot_model::RobotModelConstPtr pKModelRobotDes = robotModelLoader.getModel();
@@ -560,6 +557,7 @@ TEST(ArmIKPlugin, TestCompareUncalibratedFK)
   int test_num = 1000;
   int success = 0;
 
+  davinci_kinematics::Forward davinci_fk;
   for(int i = 0; i < test_num; ++i)
   {
     pRState->setToRandomPositions(pJointModelGroup);  // populate psm one joints with random values
@@ -567,17 +565,149 @@ TEST(ArmIKPlugin, TestCompareUncalibratedFK)
     pRState->copyJointGroupPositions(pJointModelGroup, fkJointStateByMoveIt);
     pRState->update();
     fkJointStateByMoveIt.push_back(0.0);
-  
-    davinci_kinematics::Forward davinci_fk;
-  
+
     Eigen::Affine3d tipPoseWrtBase = davinci_fk.fwd_kin_solve(fkJointStateByMoveIt);
     Eigen::Affine3d baseWrtWorld = pRState->getFrameTransform("PSM1_psm_base_link");
     Eigen::Affine3d tipPoseWrtWorld = baseWrtWorld * tipPoseWrtBase;
-  
+
     Eigen::Affine3d tipPoseWrtWorldByMoveIt = pRState->getGlobalLinkTransform("PSM1_tool_tip_link");
-    bool result = tipPoseWrtWorldByMoveIt.isApprox(tipPoseWrtWorld, 1e-4);
-    EXPECT_TRUE(result);
+    bool result_1 = tipPoseWrtWorldByMoveIt.isApprox(tipPoseWrtWorld, 1e-4);
+    bool result_2 = isTwoPoseEqual(tipPoseWrtWorldByMoveIt, tipPoseWrtWorld, 1e-4);
+    bool result = (result_1 == true && result_2 == true) ? true : false;
+    // EXPECT_TRUE(result);
     if(result)
+    {
+      success += 1;
+    }
+  }
+
+  double correct_rate = (double)(success / test_num);
+  ROS_INFO("Success Rate: %f", correct_rate);
+  bool success_count = (success > 0.9999 * test_num) ? true : false;
+  EXPECT_TRUE(success_count);
+}
+
+TEST(ArmIKPlugin, TestCompareUncalibratedFKGenDH)
+{
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
+  const robot_model::RobotModelConstPtr pKModelRobotDes = robotModelLoader.getModel();
+  robot_state::RobotStatePtr pRState(new robot_state::RobotState(pKModelRobotDes));
+
+  ROS_INFO("Model frame: %s", pKModelRobotDes->getModelFrame().c_str());
+  const robot_state::JointModelGroup * pJointModelGroup = pRState->getJointModelGroup("psm_one");
+
+  int test_num = 1000;
+  int success = 0;
+
+  const std::string psm_dh = "psm_generic";
+  davinci_kinematics::Forward davinci_fk;
+  davinci_fk.loadDHyamlfiles(psm_dh, psm_dh);
+  for(int i = 0; i < test_num; ++i)
+  {
+    pRState->setToRandomPositions(pJointModelGroup);  // populate psm one joints with random values
+    std::vector<double> fkJointStateByMoveIt;
+    pRState->copyJointGroupPositions(pJointModelGroup, fkJointStateByMoveIt);
+    pRState->update();
+    fkJointStateByMoveIt.push_back(0.0);
+
+    Eigen::Affine3d tipPoseWrtBase = davinci_fk.fwd_kin_solve(fkJointStateByMoveIt, psm_dh);
+    Eigen::Affine3d baseWrtWorld = pRState->getFrameTransform("PSM1_psm_base_link");
+    Eigen::Affine3d tipPoseWrtWorld = baseWrtWorld * tipPoseWrtBase;
+
+    Eigen::Affine3d tipPoseWrtWorldByMoveIt = pRState->getGlobalLinkTransform("PSM1_tool_tip_link");
+    bool result_1 = tipPoseWrtWorldByMoveIt.isApprox(tipPoseWrtWorld, 1e-4);
+    bool result_2 = isTwoPoseEqual(tipPoseWrtWorldByMoveIt, tipPoseWrtWorld, 1e-4);
+    bool result = (result_1 == true && result_2 == true) ? true : false;
+    // EXPECT_TRUE(result);
+    if(result)
+    {
+      success += 1;
+    }
+  }
+
+  double correct_rate = (double)(success / test_num);
+  ROS_INFO("Success Rate: %f", correct_rate);
+  bool success_count = (success > 0.9999 * test_num) ? true : false;
+  EXPECT_TRUE(success_count);
+}
+
+TEST(ArmIKPlugin, TestCompareUncalibratedFKSimDH)
+{
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
+  const robot_model::RobotModelConstPtr pKModelRobotDes = robotModelLoader.getModel();
+  robot_state::RobotStatePtr pRState(new robot_state::RobotState(pKModelRobotDes));
+
+  ROS_INFO("Model frame: %s", pKModelRobotDes->getModelFrame().c_str());
+  const robot_state::JointModelGroup * pJointModelGroup = pRState->getJointModelGroup("psm_one");
+
+  int test_num = 1000;
+  int success = 0;
+
+  const std::string psm_dh = "psm1_dh_sim";
+  davinci_kinematics::Forward davinci_fk;
+  davinci_fk.loadDHyamlfiles(psm_dh, psm_dh);
+  for(int i = 0; i < test_num; ++i)
+  {
+    pRState->setToRandomPositions(pJointModelGroup);  // populate psm one joints with random values
+    std::vector<double> fkJointStateByMoveIt;
+    pRState->copyJointGroupPositions(pJointModelGroup, fkJointStateByMoveIt);
+    pRState->update();
+    fkJointStateByMoveIt.push_back(0.0);
+
+    Eigen::Affine3d tipPoseWrtBase = davinci_fk.fwd_kin_solve(fkJointStateByMoveIt, psm_dh);
+    Eigen::Affine3d baseWrtWorld = pRState->getFrameTransform("PSM1_psm_base_link");
+    Eigen::Affine3d tipPoseWrtWorld = baseWrtWorld * tipPoseWrtBase;
+
+    Eigen::Affine3d tipPoseWrtWorldByMoveIt = pRState->getGlobalLinkTransform("PSM1_tool_tip_link");
+    bool result_1 = tipPoseWrtWorldByMoveIt.isApprox(tipPoseWrtWorld, 1e-1);
+    // bool result_2 = isTwoPoseEqual(tipPoseWrtWorldByMoveIt, tipPoseWrtWorld, 1e-1);
+    // bool result = (result_1 == true && result_2 == true) ? true : false;
+    // EXPECT_TRUE(result_1);
+    if(result_1)
+    {
+      success += 1;
+    }
+  }
+
+  double correct_rate = (double)(success / test_num);
+  ROS_INFO("Success Rate: %f", correct_rate);
+  bool success_count = (success > 0.9999 * test_num) ? true : false;
+  EXPECT_TRUE(success_count);
+}
+
+TEST(ArmIKPlugin, TestCompareUncalibratedFKRealDH)
+{
+  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
+  const robot_model::RobotModelConstPtr pKModelRobotDes = robotModelLoader.getModel();
+  robot_state::RobotStatePtr pRState(new robot_state::RobotState(pKModelRobotDes));
+
+  ROS_INFO("Model frame: %s", pKModelRobotDes->getModelFrame().c_str());
+  const robot_state::JointModelGroup * pJointModelGroup = pRState->getJointModelGroup("psm_one");
+
+  int test_num = 1000;
+  int success = 0;
+
+  const std::string psm_dh = "psm1_dh";
+  davinci_kinematics::Forward davinci_fk;
+  davinci_fk.loadDHyamlfiles(psm_dh, psm_dh);
+  for(int i = 0; i < test_num; ++i)
+  {
+    pRState->setToRandomPositions(pJointModelGroup);  // populate psm one joints with random values
+    std::vector<double> fkJointStateByMoveIt;
+    pRState->copyJointGroupPositions(pJointModelGroup, fkJointStateByMoveIt);
+    pRState->update();
+    fkJointStateByMoveIt.push_back(0.0);
+
+    Eigen::Affine3d tipPoseWrtBase = davinci_fk.fwd_kin_solve(fkJointStateByMoveIt, psm_dh);
+    Eigen::Affine3d baseWrtWorld = pRState->getFrameTransform("PSM1_psm_base_link");
+    Eigen::Affine3d tipPoseWrtWorld = baseWrtWorld * tipPoseWrtBase;
+
+    Eigen::Affine3d tipPoseWrtWorldByMoveIt = pRState->getGlobalLinkTransform("PSM1_tool_tip_link");
+    bool result_1 = tipPoseWrtWorldByMoveIt.isApprox(tipPoseWrtWorld, 1e-0);
+    // bool result_2 = isTwoPoseEqual(tipPoseWrtWorldByMoveIt, tipPoseWrtWorld, 1e-1);
+    // bool result = (result_1 == true && result_2 == true) ? true : false;
+    // EXPECT_TRUE(result_1);
+    if(result_1)
     {
       success += 1;
     }
@@ -654,7 +784,7 @@ TEST(ArmIKPlugin, DISABLED_TestCompareFK)
     Eigen::Affine3d affine_fk_pose_wrt_world = affine_base_wrt_world * affine_fk_pose_wrt_base;
 
     // compare fk results
-    bool result = isTwoPoseEqual(affine_fk_pose_wrt_world, fk_by_ik_plugin);
+    bool result = isTwoPoseEqual(affine_fk_pose_wrt_world, fk_by_ik_plugin, 1e-4);
     EXPECT_TRUE(result);
     if(result)
     {

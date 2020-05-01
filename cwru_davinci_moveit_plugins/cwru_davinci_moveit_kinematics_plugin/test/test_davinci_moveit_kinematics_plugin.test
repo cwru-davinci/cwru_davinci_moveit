@@ -5,7 +5,7 @@
     </include>
 
     <test test-name="test_davinci_moveit_kinematics_plugin" pkg="cwru_davinci_moveit_plugins" type="test_davinci_moveit_kinematics_plugin"
-          time-limit="1.0" args="--gtest_repeat=1">
+          time-limit="100.0" args="--gtest_repeat=1">
         <param name="time_out" value="0.1" />
         <param name="test_num" value="10000" />
         <param name="tip_name" value="PSM1_tool_tip_link" />

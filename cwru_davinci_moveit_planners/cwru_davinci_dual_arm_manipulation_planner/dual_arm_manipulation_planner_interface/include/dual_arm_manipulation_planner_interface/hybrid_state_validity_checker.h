@@ -41,8 +41,9 @@
 
 #include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
+
 // moveit
-#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/collision_detection/collision_common.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
@@ -93,6 +94,13 @@ public:
   const int grasp_pose_id
   ) const;
 
+  moveit::core::AttachedBody* createAttachedBody
+  (
+  const std::string& supportGroup,
+  const std::string& objectName,
+  const Eigen::Affine3d& grasp_pose
+  ) const;
+
   void setMimicJointPositions
   (
   const robot_state::RobotStatePtr& rstate,
@@ -109,15 +117,21 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-protected:
-  void defaultSettings();
-
-  void loadNeedleModel();
-
   bool noCollision
   (
   const robot_state::RobotState& rstate
   ) const;
+
+  void noCollisionThread
+  (
+  uint8_t& noCollision,
+  const robot_state::RobotState& rstate
+  ) const;
+
+protected:
+  void defaultSettings();
+
+  void loadNeedleModel();
 
 protected:
   HybridObjectStateSpace                *hyStateSpace_;
@@ -138,6 +152,8 @@ protected:
 
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
+
+  mutable std::mutex planning_scene_mutex_;
 };
 
 }
