@@ -403,9 +403,9 @@ uint8_t& noCollision,
 const robot_state::RobotState& rstate
 ) const
 {
-  auto start_ik = std::chrono::high_resolution_clock::now();
-
   std::lock_guard<std::mutex> guard(planning_scene_mutex_);
+
+  auto start_ik = std::chrono::high_resolution_clock::now();
 
   planning_scene_->setCurrentState(rstate);
   collision_detection::CollisionRequest collision_request;

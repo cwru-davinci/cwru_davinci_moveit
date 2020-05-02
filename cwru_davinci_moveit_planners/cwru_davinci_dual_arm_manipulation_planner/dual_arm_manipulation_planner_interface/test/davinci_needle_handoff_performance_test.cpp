@@ -96,525 +96,461 @@ const std::string& testCase
             << "Test case min running time is " << pStats.min << "s" << std::endl;
 }
 
-bool findValidGrasp
-(
-const ompl::base::SpaceInformationPtr& si,
-ob::ScopedState<HybridObjectStateSpace> cstate,
-const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps,
-int from_part_id = 0,
-bool pick_right_part = false
-)
+class HdfPerformanceTester
 {
-  bool is_found = false;
-  std::unordered_set<int> invalid_grasp_list;
-  ompl::RNG randNumGenerator;
-  int random_range = possible_grasps.size() - 1;
-  int stop_it_num = possible_grasps.size();
+private:
+  std::recursive_mutex m_mutex;
 
-  while (invalid_grasp_list.size() <
-         stop_it_num)  // as long as element in invalid_grasp_list <= possible_grasp size do while
+  void getPerformanceStats
+  (
+  const std::vector<double>& running_time,
+  PerformanceStats& stats
+  )
   {
-    int random_grasp_index = randNumGenerator.uniformInt(0, random_range);
-    if (invalid_grasp_list.find(random_grasp_index) == invalid_grasp_list.end())  // element is not in the container
+    stats.max = *std::max_element(running_time.begin(), running_time.end());
+    stats.min = *std::min_element(running_time.begin(), running_time.end());
+
+    double accum = std::accumulate(running_time.begin(), running_time.end(), 0);
+    double mean = accum / running_time.size();
+    stats.mean = mean;
+
+    std::for_each(running_time.begin(), running_time.end(), [&](const double d)
     {
-      if (pick_right_part)
+      accum += (d - mean) * (d - mean);
+    });
+    stats.stdev = sqrt(accum / (running_time.size() - 1));
+  }
+
+  void solveAndPostProcessing
+  (
+  std::vector<double>& running_time,
+  int& failed_num,
+  int& succeeded_num,
+  const ompl::base::SpaceInformationPtr& pSpaceInfor,
+  const ob::ScopedState<HybridObjectStateSpace>& start,
+  const ob::ScopedState<HybridObjectStateSpace>& goal
+  )
+  {
+    // std::lock_guard<std::recursive_mutex> locker(m_mutex);
+
+    // create a problem instance
+    ompl::base::ProblemDefinitionPtr pPdef(std::make_shared<ob::ProblemDefinition>(pSpaceInfor));
+    // set the start and goal states
+    pPdef->setStartAndGoalStates(start, goal);
+
+    // create a planner for the defined space
+    std::shared_ptr<og::RRTConnect> pPlanner(std::make_shared<og::RRTConnect>(pSpaceInfor));
+    // set the problem we are trying to solve for the planner
+    pPlanner->setProblemDefinition(pPdef);
+    pPlanner->setRange(100.0);
+    // perform setup steps for the planner
+    pPlanner->setup();
+    // print the settings for this space
+    pSpaceInfor->printSettings(std::cout);
+    // print the problem settings
+    pPdef->print(std::cout);
+    // attempt to solve the problem within one second of planning time
+
+    auto start_ts = std::chrono::high_resolution_clock::now();
+    pSpaceInfor->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
+    ob::PlannerStatus solved = pPlanner->ob::Planner::solve(200.0);
+  
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> planning_time = finish - start_ts;
+
+    if (solved)
+    {
+      if (pPdef->hasExactSolution())
       {
-        int grasp_part = possible_grasps[random_grasp_index].part_id;
-        // first round screen
-        if (grasp_part == from_part_id)  // if failed insert to invalid_grasp_list
+        std::cout << "Has exact solution" << std::endl;
+        succeeded_num += 1;
+        double* total_time = new double;
+        pSpaceInfor->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
+        running_time.push_back(planning_time.count());
+        delete total_time;
+      }
+      else
+      {
+        std::cout << "Do not have exact solution" << std::endl;
+        failed_num += 1;
+      }
+
+      og::PathGeometric slnPath = *(pPdef->getSolutionPath()->as<og::PathGeometric>());
+      // print the path to screen
+      std::cout << "Found solution:\n" << "\n";
+      std::cout << "Found solution with " << slnPath.getStateCount()
+                << " states and length " << slnPath.length() << std::endl;
+      // print the path to screen
+      slnPath.printAsMatrix(std::cout);
+  
+      std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
+      ob::PlannerData plannedData(pSpaceInfor);
+      pPlanner->getPlannerData(plannedData);
+      plannedData.computeEdgeWeights();
+  
+      std::cout << "Found " << plannedData.numVertices() << " vertices " << "\n";
+      std::cout << "Found " << plannedData.numEdges() << " edges " << "\n";
+      std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
+    }
+    else
+    {
+      std::cout << "No solution found" << std::endl;
+      failed_num += 1;
+    }
+
+    pPlanner->clear();
+  }
+
+  void sampleGoalState
+  (
+  const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+  const ompl::base::SpaceInformationPtr& pSpaceInfor,
+  const ob::StateSamplerPtr& pStateSampler,
+  const ob::ScopedState<HybridObjectStateSpace>& start,
+  const int num_hdf,
+  ob::ScopedState<HybridObjectStateSpace>& goal
+  )
+  {
+    pStateSampler->sampleUniform(goal.get());
+    int start_arm_index = start->armIndex().value;
+    int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
+    int goal_arm_index = goal->armIndex().value;
+    int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
+    bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
+    bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
+
+    bool is_gs_valid = pSpaceInfor->isValid(goal.get());
+
+    switch(num_hdf)
+    {
+      case 1:
+        while (same_arm || same_grasp_part || !is_gs_valid)
         {
-          invalid_grasp_list.insert(random_grasp_index);
-          continue;
+          pStateSampler->sampleUniform(goal.get());
+          is_gs_valid = pSpaceInfor->isValid(goal.get());
+          if (!is_gs_valid)
+            continue;
+          same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
+          same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
         }
-      }
-      // if past first round scree then check validity here
-      cstate->graspIndex().value = random_grasp_index;
-      if (si->isValid(cstate.get()))
-      {
-        is_found = true;
-        return is_found;
-      }
-      invalid_grasp_list.insert(random_grasp_index);
+        return;
+      case 2:
+        while (!same_arm || same_grasp_part || !is_gs_valid)
+        {
+          pStateSampler->sampleUniform(goal.get());
+          is_gs_valid = pSpaceInfor->isValid(goal.get());
+          if (!is_gs_valid)
+            continue;
+          same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
+          same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+        }
+        return;
+      case 3:
+        while (same_arm || !same_grasp_part || !is_gs_valid)
+        {
+          pStateSampler->sampleUniform(goal.get());
+          is_gs_valid = pSpaceInfor->isValid(goal.get());
+          if (!is_gs_valid)
+            continue;
+          same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
+          same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+        }
+        return;
     }
   }
-}
 
-void getPerformanceStats
-(
-const std::vector<double>& running_time,
-PerformanceStats& stats
-)
-{
-  stats.max = *std::max_element(running_time.begin(), running_time.end());
-  stats.min = *std::min_element(running_time.begin(), running_time.end());
+public:
+  // void sampleGoalStateOneHdf
+  // (
+  // const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+  // const ompl::base::SpaceInformationPtr& pSpaceInfor,
+  // const ob::StateSamplerPtr& pStateSampler,
+  // const ob::ScopedState<HybridObjectStateSpace>& start,
+  // ob::ScopedState<HybridObjectStateSpace>& goal
+  // )
+  // {
+  //   pStateSampler->sampleUniform(goal.get());
+  //   int start_arm_index = start->armIndex().value;
+  //   int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
+  //   int goal_arm_index = goal->armIndex().value;
+  //   int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
+  //   bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
+  //   bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
+  
+  //   bool is_gs_valid = pSpaceInfor->isValid(goal.get());
+  //   while (same_arm || same_grasp_part || !is_gs_valid)
+  //   {
+  //     pStateSampler->sampleUniform(goal.get());
+  //     is_gs_valid = pSpaceInfor->isValid(goal.get());
+  //     if (!is_gs_valid)
+  //       continue;
+  //     same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
+  //     same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+  //   }
+  // }
 
+  // void sampleGoalStateTwoHdf
+  // (
+  // const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+  // const ompl::base::SpaceInformationPtr& pSpaceInfor,
+  // const ob::StateSamplerPtr& pStateSampler,
+  // const ob::ScopedState<HybridObjectStateSpace>& start,
+  // ob::ScopedState<HybridObjectStateSpace>& goal
+  // )
+  // {
+  //   pStateSampler->sampleUniform(goal.get());
+  //   int start_arm_index = start->armIndex().value;
+  //   int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
+  //   int goal_arm_index = goal->armIndex().value;
+  //   int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
+  //   bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
+  //   bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
 
-  double accum = std::accumulate(running_time.begin(), running_time.end(), 0);
-  double mean = accum / running_time.size();
-  stats.mean = mean;
+  //   bool is_gs_valid = pSpaceInfor->isValid(goal.get());
+  //   while (!same_arm || same_grasp_part || !is_gs_valid)
+  //   {
+  //     pStateSampler->sampleUniform(goal.get());
+  //     is_gs_valid = pSpaceInfor->isValid(goal.get());
+  //     if (!is_gs_valid)
+  //       continue;
+  //     same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
+  //     same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+  //   }
+  // }
 
-  std::for_each(running_time.begin(), running_time.end(), [&](const double d)
+  // void sampleGoalStateThreeHdf
+  // (
+  // const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+  // const ompl::base::SpaceInformationPtr& pSpaceInfor,
+  // const ob::StateSamplerPtr& pStateSampler,
+  // const ob::ScopedState<HybridObjectStateSpace>& start,
+  // ob::ScopedState<HybridObjectStateSpace>& goal
+  // )
+  // {
+  //   pStateSampler->sampleUniform(goal.get());
+  //   int start_arm_index = start->armIndex().value;
+  //   int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
+  //   int goal_arm_index = goal->armIndex().value;
+  //   int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
+  //   bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
+  //   bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
+
+  //   bool is_gs_valid = pSpaceInfor->isValid(goal.get());
+  //   while (same_arm || !same_grasp_part || !is_gs_valid)
+  //   {
+  //     pStateSampler->sampleUniform(goal.get());
+  //     is_gs_valid = pSpaceInfor->isValid(goal.get());
+  //     if (!is_gs_valid)
+  //       continue;
+  //     same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
+  //     same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
+  //   }
+  // }
+
+  PerformanceStats handoffTest
+  (
+  const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+  int num_test,
+  const std::string& objectName,
+  const robot_model_loader::RobotModelLoaderConstPtr& pRobotModelLoader,
+  const int num_hdf
+  )
   {
-    accum += (d - mean) * (d - mean);
-  });
-  stats.stdev = sqrt(accum / (running_time.size() - 1));
-}
+    // create an instance of state space  // create an instance of state space
+    auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
 
-PerformanceStats oneHandoffTest
-(
-const ros::NodeHandle& node_handle,
-const ros::NodeHandle& node_handle_priv,
-const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-int num_test
-)
-{
-  std::string objectName = "needle_r";
-  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
-  // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
+    // construct an instance of  space information from this state space
+    ompl::base::SpaceInformationPtr si(std::make_shared<ob::SpaceInformation>(hystsp));
 
-  // construct an instance of  space information from this state space
-  auto si(std::make_shared<ob::SpaceInformation>(hystsp));
+    ompl::base::RealVectorBounds se3_xyz_bounds(3);
+    se3_xyz_bounds.setLow(0, -0.1);
+    se3_xyz_bounds.setHigh(0, 0.1);
+    se3_xyz_bounds.setLow(1, -0.2);
+    se3_xyz_bounds.setHigh(1, 0.2);
+    se3_xyz_bounds.setLow(2, 0.0);
+    se3_xyz_bounds.setHigh(2, 0.18);
 
-  ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.1);
-  se3_xyz_bounds.setHigh(0, 0.1);
-  se3_xyz_bounds.setLow(1, -0.2);
-  se3_xyz_bounds.setHigh(1, 0.2);
-  se3_xyz_bounds.setLow(2, 0.0);
-  se3_xyz_bounds.setHigh(2, 0.18);
+    hystsp->setSE3Bounds(se3_xyz_bounds);
 
-  hystsp->setSE3Bounds(se3_xyz_bounds);
+    si->setStateValidityChecker(
+    std::make_shared<HybridStateValidityChecker>(si, pRobotModelLoader->getModel(), objectName));
+    si->setMotionValidator(
+    std::make_shared<HybridMotionValidator>(si, pRobotModelLoader->getModel(), objectName));
+    si->setup();
 
-  si->setStateValidityChecker(
-  std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
-  si->setMotionValidator(
-  std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
-  si->setup();
+    ob::StateSamplerPtr stateSampler;  // setup a sampler
+    stateSampler = si->allocStateSampler();  // assign HybridStateSampler to stateSampler
 
-  ob::StateSamplerPtr stateSampler;  // setup a sampler
-  stateSampler = si->allocStateSampler();  // assign HybridStateSampler to stateSampler
+    int failed_num = 0;
+    int succeeded_num = 0;
+    std::vector<double> running_time;
+    std::vector<std::thread> threads;
 
-  int failed_num = 0;
-  int succeeded_num = 0;
-  std::vector<double> running_time;
-
-  for (std::size_t i = 0; i < num_test; ++i)
-  {
-    // create a random start state
-    ob::ScopedState<HybridObjectStateSpace> start(hystsp);
-    ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
-
-    bool is_ss_valid = false;
-    while (!is_ss_valid)
+    for (std::size_t i = 0; i < num_test; ++i)
     {
-      stateSampler->sampleUniform(start.get());
-      is_ss_valid = si->isValid(start.get());
-    }
+      // create a random start state
+      ob::ScopedState<HybridObjectStateSpace> start(hystsp);
+      ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-    stateSampler->sampleUniform(goal.get());
-
-    int start_arm_index = start->armIndex().value;
-    int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
-    int goal_arm_index = goal->armIndex().value;
-    int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
-    bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
-    bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
-
-    bool is_gs_valid = si->isValid(goal.get());
-    while (same_arm || same_grasp_part || !is_gs_valid)
-    {
-      stateSampler->sampleUniform(goal.get());
-      is_gs_valid = si->isValid(goal.get());
-      if (!is_gs_valid)
-        continue;
-      same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-      same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
-    }
-
-//    hystsp->printState(start.get(), std::cout);
-//    std::cout << "Start state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
-//    hystsp->printState(goal.get(), std::cout);
-//    std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
-
-//    double distance_btw_s_g = hystsp->distance(start.get(), goal.get());
-    // create a problem instance
-    auto pdef(std::make_shared<ob::ProblemDefinition>(si));
-
-    // set the start and goal states
-    pdef->setStartAndGoalStates(start, goal);
-
-    // create a planner for the defined space
-    auto planner(std::make_shared<og::RRTConnect>(si));
-    // set the problem we are trying to solve for the planner
-    planner->setProblemDefinition(pdef);
-    planner->setRange(100.0);
-    // perform setup steps for the planner
-    planner->setup();
-    // print the settings for this space
-    si->printSettings(std::cout);
-    // print the problem settings
-    pdef->print(std::cout);
-    // attempt to solve the problem within one second of planning time
-    auto start_ts = std::chrono::high_resolution_clock::now();
-    si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-    ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
-
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> planning_time = finish - start_ts;
-
-    if (solved)
-    {
-      if (pdef->hasExactSolution())
+      bool is_ss_valid = false;
+      while (!is_ss_valid)
       {
-        std::cout << "Has exact solution" << std::endl;
-        succeeded_num += 1;
-        double* total_time = new double;
-        si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
-        running_time.push_back(*total_time);
-        delete total_time;
-      }
-      else
-      {
-        std::cout << "Do not have exact solution" << std::endl;
-        failed_num += 1;
+        stateSampler->sampleUniform(start.get());
+        is_ss_valid = si->isValid(start.get());
       }
 
-      og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
-      // print the path to screen
-      std::cout << "Found solution:\n" << "\n";
-      std::cout << "Found solution with " << slnPath.getStateCount()
-                << " states and length " << slnPath.length() << std::endl;
-      // print the path to screen
-      slnPath.printAsMatrix(std::cout);
+      sampleGoalState(grasp_poses, si, stateSampler, start, num_hdf, goal);
 
-      std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
-      ob::PlannerData plannedData(si);
-      planner->getPlannerData(plannedData);
-      plannedData.computeEdgeWeights();
-
-      std::cout << "Found " << plannedData.numVertices() << " vertices " << "\n";
-      std::cout << "Found " << plannedData.numEdges() << " edges " << "\n";
-      std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
+  //    hystsp->printState(start.get(), std::cout);
+  //    std::cout << "Start state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
+  //    hystsp->printState(goal.get(), std::cout);
+  //    std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
+      solveAndPostProcessing(running_time, failed_num, succeeded_num, si, start, goal);
+    //   threads.push_back
+    //   (
+    //     std::thread
+    //     (
+    //       &HdfPerformanceTester::solveAndPostProcessing,
+    //       this,
+    //       std::ref(running_time),
+    //       std::ref(failed_num),
+    //       std::ref(succeeded_num),
+    //       std::ref(si),
+    //       std::cref(start),
+    //       std::cref(goal)
+    //     )
+    //   );
     }
-    else
-    {
-      std::cout << "No solution found" << std::endl;
-      failed_num += 1;
-    }
 
-    planner->clear();
+    // for (std::thread &t : threads)
+    // {
+    //  if (t.joinable())
+    //  {
+    //    t.join();
+    //  }
+    // }
+
+    PerformanceStats stats;
+    stats.failed_num = failed_num;
+    stats.succeeded_num = succeeded_num;
+    getPerformanceStats(running_time, stats);
+    return stats;
   }
-  PerformanceStats stats;
-  stats.failed_num = failed_num;
-  stats.succeeded_num = succeeded_num;
-  getPerformanceStats(running_time, stats);
-  return stats;
-}
 
-PerformanceStats twoHandoffTest
-(
-const ros::NodeHandle& node_handle,
-const ros::NodeHandle& node_handle_priv,
-const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-int num_test
-)
-{
-  std::string objectName = "needle_r";
-  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
-  // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
+  // PerformanceStats handoffTest
+  // (
+  // const ros::NodeHandle& node_handle,
+  // const ros::NodeHandle& node_handle_priv,
+  // const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
+  // int num_test,
+  // const std::string& objectName,
+  // const robot_model_loader::RobotModelLoaderConstPtr& pRobotModelLoader,
+  // void (HdfPerformanceTester::*goalSamplingFcn)(const std::vector<cwru_davinci_grasp::GraspInfo>&,
+  //                                               const ompl::base::SpaceInformationPtr&,
+  //                                               const ob::StateSamplerPtr&,
+  //                                               const ob::ScopedState<HybridObjectStateSpace>&,
+  //                                               ob::ScopedState<HybridObjectStateSpace>&)
+  // )
+  // {
+  //   // create an instance of state space  // create an instance of state space
+  //   auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
 
-  // construct an instance of  space information from this state space
-  auto si(std::make_shared<ob::SpaceInformation>(hystsp));
+  //   // construct an instance of  space information from this state space
+  //   ompl::base::SpaceInformationPtr si(std::make_shared<ob::SpaceInformation>(hystsp));
 
-  ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.1);
-  se3_xyz_bounds.setHigh(0, 0.1);
-  se3_xyz_bounds.setLow(1, -0.2);
-  se3_xyz_bounds.setHigh(1, 0.2);
-  se3_xyz_bounds.setLow(2, 0.0);
-  se3_xyz_bounds.setHigh(2, 0.18);
+  //   ompl::base::RealVectorBounds se3_xyz_bounds(3);
+  //   se3_xyz_bounds.setLow(0, -0.1);
+  //   se3_xyz_bounds.setHigh(0, 0.1);
+  //   se3_xyz_bounds.setLow(1, -0.2);
+  //   se3_xyz_bounds.setHigh(1, 0.2);
+  //   se3_xyz_bounds.setLow(2, 0.0);
+  //   se3_xyz_bounds.setHigh(2, 0.18);
 
-  hystsp->setSE3Bounds(se3_xyz_bounds);
+  //   hystsp->setSE3Bounds(se3_xyz_bounds);
 
-  si->setStateValidityChecker(
-  std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
-  si->setMotionValidator(
-  std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
-  si->setup();
+  //   si->setStateValidityChecker(
+  //   std::make_shared<HybridStateValidityChecker>(si, pRobotModelLoader->getModel(), objectName));
+  //   si->setMotionValidator(
+  //   std::make_shared<HybridMotionValidator>(si, pRobotModelLoader->getModel(), objectName));
+  //   si->setup();
 
-  ob::StateSamplerPtr stateSampler;  // setup a sampler
-  stateSampler = si->allocStateSampler();  // assign HybridStateSampler to stateSampler
+  //   ob::StateSamplerPtr stateSampler;  // setup a sampler
+  //   stateSampler = si->allocStateSampler();  // assign HybridStateSampler to stateSampler
 
-  int failed_num = 0;
-  int succeeded_num = 0;
-  std::vector<double> running_time;
+  //   int failed_num = 0;
+  //   int succeeded_num = 0;
+  //   std::vector<double> running_time;
+  //   std::vector<std::thread> threads;
 
-  for (std::size_t i = 0; i < num_test; ++i)
-  {
-    // create a random start state
-    ob::ScopedState<HybridObjectStateSpace> start(hystsp);
-    ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
+  //   for (std::size_t i = 0; i < num_test; ++i)
+  //   {
+  //     // create a random start state
+  //     ob::ScopedState<HybridObjectStateSpace> start(hystsp);
+  //     ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
 
-    bool is_ss_valid = false;
-    while (!is_ss_valid)
-    {
-      stateSampler->sampleUniform(start.get());
-      is_ss_valid = si->isValid(start.get());
-    }
+  //     bool is_ss_valid = false;
+  //     while (!is_ss_valid)
+  //     {
+  //       stateSampler->sampleUniform(start.get());
+  //       is_ss_valid = si->isValid(start.get());
+  //     }
 
-    stateSampler->sampleUniform(goal.get());
+  //     this->*goalSamplingFcn(grasp_poses, si, stateSampler, start, goal);
 
-    int start_arm_index = start->armIndex().value;
-    int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
-    int goal_arm_index = goal->armIndex().value;
-    int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
-    bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
-    bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
+  // //    hystsp->printState(start.get(), std::cout);
+  // //    std::cout << "Start state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
+  // //    hystsp->printState(goal.get(), std::cout);
+  // //    std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
 
-    bool is_gs_valid = si->isValid(goal.get());
-    while (!same_arm || same_grasp_part || !is_gs_valid)
-    {
-      stateSampler->sampleUniform(goal.get());
-      is_gs_valid = si->isValid(goal.get());
-      if (!is_gs_valid)
-        continue;
-      same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-      same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
-    }
+  //     // create a problem instance
+  //     ompl::base::ProblemDefinitionPtr pdef(std::make_shared<ob::ProblemDefinition>(si));
+  
+  //     // set the start and goal states
+  //     pdef->setStartAndGoalStates(start, goal);
 
-//    hystsp->printState(start.get(), std::cout);
-//    std::cout << "Start state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
-//    hystsp->printState(goal.get(), std::cout);
-//    std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
+  //     // create a planner for the defined space
+  //     std::shared_ptr<og::RRTConnect> planner(std::make_shared<og::RRTConnect>(si));
+  //     // set the problem we are trying to solve for the planner
+  //     planner->setProblemDefinition(pdef);
+  //     planner->setRange(100.0);
+  //     // perform setup steps for the planner
+  //     planner->setup();
+  //     // print the settings for this space
+  //     si->printSettings(std::cout);
+  //     // print the problem settings
+  //     pdef->print(std::cout);
+  //     // attempt to solve the problem within one second of planning time
 
-//    double distance_btw_s_g = hystsp->distance(start.get(), goal.get());
-    // create a problem instance
-    auto pdef(std::make_shared<ob::ProblemDefinition>(si));
+  //     threads.push_back
+  //     (
+  //       std::thread
+  //       (
+  //         solveAndPostProcessing,
+  //         std::ref(running_time),
+  //         std::ref(failed_num),
+  //         std::ref(succeeded_num),
+  //         std::cref(si),
+  //         std::cref(planner),
+  //         std::cref(pdef)
+  //       )
+  //     );
+  //   }
 
-    // set the start and goal states
-    pdef->setStartAndGoalStates(start, goal);
+  //   for (std::thread &t : threads)
+  //   {
+  //    if (t.joinable())
+  //    {
+  //      t.join();
+  //    }
+  //   }
 
-    // create a planner for the defined space
-    auto planner(std::make_shared<og::RRTConnect>(si));
-    // set the problem we are trying to solve for the planner
-    planner->setProblemDefinition(pdef);
-    planner->setRange(100.0);
-    // perform setup steps for the planner
-    planner->setup();
-    // print the settings for this space
-    si->printSettings(std::cout);
-    // print the problem settings
-    pdef->print(std::cout);
-    // attempt to solve the problem within one second of planning time
-    auto start_ts = std::chrono::high_resolution_clock::now();
-    si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-    ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
-
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> planning_time = finish - start_ts;
-
-    if (solved)
-    {
-      if (pdef->hasExactSolution())
-      {
-        std::cout << "Has exact solution" << std::endl;
-        succeeded_num += 1;
-        double* total_time = new double;
-        si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
-        running_time.push_back(*total_time);
-        delete total_time;
-      }
-      else
-      {
-        std::cout << "Do not have exact solution" << std::endl;
-        failed_num += 1;
-      }
-
-      og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
-      // print the path to screen
-      std::cout << "Found solution:\n" << "\n";
-      std::cout << "Found solution with " << slnPath.getStateCount()
-                << " states and length " << slnPath.length() << std::endl;
-      // print the path to screen
-      slnPath.printAsMatrix(std::cout);
-
-      std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
-      ob::PlannerData plannedData(si);
-      planner->getPlannerData(plannedData);
-      plannedData.computeEdgeWeights();
-
-      std::cout << "Found " << plannedData.numVertices() << " vertices " << "\n";
-      std::cout << "Found " << plannedData.numEdges() << " edges " << "\n";
-      std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
-    }
-    else
-    {
-      std::cout << "No solution found" << std::endl;
-      failed_num += 1;
-    }
-
-    planner->clear();
-  }
-  PerformanceStats stats;
-  stats.failed_num = failed_num;
-  stats.succeeded_num = succeeded_num;
-  getPerformanceStats(running_time, stats);
-  return stats;
-}
-
-PerformanceStats threeHandoffTest
-(
-const ros::NodeHandle& node_handle,
-const ros::NodeHandle& node_handle_priv,
-const std::vector<cwru_davinci_grasp::GraspInfo>& grasp_poses,
-int num_test
-)
-{
-  std::string objectName = "needle_r";
-  robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
-  // create an instance of state space  // create an instance of state space
-  auto hystsp(std::make_shared<HybridObjectStateSpace>(1, 2, 0, grasp_poses.size() - 1, grasp_poses));
-
-  // construct an instance of  space information from this state space
-  auto si(std::make_shared<ob::SpaceInformation>(hystsp));
-
-  ompl::base::RealVectorBounds se3_xyz_bounds(3);
-  se3_xyz_bounds.setLow(0, -0.1);
-  se3_xyz_bounds.setHigh(0, 0.1);
-  se3_xyz_bounds.setLow(1, -0.2);
-  se3_xyz_bounds.setHigh(1, 0.2);
-  se3_xyz_bounds.setLow(2, 0.0);
-  se3_xyz_bounds.setHigh(2, 0.18);
-
-  hystsp->setSE3Bounds(se3_xyz_bounds);
-
-  si->setStateValidityChecker(
-  std::make_shared<HybridStateValidityChecker>(si, robotModelLoader.getModel(), objectName));
-  si->setMotionValidator(
-  std::make_shared<HybridMotionValidator>(si, robotModelLoader.getModel(), objectName));
-  si->setup();
-
-  ob::StateSamplerPtr stateSampler;  // setup a sampler
-  stateSampler = si->allocStateSampler();  // assign HybridStateSampler to stateSampler
-
-  int failed_num = 0;
-  int succeeded_num = 0;
-  std::vector<double> running_time;
-
-  for (std::size_t i = 0; i < num_test; ++i)
-  {
-    // create a random start state
-    ob::ScopedState<HybridObjectStateSpace> start(hystsp);
-    ob::ScopedState<HybridObjectStateSpace> goal(hystsp);
-
-    bool is_ss_valid = false;
-    while (!is_ss_valid)
-    {
-      stateSampler->sampleUniform(start.get());
-      is_ss_valid = si->isValid(start.get());
-    }
-
-    stateSampler->sampleUniform(goal.get());
-
-    int start_arm_index = start->armIndex().value;
-    int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
-    int goal_arm_index = goal->armIndex().value;
-    int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
-    bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
-    bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
-
-    bool is_gs_valid = si->isValid(goal.get());
-    while (same_arm || !same_grasp_part || !is_gs_valid)
-    {
-      stateSampler->sampleUniform(goal.get());
-      is_gs_valid = si->isValid(goal.get());
-      if (!is_gs_valid)
-        continue;
-      same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-      same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
-    }
-
-//    hystsp->printState(start.get(), std::cout);
-//    std::cout << "Start state selected Grasp's part is " << grasp_poses[start->graspIndex().value].part_id << std::endl;
-//    hystsp->printState(goal.get(), std::cout);
-//    std::cout << "Goal state selected Grasp's part is " << grasp_poses[goal->graspIndex().value].part_id << std::endl;
-
-//    double distance_btw_s_g = hystsp->distance(start.get(), goal.get());
-    // create a problem instance
-    auto pdef(std::make_shared<ob::ProblemDefinition>(si));
-
-    // set the start and goal states
-    pdef->setStartAndGoalStates(start, goal);
-
-    // create a planner for the defined space
-    auto planner(std::make_shared<og::RRTConnect>(si));
-    // set the problem we are trying to solve for the planner
-    planner->setProblemDefinition(pdef);
-    planner->setRange(100.0);
-    // perform setup steps for the planner
-    planner->setup();
-    // print the settings for this space
-    si->printSettings(std::cout);
-    // print the problem settings
-    pdef->print(std::cout);
-    // attempt to solve the problem within one second of planning time
-    auto start_ts = std::chrono::high_resolution_clock::now();
-    si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
-    ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
-
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> planning_time = finish - start_ts;
-
-    if (solved)
-    {
-      if (pdef->hasExactSolution())
-      {
-        std::cout << "Has exact solution" << std::endl;
-        succeeded_num += 1;
-        double* total_time = new double;
-        si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
-        running_time.push_back(*total_time);
-        delete total_time;
-      }
-      else
-      {
-        std::cout << "Do not have exact solution" << std::endl;
-        failed_num += 1;
-      }
-
-      og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
-      // print the path to screen
-      std::cout << "Found solution:\n" << "\n";
-      std::cout << "Found solution with " << slnPath.getStateCount()
-                << " states and length " << slnPath.length() << std::endl;
-      // print the path to screen
-      slnPath.printAsMatrix(std::cout);
-
-      std::cout << "Writing PlannerData to file’./myPlannerData’" << std::endl;
-      ob::PlannerData plannedData(si);
-      planner->getPlannerData(plannedData);
-      plannedData.computeEdgeWeights();
-
-      std::cout << "Found " << plannedData.numVertices() << " vertices " << "\n";
-      std::cout << "Found " << plannedData.numEdges() << " edges " << "\n";
-      std::cout << "Actual Planning Time is: " << planning_time.count() << std::endl;
-    }
-    else
-    {
-      std::cout << "No solution found" << std::endl;
-      failed_num += 1;
-    }
-
-    planner->clear();
-  }
-  PerformanceStats stats;
-  stats.failed_num = failed_num;
-  stats.succeeded_num = succeeded_num;
-  getPerformanceStats(running_time, stats);
-  return stats;
-}
+  //   PerformanceStats stats;
+  //   stats.failed_num = failed_num;
+  //   stats.succeeded_num = succeeded_num;
+  //   getPerformanceStats(running_time, stats);
+  //   return stats;
+  // }
+};
 
 int main(int argc, char** argv)
 {
@@ -633,9 +569,14 @@ int main(int argc, char** argv)
 
   std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses = simpleGrasp->getAllPossibleNeedleGrasps(false);
 
-  PerformanceStats oneHfStats = oneHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
-  PerformanceStats twoHfStats = twoHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
-  PerformanceStats threeHfStats = threeHandoffTest(node_handle, node_handle_priv, grasp_poses, test_num);
+  std::string objectName = "needle_r";
+  const robot_model_loader::RobotModelLoaderConstPtr pRobotModelLoader(new robot_model_loader::RobotModelLoader("robot_description"));
+  HdfPerformanceTester oneHdfPerformaceTest;
+  HdfPerformanceTester twoHdfPerformaceTest;
+  HdfPerformanceTester threeHdfPerformaceTest;
+  PerformanceStats oneHfStats = oneHdfPerformaceTest.handoffTest(grasp_poses, test_num, objectName, pRobotModelLoader, 1);
+  PerformanceStats twoHfStats = twoHdfPerformaceTest.handoffTest(grasp_poses, test_num, objectName, pRobotModelLoader, 2);
+  PerformanceStats threeHfStats = threeHdfPerformaceTest.handoffTest(grasp_poses, test_num, objectName, pRobotModelLoader, 3);
 
   printPerformanceStats(oneHfStats, "One Handoff");
   printPerformanceStats(twoHfStats, "Two Handoff");
