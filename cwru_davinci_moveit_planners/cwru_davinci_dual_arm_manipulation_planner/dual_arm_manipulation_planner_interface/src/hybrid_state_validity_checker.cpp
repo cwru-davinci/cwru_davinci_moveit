@@ -365,6 +365,48 @@ const std::string& planning_group
     rstate->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
 }
 
+// bool HybridStateValidityChecker::isRobotStateValid
+// (
+// const planning_scene::PlanningScene* planning_scene,
+// const std::string& planning_group,
+// robot_state::RobotState* state,
+// const robot_state::JointModelGroup* group,
+// const double* ik_solution
+// )
+// {
+//   state->setJointGroupPositions(group, ik_solution);
+//   const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
+//   const double *joint_val = state->getJointPositions(outer_pitch_joint);
+//   if (joint_val)
+//     state->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
+//   state->update();
+
+//   // planning_scene->setCurrentState(*state);
+//   // collision_detection::CollisionRequest collision_request;
+//   // collision_request.contacts = true;
+//   // collision_detection::CollisionResult collision_result;
+//   // planning_scene_->checkCollision(collision_request, collision_result, *state);
+//   // bool no_collision = !collision_result.collision;
+
+//   // if (collision_result.collision)
+//   // {
+//   //   ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+//   //   collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+//   //   for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+//   //        it != contactMap.end(); ++it)
+//   //   {
+//   //     ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+//   //   }
+//   // }
+//   // return no_collision;
+//   if (!planning_scene)
+//   {
+//     return false;
+//   }
+
+//   return !planning_scene->isStateColliding(*state);
+// }
+
 bool HybridStateValidityChecker::noCollision
 (
 const robot_state::RobotState& rstate

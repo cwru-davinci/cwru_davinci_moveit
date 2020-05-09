@@ -119,6 +119,15 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
+  // bool isRobotStateValid
+  // (
+  // const planning_scene::PlanningScene* planning_scene,
+  // const std::string& planning_group,
+  // robot_state::RobotState* state,
+  // const robot_state::JointModelGroup* group,
+  // const double* ik_solution
+  // );
+
   bool noCollision
   (
   const robot_state::RobotState& rstate
@@ -156,6 +165,8 @@ protected:
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
 
   mutable std::mutex planning_scene_mutex_;
+
+  robot_state::GroupStateValidityCallbackFn constraint_fn;
 };
 
 }

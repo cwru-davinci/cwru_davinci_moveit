@@ -318,13 +318,19 @@ const std::string& planning_group
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
 //  double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
+
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
+
   double found_cartesian_path = pre_grasp_state->computeCartesianPath(arm_joint_group,
                                                                       traj,
                                                                       tip_link,
                                                                       grasped_tool_tip_pose,
                                                                       true,
                                                                       max_step,
-                                                                      jump_threshold);
+                                                                      jump_threshold,
+                                                                      stateValidityCallbackFn);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -365,38 +371,40 @@ const std::string& planning_group
   //   }
   // }
 
-  const int num_threads = traj.size();
-  std::vector<std::thread> threads;
-  std::vector<uint8_t> result(num_threads, false);
+  return !planning_scene_->isStateColliding(*traj.back(), "", true);
 
-  for (std::size_t i = 0; i < num_threads; ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  }
+  // const int num_threads = traj.size();
+  // std::vector<std::thread> threads;
+  // std::vector<uint8_t> result(num_threads, false);
 
-  for (std::thread &t : threads)
-  {
-    if (t.joinable())
-    {
-      t.join();
-    }
-  }
+  // for (std::size_t i = 0; i < num_threads; ++i)
+  // {
+  //   setMimicJointPositions(traj[i], planning_group);
+  //   traj[i]->update();
+  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
+  // }
 
-  for (uint8_t &r : result)
-  {
-    if (r == 0)
-    {
-      return clear_path;
-    }
-  }
+  // for (std::thread &t : threads)
+  // {
+  //   if (t.joinable())
+  //   {
+  //     t.join();
+  //   }
+  // }
 
-  pre_grasp_state.reset(new robot_state::RobotState(*traj[0]));
-  pre_grasp_state->update();
+  // for (uint8_t &r : result)
+  // {
+  //   if (r == 0)
+  //   {
+  //     return clear_path;
+  //   }
+  // }
 
-  clear_path = true;
-  return clear_path;
+  // pre_grasp_state.reset(new robot_state::RobotState(*traj[0]));
+  // pre_grasp_state->update();
+
+  // clear_path = true;
+  // return clear_path;
 }
 
 
@@ -415,13 +423,19 @@ const std::string& planning_group
   const Eigen::Affine3d pre_grasp_tool_tip_pose = pre_grasp_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
+
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
                                                                      tip_link,
                                                                      pre_grasp_tool_tip_pose,
                                                                      true,
                                                                      0.001,
-                                                                     0.0);
+                                                                     0.0,
+                                                                     stateValidityCallbackFn);
+
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
@@ -451,32 +465,32 @@ const std::string& planning_group
   // clear_path = true;
   // return clear_path;
 
-  const int num_threads = traj.size();
-  std::vector<std::thread> threads;
-  std::vector<uint8_t> result(num_threads, false);
+  // const int num_threads = traj.size();
+  // std::vector<std::thread> threads;
+  // std::vector<uint8_t> result(num_threads, false);
 
-  for (std::size_t i = 0; i < num_threads; ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  }
+  // for (std::size_t i = 0; i < num_threads; ++i)
+  // {
+  //   setMimicJointPositions(traj[i], planning_group);
+  //   traj[i]->update();
+  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
+  // }
 
-  for (std::thread &t : threads)
-  {
-    if (t.joinable())
-    {
-      t.join();
-    }
-  }
+  // for (std::thread &t : threads)
+  // {
+  //   if (t.joinable())
+  //   {
+  //     t.join();
+  //   }
+  // }
 
-  for (uint8_t &r : result)
-  {
-    if (r == 0)
-    {
-      return clear_path;
-    }
-  }
+  // for (uint8_t &r : result)
+  // {
+  //   if (r == 0)
+  //   {
+  //     return clear_path;
+  //   }
+  // }
 
   clear_path = true;
   return clear_path;
@@ -533,14 +547,18 @@ const std::string& planning_group
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
 //  double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
+
   double found_cartesian_path = ungrasped_state->computeCartesianPath(arm_joint_group,
                                                                       traj,
                                                                       tip_link,
                                                                       ungrasped_tool_tip_pose,
                                                                       true,
                                                                       max_step,
-                                                                      jump_threshold);
-
+                                                                      jump_threshold,
+                                                                      stateValidityCallbackFn);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -572,38 +590,38 @@ const std::string& planning_group
   //     return clear_path;
   //   }
   // }
-  // clear_path = true;
-  // return clear_path;
-
-  const int num_threads = traj.size();
-  std::vector<std::thread> threads;
-  std::vector<uint8_t> result(num_threads, false);
-
-  for (std::size_t i = 0; i < num_threads; ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  }
-
-  for (std::thread &t : threads)
-  {
-    if (t.joinable())
-    {
-      t.join();
-    }
-  }
-
-  for (uint8_t &r : result)
-  {
-    if (r == 0)
-    {
-      return clear_path;
-    }
-  }
-
   clear_path = true;
   return clear_path;
+
+  // const int num_threads = traj.size();
+  // std::vector<std::thread> threads;
+  // std::vector<uint8_t> result(num_threads, false);
+
+  // for (std::size_t i = 0; i < num_threads; ++i)
+  // {
+  //   setMimicJointPositions(traj[i], planning_group);
+  //   traj[i]->update();
+  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
+  // }
+
+  // for (std::thread &t : threads)
+  // {
+  //   if (t.joinable())
+  //   {
+  //     t.join();
+  //   }
+  // }
+
+  // for (uint8_t &r : result)
+  // {
+  //   if (r == 0)
+  //   {
+  //     return clear_path;
+  //   }
+  // }
+
+  // clear_path = true;
+  // return clear_path;
 }
 
 bool HybridMotionValidator::planUngraspedStateToSafeState
@@ -621,13 +639,19 @@ const std::string& planning_group
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
+
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
                                                                      tip_link,
                                                                      tool_tip_pose,
                                                                      true,
                                                                      0.001,
-                                                                     0.0);
+                                                                     0.0,
+                                                                     stateValidityCallbackFn);
+
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
@@ -655,38 +679,38 @@ const std::string& planning_group
   //     return clear_path;
   //   }
   // }
-  // clear_path = true;
-  // return clear_path;
-
-  const int num_threads = traj.size();
-  std::vector<std::thread> threads;
-  std::vector<uint8_t> result(num_threads, false);
-
-  for (std::size_t i = 0; i < num_threads; ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  }
-
-  for (std::thread &t : threads)
-  {
-    if (t.joinable())
-    {
-      t.join();
-    }
-  }
-
-  for (uint8_t &r : result)
-  {
-    if (r == 0)
-    {
-      return clear_path;
-    }
-  }
-
   clear_path = true;
   return clear_path;
+
+  // const int num_threads = traj.size();
+  // std::vector<std::thread> threads;
+  // std::vector<uint8_t> result(num_threads, false);
+
+  // for (std::size_t i = 0; i < num_threads; ++i)
+  // {
+  //   setMimicJointPositions(traj[i], planning_group);
+  //   traj[i]->update();
+  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
+  // }
+
+  // for (std::thread &t : threads)
+  // {
+  //   if (t.joinable())
+  //   {
+  //     t.join();
+  //   }
+  // }
+
+  // for (uint8_t &r : result)
+  // {
+  //   if (r == 0)
+  //   {
+  //     return clear_path;
+  //   }
+  // }
+
+  // clear_path = true;
+  // return clear_path;
 }
 
 bool HybridMotionValidator::planObjectTransit
@@ -705,13 +729,19 @@ const std::string& planning_group
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
+
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
                                                                      tip_link,
                                                                      tool_tip_pose,
                                                                      true,
                                                                      0.001,
-                                                                     0.0);
+                                                                     0.0,
+                                                                     stateValidityCallbackFn);
+
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
@@ -727,33 +757,75 @@ const std::string& planning_group
   // cp_start_state->update();
   // publishRobotState(*cp_start_state);
 
-  const int num_threads = traj.size();
-  std::vector<std::thread> threads;
-  std::vector<uint8_t> result(num_threads, false);
+  // const int num_threads = traj.size();
+  // std::vector<std::thread> threads;
+  // std::vector<uint8_t> result(num_threads, false);
 
-  for (std::size_t i = 0; i < num_threads; ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  }
+  // for (std::size_t i = 0; i < num_threads; ++i)
+  // {
+  //   setMimicJointPositions(traj[i], planning_group);
+  //   traj[i]->update();
+  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
+  // }
 
-  for (std::thread &t : threads)
-  {
-    if (t.joinable())
-    {
-      t.join();
-    }
-  }
+  // for (std::thread &t : threads)
+  // {
+  //   if (t.joinable())
+  //   {
+  //     t.join();
+  //   }
+  // }
 
-  for (uint8_t &r : result)
-  {
-    if (r == 0)
-    {
-      return clear_path;
-    }
-  }
+  // for (uint8_t &r : result)
+  // {
+  //   if (r == 0)
+  //   {
+  //     return clear_path;
+  //   }
+  // }
 
   clear_path = true;
   return clear_path;
+}
+
+bool dual_arm_manipulation_planner_interface::isRobotStateValid
+(
+const planning_scene::PlanningScene* planning_scene,
+const std::string& planning_group,
+robot_state::RobotState* state,
+const robot_state::JointModelGroup* group,
+const double* ik_solution
+)
+{
+  state->setJointGroupPositions(group, ik_solution);
+  const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
+  const double *joint_val = state->getJointPositions(outer_pitch_joint);
+  if (joint_val)
+    state->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
+  state->update();
+
+  // planning_scene->setCurrentState(*state);
+  // collision_detection::CollisionRequest collision_request;
+  // collision_request.contacts = true;
+  // collision_detection::CollisionResult collision_result;
+  // planning_scene_->checkCollision(collision_request, collision_result, *state);
+  // bool no_collision = !collision_result.collision;
+
+  // if (collision_result.collision)
+  // {
+  //   ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+  //   collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+  //   for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+  //        it != contactMap.end(); ++it)
+  //   {
+  //     ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+  //   }
+  // }
+  // return no_collision;
+  if (!planning_scene)
+  {
+    return false;
+  }
+
+  return !planning_scene->isStateColliding(*state, "", true);
 }
