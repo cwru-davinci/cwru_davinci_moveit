@@ -827,5 +827,5 @@ const double* ik_solution
     return false;
   }
 
-  return !planning_scene->isStateColliding(*state, "", true);
+  return !planning_scene->isStateColliding(*state);
 }

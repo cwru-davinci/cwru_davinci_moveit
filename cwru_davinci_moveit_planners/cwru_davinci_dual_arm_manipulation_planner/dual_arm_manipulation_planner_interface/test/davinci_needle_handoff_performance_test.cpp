@@ -164,10 +164,7 @@ private:
       {
         std::cout << "Has exact solution" << std::endl;
         succeeded_num += 1;
-        double* total_time = new double;
-        pSpaceInfor->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
         running_time.push_back(planning_time.count());
-        delete total_time;
       }
       else
       {
