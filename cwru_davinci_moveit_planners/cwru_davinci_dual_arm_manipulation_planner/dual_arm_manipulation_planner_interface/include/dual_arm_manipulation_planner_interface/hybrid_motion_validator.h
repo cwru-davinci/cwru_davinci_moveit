@@ -51,14 +51,14 @@
 namespace dual_arm_manipulation_planner_interface
 {
 
-bool isRobotStateValid
-(
-const planning_scene::PlanningScene* planning_scene,
-const std::string& planning_group,
-robot_state::RobotState* state,
-const robot_state::JointModelGroup* group,
-const double* ik_solution
-);
+// bool isRobotStateValid
+// (
+// const planning_scene::PlanningScene* planning_scene,
+// const std::string& planning_group,
+// robot_state::RobotState* state,
+// const robot_state::JointModelGroup* group,
+// const double* ik_solution
+// );
 
 class HybridMotionValidator : public ompl::base::MotionValidator, public HybridStateValidityChecker
 {
@@ -110,15 +110,6 @@ public:
   const robot_state::RobotState& goal_state,
   const std::string& ss_active_group
   ) const;
-
-  // bool isRobotStateValid
-  // (
-  // const planning_scene::PlanningScene* planning_scene,
-  // const std::string& planning_group,
-  // robot_state::RobotState* state,
-  // const robot_state::JointModelGroup* group,
-  // const double* ik_solution
-  // );
 
 protected:
   bool planSafeStateToPreGraspState

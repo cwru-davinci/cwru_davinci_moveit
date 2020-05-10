@@ -119,14 +119,14 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-  // bool isRobotStateValid
-  // (
-  // const planning_scene::PlanningScene* planning_scene,
-  // const std::string& planning_group,
-  // robot_state::RobotState* state,
-  // const robot_state::JointModelGroup* group,
-  // const double* ik_solution
-  // );
+  static bool isRobotStateValid
+  (
+  const planning_scene::PlanningScene* planning_scene,
+  const std::string& planning_group,
+  robot_state::RobotState* state,
+  const robot_state::JointModelGroup* group,
+  const double* ik_solution
+  );
 
   bool noCollision
   (

@@ -278,6 +278,9 @@ const std::string& planning_group
 
   auto start_ik = std::chrono::high_resolution_clock::now();
 
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
   bool found_ik = false;
   double distance = 0.008;
   while (distance <= 0.013)
@@ -286,7 +289,7 @@ const std::string& planning_group
     pregrasp_tool_tip_pose.translation() = grasped_tool_tip_pose.translation() - approach_dir;
     std::size_t attempts = 1;
     double timeout = 0.1;
-    found_ik = pre_grasp_state->setFromIK(arm_joint_group, pregrasp_tool_tip_pose, attempts, timeout);
+    found_ik = pre_grasp_state->setFromIK(arm_joint_group, pregrasp_tool_tip_pose, attempts, timeout, stateValidityCallbackFn);
     if (found_ik)
       break;
     distance += 0.001;
@@ -318,10 +321,6 @@ const std::string& planning_group
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
 //  double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
-
-  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
-                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
-                                                                                  boost::cref(planning_group), _1, _2, _3);
 
   double found_cartesian_path = pre_grasp_state->computeCartesianPath(arm_joint_group,
                                                                       traj,
@@ -372,39 +371,6 @@ const std::string& planning_group
   // }
 
   return !planning_scene_->isStateColliding(*traj.back(), "", true);
-
-  // const int num_threads = traj.size();
-  // std::vector<std::thread> threads;
-  // std::vector<uint8_t> result(num_threads, false);
-
-  // for (std::size_t i = 0; i < num_threads; ++i)
-  // {
-  //   setMimicJointPositions(traj[i], planning_group);
-  //   traj[i]->update();
-  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  // }
-
-  // for (std::thread &t : threads)
-  // {
-  //   if (t.joinable())
-  //   {
-  //     t.join();
-  //   }
-  // }
-
-  // for (uint8_t &r : result)
-  // {
-  //   if (r == 0)
-  //   {
-  //     return clear_path;
-  //   }
-  // }
-
-  // pre_grasp_state.reset(new robot_state::RobotState(*traj[0]));
-  // pre_grasp_state->update();
-
-  // clear_path = true;
-  // return clear_path;
 }
 
 
@@ -446,11 +412,6 @@ const std::string& planning_group
     return clear_path;
   }
 
-  // removable
-  // setMimicJointPositions(cp_start_state, planning_group);
-  // cp_start_state->update();
-  // publishRobotState(*cp_start_state);
-
   // for (std::size_t i = 0; i < traj.size(); ++i)
   // {
   //   setMimicJointPositions(traj[i], planning_group);
@@ -464,33 +425,6 @@ const std::string& planning_group
   // }
   // clear_path = true;
   // return clear_path;
-
-  // const int num_threads = traj.size();
-  // std::vector<std::thread> threads;
-  // std::vector<uint8_t> result(num_threads, false);
-
-  // for (std::size_t i = 0; i < num_threads; ++i)
-  // {
-  //   setMimicJointPositions(traj[i], planning_group);
-  //   traj[i]->update();
-  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  // }
-
-  // for (std::thread &t : threads)
-  // {
-  //   if (t.joinable())
-  //   {
-  //     t.join();
-  //   }
-  // }
-
-  // for (uint8_t &r : result)
-  // {
-  //   if (r == 0)
-  //   {
-  //     return clear_path;
-  //   }
-  // }
 
   clear_path = true;
   return clear_path;
@@ -516,9 +450,12 @@ const std::string& planning_group
 
   auto start_ik = std::chrono::high_resolution_clock::now();
 
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
   std::size_t attempts = 1;
   double timeout = 0.1;
-  bool found_ik = ungrasped_state->setFromIK(arm_joint_group, grasped_tool_tip_pose, attempts, timeout);
+  bool found_ik = ungrasped_state->setFromIK(arm_joint_group, grasped_tool_tip_pose, attempts, timeout, stateValidityCallbackFn);
 
   if (!found_ik)
   {
@@ -547,9 +484,6 @@ const std::string& planning_group
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
 //  double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
-  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
-                                                                                  static_cast<const planning_scene::PlanningSceneConstPtr&>(planning_scene_).get(),
-                                                                                  boost::cref(planning_group), _1, _2, _3);
 
   double found_cartesian_path = ungrasped_state->computeCartesianPath(arm_joint_group,
                                                                       traj,
@@ -592,36 +526,6 @@ const std::string& planning_group
   // }
   clear_path = true;
   return clear_path;
-
-  // const int num_threads = traj.size();
-  // std::vector<std::thread> threads;
-  // std::vector<uint8_t> result(num_threads, false);
-
-  // for (std::size_t i = 0; i < num_threads; ++i)
-  // {
-  //   setMimicJointPositions(traj[i], planning_group);
-  //   traj[i]->update();
-  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  // }
-
-  // for (std::thread &t : threads)
-  // {
-  //   if (t.joinable())
-  //   {
-  //     t.join();
-  //   }
-  // }
-
-  // for (uint8_t &r : result)
-  // {
-  //   if (r == 0)
-  //   {
-  //     return clear_path;
-  //   }
-  // }
-
-  // clear_path = true;
-  // return clear_path;
 }
 
 bool HybridMotionValidator::planUngraspedStateToSafeState
@@ -681,36 +585,6 @@ const std::string& planning_group
   // }
   clear_path = true;
   return clear_path;
-
-  // const int num_threads = traj.size();
-  // std::vector<std::thread> threads;
-  // std::vector<uint8_t> result(num_threads, false);
-
-  // for (std::size_t i = 0; i < num_threads; ++i)
-  // {
-  //   setMimicJointPositions(traj[i], planning_group);
-  //   traj[i]->update();
-  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  // }
-
-  // for (std::thread &t : threads)
-  // {
-  //   if (t.joinable())
-  //   {
-  //     t.join();
-  //   }
-  // }
-
-  // for (uint8_t &r : result)
-  // {
-  //   if (r == 0)
-  //   {
-  //     return clear_path;
-  //   }
-  // }
-
-  // clear_path = true;
-  // return clear_path;
 }
 
 bool HybridMotionValidator::planObjectTransit
@@ -752,80 +626,6 @@ const std::string& planning_group
     return clear_path;
   }
 
-  // removable
-  // setMimicJointPositions(cp_start_state, planning_group);
-  // cp_start_state->update();
-  // publishRobotState(*cp_start_state);
-
-  // const int num_threads = traj.size();
-  // std::vector<std::thread> threads;
-  // std::vector<uint8_t> result(num_threads, false);
-
-  // for (std::size_t i = 0; i < num_threads; ++i)
-  // {
-  //   setMimicJointPositions(traj[i], planning_group);
-  //   traj[i]->update();
-  //   threads.push_back(std::thread(&HybridMotionValidator::noCollisionThread, this, std::ref(result[i]), std::cref(*traj[i])));
-  // }
-
-  // for (std::thread &t : threads)
-  // {
-  //   if (t.joinable())
-  //   {
-  //     t.join();
-  //   }
-  // }
-
-  // for (uint8_t &r : result)
-  // {
-  //   if (r == 0)
-  //   {
-  //     return clear_path;
-  //   }
-  // }
-
   clear_path = true;
   return clear_path;
-}
-
-bool dual_arm_manipulation_planner_interface::isRobotStateValid
-(
-const planning_scene::PlanningScene* planning_scene,
-const std::string& planning_group,
-robot_state::RobotState* state,
-const robot_state::JointModelGroup* group,
-const double* ik_solution
-)
-{
-  state->setJointGroupPositions(group, ik_solution);
-  const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
-  const double *joint_val = state->getJointPositions(outer_pitch_joint);
-  if (joint_val)
-    state->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
-  state->update();
-
-  // planning_scene->setCurrentState(*state);
-  // collision_detection::CollisionRequest collision_request;
-  // collision_request.contacts = true;
-  // collision_detection::CollisionResult collision_result;
-  // planning_scene_->checkCollision(collision_request, collision_result, *state);
-  // bool no_collision = !collision_result.collision;
-
-  // if (collision_result.collision)
-  // {
-  //   ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-  //   collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-  //   for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
-  //        it != contactMap.end(); ++it)
-  //   {
-  //     ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-  //   }
-  // }
-  // return no_collision;
-  if (!planning_scene)
-  {
-    return false;
-  }
-
-  return !planning_scene->isStateColliding(*state);
 }
