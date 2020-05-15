@@ -59,17 +59,6 @@ const std::string& robotDescription
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
 }
 
-DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
-(
-)
-{
-  if (m_pHyStartState && m_pHyGoalState)
-  {
-    m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyStartState);
-    m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyGoalState);
-  }
-}
-
 bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 (
 )
@@ -88,7 +77,6 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
   {
     if (m_HandoffJntTraj[i].size() == 1)  // object Transit
     {
-      // move
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
       m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
       double jawPosition = 0.0;
@@ -160,6 +148,9 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
         }
+        m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
+        if (jawPosition > 0.0)
+          m_pSupportArmGroup->control_jaw(0.0, 1.0);
       }
       ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
     }

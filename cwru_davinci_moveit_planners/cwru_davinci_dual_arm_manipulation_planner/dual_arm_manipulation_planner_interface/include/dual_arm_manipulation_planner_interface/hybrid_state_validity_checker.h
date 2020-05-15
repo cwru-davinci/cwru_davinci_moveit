@@ -41,8 +41,9 @@
 
 #include <dual_arm_manipulation_planner_interface/parameterization/hybrid_object_state_space.h>
 #include <dual_arm_manipulation_planner_interface/threadsafe_state_storage.h>
+
 // moveit
-#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/collision_detection/collision_common.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
@@ -95,6 +96,13 @@ public:
   const int grasp_pose_id
   ) const;
 
+  moveit::core::AttachedBody* createAttachedBody
+  (
+  const std::string& supportGroup,
+  const std::string& objectName,
+  const Eigen::Affine3d& grasp_pose
+  ) const;
+
   void setMimicJointPositions
   (
   const robot_state::RobotStatePtr& rstate,
@@ -111,35 +119,52 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-protected:
-  void defaultSettings();
-
-  void loadNeedleModel();
+  static bool isRobotStateValid
+  (
+  const planning_scene::PlanningScenePtr& planning_scene,
+  const std::string& planning_group,
+  robot_state::RobotState* state,
+  const robot_state::JointModelGroup* group,
+  const double* ik_solution
+  );
 
   bool noCollision
   (
   const robot_state::RobotState& rstate
   ) const;
 
+  void noCollisionThread
+  (
+  uint8_t& noCollision,
+  const robot_state::RobotState& rstate
+  ) const;
+
 protected:
-  HybridObjectStateSpace                *hyStateSpace_;
+  void defaultSettings();
 
-  planning_scene::PlanningScenePtr      planning_scene_;
+  void loadNeedleModel();
 
-  robot_model::RobotModelConstPtr       kmodel_;
+protected:
+  HybridObjectStateSpace                    *hyStateSpace_;
 
-  collision_detection::CollisionRequest collision_request_simple_;
+  planning_scene::PlanningScenePtr          planning_scene_;
 
-  collision_detection::CollisionRequest collision_request_with_cost_;
+  robot_model::RobotModelConstPtr           kmodel_;
 
-  collision_detection::CollisionRequest collision_request_with_distance_;
+  collision_detection::CollisionRequest     collision_request_simple_;
 
-  std::string                           m_ObjectName;
+  collision_detection::CollisionRequest     collision_request_with_cost_;
 
-  std::vector<shapes::ShapeConstPtr>    needleShapes_;
+  collision_detection::CollisionRequest     collision_request_with_distance_;
+
+  std::string                               m_ObjectName;
+
+  std::vector<shapes::ShapeConstPtr>        needleShapes_;
 
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
+
+  mutable std::mutex                        planning_scene_mutex_;
 };
 
 }

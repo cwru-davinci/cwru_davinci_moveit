@@ -88,7 +88,7 @@ TEST(TestHybridRRT, HybridObjectHandoffPlanner)
                                                                      initialSupportArm,
                                                                      objectName);
 
-//  EXPECT_TRUE(pSimpleGrasp->pickNeedle(cwru_davinci_grasp::NeedlePickMode::FINDGOOD, objectName));
+  EXPECT_TRUE(pSimpleGrasp->pickNeedle(objectName, cwru_davinci_grasp::NeedlePickMode::FINDGOOD));
 
   HybridObjectHandoffPlannerTester tester(pSimpleGrasp->getAllPossibleNeedleGrasps(false),
                                           robotModelLoader.getModel());
@@ -96,7 +96,7 @@ TEST(TestHybridRRT, HybridObjectHandoffPlanner)
   DavinciNeedleHandoffExecutionManagerTester managerTester(objectName);
   // tester.testConnectStates();
   PathJointTrajectory handoffPathJntTraj;
-  tester.testGetSolutionPathJointTrajectory(handoffPathJntTraj);
+  EXPECT_TRUE(tester.testGetSolutionPathJointTrajectory(handoffPathJntTraj));
   EXPECT_TRUE(managerTester.testExecuteNeedleHandoffTraj(handoffPathJntTraj));
 
 //  const ompl::base::SpaceInformationPtr& si = tester.getSpaceInformation();

@@ -39,19 +39,13 @@
 #ifndef CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_DAVINCI_NEEDLE_HANDOFF_EXECUTION_MANAGER_H
 #define CWRU_DAVINCI_DUAL_ARM_MANIPULATION_PLANNER_DAVINCI_NEEDLE_HANDOFF_EXECUTION_MANAGER_H
 
-//moveit
-//#include <moveit/move_group_interface/move_group_interface.h>
-
-#include <cwru_davinci/uv_control/psm_interface.h>
+#include <dual_arm_manipulation_planner_interface/hybrid_object_handoff_planner.h>
 
 //ompl
 #include <ompl/geometric/PathGeometric.h>
 
 // cwru_davinci_grasp
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
-
-#include <dual_arm_manipulation_planner_interface/hybrid_object_handoff_planner.h>
-
 
 namespace dual_arm_manipulation_planner_interface
 {
@@ -69,7 +63,7 @@ public:
   const std::string& robotDescription = "robot_description"
   );
 
-  ~DavinciNeedleHandoffExecutionManager();
+  ~DavinciNeedleHandoffExecutionManager(){};
 
   bool planNeedleHandoffTraj
   (
@@ -96,6 +90,7 @@ public:
 
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
+
 protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
@@ -108,8 +103,6 @@ protected:
   std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
-
-  geometry_msgs::PoseStamped                                      m_NeedlePose;
 
   PathJointTrajectory                                             m_HandoffJntTraj;
 

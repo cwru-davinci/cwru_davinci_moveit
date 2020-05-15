@@ -1,4 +1,6 @@
 #cmake_minimum_required(VERSION 2.8.3)
+find_package(GTest REQUIRED)
+
 set(MOVEIT_LIB_NAME davinci_moveit_kinematics_plugin)
 add_library( ${MOVEIT_LIB_NAME}
         src/davinci_moveit_ik.cpp

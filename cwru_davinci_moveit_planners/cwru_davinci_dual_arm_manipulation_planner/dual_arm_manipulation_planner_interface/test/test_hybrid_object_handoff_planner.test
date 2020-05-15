@@ -11,5 +11,7 @@
           time-limit="1.0" args="--gtest_repeat=1">
         <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
         <rosparam command="load" file="$(find cwru_davinci_dual_arm_manipulation_planner)/dual_arm_manipulation_planner_interface/config/simulation_handoff_planning_inputs.yaml"/>
+        <param name="/planning_plugin" value="ompl_interface/OMPLPlanner"/>
+        <rosparam command="load" file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/config/ompl_planning.yaml"/>
     </test>
 </launch>
