@@ -99,6 +99,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
     if (pHybridState->jointsComputed())
     {
       is_valid = noCollision(*kstate);
+      // is_valid = (planning_scene_) ? (!planning_scene_->isStateColliding(*kstate)) : false;
       kstate->clearAttachedBodies();
       if (!is_valid)
       {
@@ -378,4 +379,36 @@ const robot_state::RobotState& rstate
   collision_detection::CollisionResult collision_result;
   planning_scene_->checkCollision(collision_request, collision_result, rstate);
   noCollision = (!collision_result.collision) ? 1 : 0;
+}
+
+bool HybridStateValidityChecker::isRobotStateValid
+(
+const planning_scene::PlanningScenePtr& planning_scene,
+const std::string& planning_group,
+robot_state::RobotState* state,
+const robot_state::JointModelGroup* group,
+const double* ik_solution
+)
+{
+  state->setJointGroupPositions(group, ik_solution);
+  const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
+  const double *joint_val = state->getJointPositions(outer_pitch_joint);
+  if (joint_val)
+    state->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
+  state->update();
+
+  if (!planning_scene)
+  {
+    return false;
+  }
+
+  // return !planning_scene->isStateColliding(*state,"", true);
+  planning_scene->setCurrentState(*state);
+  collision_detection::CollisionRequest collision_request;
+  collision_request.contacts = true;
+  collision_detection::CollisionResult collision_result;
+  planning_scene->checkCollision(collision_request, collision_result, *state);
+  bool noCollision = (!collision_result.collision) ? 1 : 0;
+
+  return noCollision;
 }

@@ -94,33 +94,6 @@ public:
   PathJointTrajectory& handoffPathJntTraj
   );
 
-  bool correctObjectTransit
-  (
-  const Eigen::Affine3d& needlePose,
-  const int ithTraj,
-  MoveGroupJointTrajectory& jntTrajectoryBtwStates
-  );
-
-  bool correctObjectTransfer
-  (
-  const Eigen::Affine3d& needlePose,
-  const int targetState,
-  const PSMInterfacePtr& pSupportArmGroup,
-  std::function<const Eigen::Affine3d&()> updateNdlPoseFcn
-  );
-
-  int stepsBtwStates
-  (
-  const Eigen::Affine3d& needlePose,
-  const Eigen::Affine3d& targetPose
-  );
-
-  double distanceBtwPoses
-  (
-  const Eigen::Affine3d& currentPose,
-  const Eigen::Affine3d& targetPose
-  );
-
 protected:
   HybridObjectStateSpacePtr                    m_pHyStateSpace;
 
@@ -229,25 +202,6 @@ protected:
   const robot_state::RobotStateConstPtr& pRobotToState,
   const std::string& fromSupportGroup,
   MoveGroupJointTrajectory& jntTrajectoryBtwStates
-  );
-
-  bool localPlanObjectTransit
-  (
-  const Eigen::Affine3d& needlePose,
-  const int ithTraj,
-  MoveGroupJointTrajectory& jntTrajectoryBtwStates
-  );
-
-  // based on current needle pose move it towards to 
-  // target pose half way
-  bool localPlanObjectTransfer
-  (
-  const Eigen::Affine3d& currentNeedlePose,
-  const Eigen::Affine3d& targetTipPose,
-  const std::string& supportGroup,
-  const PSMInterfacePtr& pSupportArmGroup,
-  MoveGroupJointTrajectorySegment& jntTrajSeg,
-  double& time
   );
 
 protected:

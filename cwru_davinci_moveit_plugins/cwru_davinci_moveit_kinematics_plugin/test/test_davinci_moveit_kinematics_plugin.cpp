@@ -369,7 +369,7 @@ TEST(ArmIKPlugin, DISABLED_TestMimicJoints)
   EXPECT_EQ(psm_one_base_active_joints_name[5], "PSM1_outer_wrist_yaw");
 }
 
-TEST(ArmIKPlugin, DISABLED_TestKDLKinematics)
+TEST(ArmIKPlugin, TestKDLKinematics)
 // TEST(ArmIKPlugin, TestKDLKinematics)
 {
   robot_model_loader::RobotModelLoader robotModelLoader("robot_description");
@@ -403,6 +403,7 @@ TEST(ArmIKPlugin, DISABLED_TestKDLKinematics)
   // ik robot state
   const robot_state::RobotStatePtr pRStateIK(new robot_state::RobotState(pKModel));
   pRStateIK->setToDefaultValues();
+  *pRStateIK = *pRStateFK;
   const robot_state::JointModelGroup* arm_joint_group_ik = pRStateIK->getJointModelGroup("psm_one");
   std::vector<double> positionByIK;
   int active_joint_num = 6;
@@ -431,7 +432,12 @@ TEST(ArmIKPlugin, DISABLED_TestKDLKinematics)
 //    const Eigen::Affine3d tip_to_base_pose = base_to_world_pose.inverse() * goal_tool_tip_pose;
     bool found_ik = pRStateIK->setFromIK(arm_joint_group_ik, goal_tool_tip_pose, 1, time_out);
     pRStateIK->update();
-    if(found_ik)
+    const robot_state::RobotStatePtr pRStateTest(new robot_state::RobotState(pKModel));
+    pRStateTest->setToDefaultValues();
+    pRStateTest->update();
+    bool found_again = pRStateTest->setFromIK(arm_joint_group_ik, goal_tool_tip_pose, 1, time_out);
+    pRStateIK->update();
+    if(found_ik && found_again)
     {
       succeeded_num += 1;
       pRStateIK->copyJointGroupPositions("psm_one", positionByIK);

@@ -117,6 +117,15 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
+  static bool isRobotStateValid
+  (
+  const planning_scene::PlanningScenePtr& planning_scene,
+  const std::string& planning_group,
+  robot_state::RobotState* state,
+  const robot_state::JointModelGroup* group,
+  const double* ik_solution
+  );
+
   bool noCollision
   (
   const robot_state::RobotState& rstate
@@ -134,26 +143,26 @@ protected:
   void loadNeedleModel();
 
 protected:
-  HybridObjectStateSpace                *hyStateSpace_;
+  HybridObjectStateSpace                    *hyStateSpace_;
 
-  planning_scene::PlanningScenePtr      planning_scene_;
+  planning_scene::PlanningScenePtr          planning_scene_;
 
-  robot_model::RobotModelConstPtr       kmodel_;
+  robot_model::RobotModelConstPtr           kmodel_;
 
-  collision_detection::CollisionRequest collision_request_simple_;
+  collision_detection::CollisionRequest     collision_request_simple_;
 
-  collision_detection::CollisionRequest collision_request_with_cost_;
+  collision_detection::CollisionRequest     collision_request_with_cost_;
 
-  collision_detection::CollisionRequest collision_request_with_distance_;
+  collision_detection::CollisionRequest     collision_request_with_distance_;
 
-  std::string                           m_ObjectName;
+  std::string                               m_ObjectName;
 
-  std::vector<shapes::ShapeConstPtr>    needleShapes_;
+  std::vector<shapes::ShapeConstPtr>        needleShapes_;
 
   // For visualizing things in rviz
   moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
 
-  mutable std::mutex planning_scene_mutex_;
+  mutable std::mutex                        planning_scene_mutex_;
 };
 
 }
