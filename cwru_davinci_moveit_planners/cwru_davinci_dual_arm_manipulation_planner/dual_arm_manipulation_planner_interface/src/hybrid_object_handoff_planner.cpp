@@ -650,6 +650,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 
   pUngraspedRobotState->setToDefaultValues(pUngraspedRobotState->getJointModelGroup(fromSupportEefGroup),
                                            fromSupportEefGroup + "_home");
+  m_pHyStateValidator->setMimicJointPositions(pUngraspedRobotState, fromSupportGroup);
   pUngraspedRobotState->update();
 
   fromSupportEefGroupJntTraj.back()[0] = - 0.5;
@@ -681,7 +682,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                          0.003,
                                                                          0.0);
 
-  if (!(fabs(foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
+  if (!((foundCartesianPath - 0.9) >= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }

@@ -98,8 +98,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 
     if (pHybridState->jointsComputed())
     {
-      is_valid = noCollision(*kstate);
-      // is_valid = (planning_scene_) ? (!planning_scene_->isStateColliding(*kstate)) : false;
+      is_valid = (planning_scene_) ? (!planning_scene_->isStateColliding(*kstate)) : false;
       kstate->clearAttachedBodies();
       if (!is_valid)
       {
@@ -402,13 +401,5 @@ const double* ik_solution
     return false;
   }
 
-  // return !planning_scene->isStateColliding(*state,"", true);
-  planning_scene->setCurrentState(*state);
-  collision_detection::CollisionRequest collision_request;
-  collision_request.contacts = true;
-  collision_detection::CollisionResult collision_result;
-  planning_scene->checkCollision(collision_request, collision_result, *state);
-  bool noCollision = (!collision_result.collision) ? 1 : 0;
-
-  return noCollision;
+  return !planning_scene->isStateColliding(*state);
 }
