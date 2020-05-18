@@ -119,7 +119,7 @@ public:
 
   static bool isRobotStateValid
   (
-  const planning_scene::PlanningScenePtr& planning_scene,
+  const planning_scene::PlanningScene& planning_scene,
   const std::string& planning_group,
   robot_state::RobotState* state,
   const robot_state::JointModelGroup* group,
