@@ -14,4 +14,4 @@ The package is for both psms moveit configuration files. For detail please see i
 The package is for object handling for moveit. For detail please see its [README.md](https://github.com/lusu8892/cwru_davinci_moveit/blob/master/cwru_davinci_moveit_object_handling/README.md)
 
 # cwru_davinci_dual_arm_manipulation_planner
-The package is for daVinci to do dual arm manipulation. For detail please see its [README.md](https://github.com/lusu8892/cwru_davinci_moveit/tree/performance-test/cwru_davinci_moveit_planners/cwru_davinci_dual_arm_manipulation_planner)
+The package is for daVinci to do dual arm manipulation. For detail please see its [README.md](https://github.com/lusu8892/cwru_davinci_moveit/tree/master/cwru_davinci_moveit_planners/cwru_davinci_dual_arm_manipulation_planner)
