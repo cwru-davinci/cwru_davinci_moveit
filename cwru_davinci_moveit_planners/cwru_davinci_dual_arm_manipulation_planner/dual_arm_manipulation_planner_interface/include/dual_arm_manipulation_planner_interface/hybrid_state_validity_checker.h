@@ -143,11 +143,11 @@ protected:
   void loadNeedleModel();
 
 protected:
-  HybridObjectStateSpace                    *hyStateSpace_;
+  HybridObjectStateSpace                    *hyStateSpace_ = nullptr;
 
-  planning_scene::PlanningScenePtr          planning_scene_;
+  planning_scene::PlanningScenePtr          planning_scene_ = nullptr;
 
-  robot_model::RobotModelConstPtr           kmodel_;
+  robot_model::RobotModelConstPtr           kmodel_ = nullptr;
 
   collision_detection::CollisionRequest     collision_request_simple_;
 

@@ -224,13 +224,14 @@ const std::vector<double>& goalJointPosition
   m_pHyGoalState = m_pHandoffPlanner->m_pHyStateSpace->allocState()->as<HybridObjectStateSpace::StateType>();
 
   //  construct start state
-  m_pHyStartState->se3State().setXYZ(objStartPose->getX(),
-                                     objStartPose->getY(),
-                                     objStartPose->getZ());
-  m_pHyStartState->se3State().rotation().x = objStartPose->rotation().x;
-  m_pHyStartState->se3State().rotation().y = objStartPose->rotation().y;
-  m_pHyStartState->se3State().rotation().z = objStartPose->rotation().z;
-  m_pHyStartState->se3State().rotation().w = objStartPose->rotation().w;
+  m_pHandoffPlanner->m_pHyStateSpace->getSubspaces()[0]->copyState(m_pHyStartState->components[0], objStartPose);
+  // m_pHyStartState->se3State().setXYZ(objStartPose->getX(),
+  //                                    objStartPose->getY(),
+  //                                    objStartPose->getZ());
+  // m_pHyStartState->se3State().rotation().x = objStartPose->rotation().x;
+  // m_pHyStartState->se3State().rotation().y = objStartPose->rotation().y;
+  // m_pHyStartState->se3State().rotation().z = objStartPose->rotation().z;
+  // m_pHyStartState->se3State().rotation().w = objStartPose->rotation().w;
 
   m_pHyStartState->armIndex().value = startSupportArmIdx;
   m_pHyStartState->graspIndex().value = startGraspIdx;
@@ -239,13 +240,15 @@ const std::vector<double>& goalJointPosition
   m_pHyStartState->markValid();
 
   //  construct goal state
-  m_pHyGoalState->se3State().setXYZ(objGoalPose->getX(),
-                                    objGoalPose->getY(),
-                                    objGoalPose->getZ());
-  m_pHyGoalState->se3State().rotation().x = objGoalPose->rotation().x;
-  m_pHyGoalState->se3State().rotation().y = objGoalPose->rotation().y;
-  m_pHyGoalState->se3State().rotation().z = objGoalPose->rotation().z;
-  m_pHyGoalState->se3State().rotation().w = objGoalPose->rotation().w;
+  m_pHandoffPlanner->m_pHyStateSpace->getSubspaces()[0]->copyState(m_pHyGoalState->components[0], objGoalPose);
+
+  // m_pHyGoalState->se3State().setXYZ(objGoalPose->getX(),
+  //                                   objGoalPose->getY(),
+  //                                   objGoalPose->getZ());
+  // m_pHyGoalState->se3State().rotation().x = objGoalPose->rotation().x;
+  // m_pHyGoalState->se3State().rotation().y = objGoalPose->rotation().y;
+  // m_pHyGoalState->se3State().rotation().z = objGoalPose->rotation().z;
+  // m_pHyGoalState->se3State().rotation().w = objGoalPose->rotation().w;
 
   m_pHyGoalState->armIndex().value = goalSupportArmIdx;
   m_pHyGoalState->graspIndex().value = goalGraspIdx;

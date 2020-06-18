@@ -100,9 +100,9 @@ protected:
 
   ompl::base::PlannerStatus                                       m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
 
-  PSMInterfacePtr                                                 m_pSupportArmGroup;
+  PSMInterfacePtr                                                 m_pSupportArmGroup = nullptr;
 
-  std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf;
+  std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf = nullptr;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
   ros::ServiceClient                                              m_PfGraspClient;
@@ -114,8 +114,8 @@ protected:
   ros::NodeHandle                                                 m_NodeHandlePrivate;
   ros::NodeHandle                                                 m_NodeHandle;
 
-  HybridObjectStateSpace::StateType*                              m_pHyStartState;
-  HybridObjectStateSpace::StateType*                              m_pHyGoalState;
+  HybridObjectStateSpace::StateType*                              m_pHyStartState = nullptr;
+  HybridObjectStateSpace::StateType*                              m_pHyGoalState  = nullptr;
 
   double                                                          m_SE3Bounds[6];
   int                                                             m_ArmIndexBounds[2];
