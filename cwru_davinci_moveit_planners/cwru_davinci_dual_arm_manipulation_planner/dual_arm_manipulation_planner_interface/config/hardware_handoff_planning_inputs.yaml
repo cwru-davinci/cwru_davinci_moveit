@@ -8,8 +8,8 @@ goal_state : [0.00181831918683903, -0.0180504934553891, 0.161699926499954, -0.70
 
 # SE3 bounds: x_min, x_max, y_min, y_max, z_min, z_max wr/t /world from
 # SE3 bounds for physical robot
-# se3_bounds : [-0.012, 0.079, -0.036, 0.049, 0.138, 0.19]
-se3_bounds : [-0.010, 0.092, -0.047, 0.044, 0.058, 0.175]
+se3_bounds : [-0.012, 0.079, -0.036, 0.049, 0.138, 0.19]
+# se3_bounds : [-0.010, 0.092, -0.047, 0.044, 0.058, 0.175]
 
 arm_index_bounds : [1, 2]
 

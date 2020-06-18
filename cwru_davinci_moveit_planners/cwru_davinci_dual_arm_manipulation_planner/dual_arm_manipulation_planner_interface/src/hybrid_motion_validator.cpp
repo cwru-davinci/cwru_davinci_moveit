@@ -99,12 +99,12 @@ const ompl::base::State* s2
       return false;
     }
 
-    const robot_state::RobotStatePtr start_state(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr start_state = std::make_shared<robot_state::RobotState>(kmodel_);
     if (!start_state || !hybridStateToRobotState(pHyState1, start_state))
     {
       return result;
     }
-    const robot_state::RobotStatePtr goal_state(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr goal_state = std::make_shared<robot_state::RobotState>(kmodel_);
     if (!goal_state || !hybridStateToRobotState(pHyState2, goal_state))
     {
       return result;
@@ -172,7 +172,7 @@ const std::string& gs_active_group
   bool able_to_handoff = false;
 
   // an intermediate state when needle is supporting by two grippers
-  const robot_state::RobotStatePtr handoff_state(new robot_state::RobotState(start_state));
+  const robot_state::RobotStatePtr handoff_state = std::make_shared<robot_state::RobotState>(start_state);
 
   std::vector<double> gs_jt_position;
   goal_state.copyJointGroupPositions(gs_active_group, gs_jt_position);
@@ -232,7 +232,7 @@ const std::string& gs_active_group
 ) const
 {
   // planning in a back order fashion
-  robot_state::RobotStatePtr pre_grasp_state(new robot_state::RobotState(start_state));
+  robot_state::RobotStatePtr pre_grasp_state = std::make_shared<robot_state::RobotState>(start_state);
   if (!planPreGraspStateToGraspedState(pre_grasp_state, handoff_state, gs_active_group))
     return false;
   if (!planSafeStateToPreGraspState(start_state, *pre_grasp_state, gs_active_group))
@@ -247,8 +247,7 @@ const robot_state::RobotState& goal_state,
 const std::string& ss_active_group
 ) const
 {
-  robot_state::RobotStatePtr ungrasped_state(new robot_state::RobotState(goal_state));
-
+  robot_state::RobotStatePtr ungrasped_state = std::make_shared<robot_state::RobotState>(goal_state);
   if (!planGraspStateToUngraspedState(handoff_state, ungrasped_state, ss_active_group))
     return false;
   if (!planUngraspedStateToSafeState(*ungrasped_state, goal_state, ss_active_group))
@@ -274,7 +273,7 @@ const std::string& planning_group
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
-                                                                                  planning_scene_,
+                                                                                  boost::cref(*planning_scene_),
                                                                                   boost::cref(planning_group), _1, _2, _3);
   bool found_ik = false;
   double distance = 0.01;
@@ -306,31 +305,21 @@ const std::string& planning_group
     eef_joint_position[i] = 0.5;
   }
   pre_grasp_state->setJointGroupPositions(eef_group_name, eef_joint_position);
-  setMimicJointPositions(pre_grasp_state, planning_group);
   pre_grasp_state->update();
 
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
-//  double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
 
-  // double found_cartesian_path = pre_grasp_state->computeCartesianPath(arm_joint_group,
-  //                                                                     traj,
-  //                                                                     tip_link,
-  //                                                                     grasped_tool_tip_pose,
-  //                                                                     true,
-  //                                                                     max_step,
-  //                                                                     jump_threshold,
-  //                                                                     stateValidityCallbackFn);
-
-  double found_cartesian_path = pre_grasp_state->computeCartesianPath(arm_joint_group,
+  double found_cartesian_path = pre_grasp_state->computeCartesianPath(pre_grasp_state->getJointModelGroup(planning_group),
                                                                       traj,
                                                                       tip_link,
                                                                       grasped_tool_tip_pose,
                                                                       true,
                                                                       max_step,
-                                                                      jump_threshold);
+                                                                      jump_threshold,
+                                                                      stateValidityCallbackFn);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -341,36 +330,13 @@ const std::string& planning_group
   {
     return clear_path;
   }
-  setMimicJointPositions(pre_grasp_state, planning_group);
-  pre_grasp_state->update();
 
-  const moveit::core::AttachedBody* hdof_needle_body = handoff_state.getAttachedBody(m_ObjectName);
-
-  traj.back()->attachBody(hdof_needle_body->getName(), hdof_needle_body->getShapes(),
-                          hdof_needle_body->getFixedTransforms(), hdof_needle_body->getTouchLinks(),
-                          hdof_needle_body->getAttachedLinkName(), hdof_needle_body->getDetachPosture());
-
+  pre_grasp_state = std::move(traj[0]);
   for (std::size_t i = 0; i < eef_joint_position.size(); ++i)
   {
     eef_joint_position[i] = 0.0;
   }
-  traj.back()->setJointGroupPositions(eef_group_name, eef_joint_position);
-  traj.back()->update();
-
-  for (std::size_t i = 0; i < traj.size(); ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    if (!noCollision(*traj[i]))  // check intermediate states
-    {
-      return clear_path;
-    }
-  }
-
-  // if(planning_scene_->isStateColliding(*traj.back()))
-  //   return clear_path;
-
-  pre_grasp_state.reset(new robot_state::RobotState(*traj[0]));
+  pre_grasp_state->setJointGroupPositions(eef_group_name, eef_joint_position);
   pre_grasp_state->update();
   clear_path = true;
   return clear_path;
@@ -386,32 +352,24 @@ const std::string& planning_group
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
 
-  robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(pre_grasp_state));
+  const robot_state::RobotStatePtr cp_start_state = std::make_shared<robot_state::RobotState>(pre_grasp_state);
   const robot_state::JointModelGroup* arm_joint_group = pre_grasp_state.getJointModelGroup(planning_group);
   const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d tool_tip_home = start_state.getGlobalLinkTransform(tip_link);
+
   std::vector<robot_state::RobotStatePtr> traj;
-  // robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
-  //                                                                                 planning_scene_,
-  //                                                                                 boost::cref(planning_group), _1, _2, _3);
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  boost::cref(*planning_scene_),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
 
-  // double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
-  //                                                                    traj,
-  //                                                                    tip_link,
-  //                                                                    pre_grasp_tool_tip_pose,
-  //                                                                    true,
-  //                                                                    0.001,
-  //                                                                    0.0,
-  //                                                                    stateValidityCallbackFn);
-
-  // compute from pre-grasp state to safe state, back order fashion give higher succeeded rate
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
                                                                      tip_link,
                                                                      tool_tip_home,
                                                                      true,
                                                                      0.001,
-                                                                     0.0);
+                                                                     0.0,
+                                                                     stateValidityCallbackFn);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -421,16 +379,6 @@ const std::string& planning_group
   if (!((found_cartesian_path - 0.9) >= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
-  }
-
-  for (std::size_t i = 0; i < traj.size(); ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    if (!noCollision(*traj[i]))
-    {
-      return clear_path;
-    }
   }
 
   clear_path = true;
@@ -458,7 +406,7 @@ const std::string& planning_group
   auto start_ik = std::chrono::high_resolution_clock::now();
 
   std::vector<double> fromSupportGroupJntPosition;
-  handoff_state.copyJointGroupPositions(planning_group, fromSupportGroupJntPosition);
+  handoff_state.copyJointGroupPositions(planning_group, fromSupportGroupJntPosition);  // this will not copy mimic joints' value
   ungrasped_state->setJointGroupPositions(planning_group, fromSupportGroupJntPosition);
 
   const std::string eef_group_name = arm_joint_group->getAttachedEndEffectorNames()[0];
@@ -470,35 +418,27 @@ const std::string& planning_group
     eef_joint_position[i] = 0.5;
   }
   ungrasped_state->setJointGroupPositions(eef_group_name, eef_joint_position);
-  setMimicJointPositions(ungrasped_state, planning_group);
+  setMimicJointPositions(ungrasped_state, planning_group);  // this line cannot be removed, as copyJointGroupPosition does not copy mimic joints's value
   ungrasped_state->update();
 
+  if (!noCollision(*ungrasped_state))
+    return false;
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
-//  double jt_revolute = 0.0, jt_prismatic = 0.0, jump_threshold_factor = 0.1;
   moveit::core::JumpThreshold jump_threshold;
 
-  // robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
-  //                                                                                 planning_scene_,
-  //                                                                                 boost::cref(planning_group), _1, _2, _3);
-
-  // double found_cartesian_path = ungrasped_state->computeCartesianPath(arm_joint_group,
-  //                                                                     traj,
-  //                                                                     tip_link,
-  //                                                                     ungrasped_tool_tip_pose,
-  //                                                                     true,
-  //                                                                     max_step,
-  //                                                                     jump_threshold,
-  //                                                                     stateValidityCallbackFn);
-
-  double found_cartesian_path = ungrasped_state->computeCartesianPath(arm_joint_group,
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  boost::cref(*planning_scene_),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
+  double found_cartesian_path = ungrasped_state->computeCartesianPath(ungrasped_state->getJointModelGroup(planning_group),
                                                                       traj,
                                                                       tip_link,
                                                                       ungrasped_tool_tip_pose,
                                                                       true,
                                                                       max_step,
-                                                                      jump_threshold);
+                                                                      jump_threshold,
+                                                                      stateValidityCallbackFn);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -506,47 +446,16 @@ const std::string& planning_group
 
   bool clear_path = false;
 
-  // if (!(fabs(found_cartesian_path - 1.0) <= std::numeric_limits<double>::epsilon()))
-  // {
-  //   if (traj.size() > 0)
-  //   {
-  //     ungrasped_state.reset(new robot_state::RobotState(*traj[traj.size() - 1]));
-  //     ungrasped_state->update();
-  //     clear_path = true;
-  //   }
-  //   return clear_path;
-  // }
-
-  // if (!((found_cartesian_path - 0.9) >= std::numeric_limits<double>::epsilon()))
-  // {
-  //   return clear_path;
-  // }
-
-  for (std::size_t i = 0; i < traj.size(); ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    if (!noCollision(*traj[i]))  // check intermediate states
-    {
-      if (i > 0)
-      {
-        ungrasped_state.reset(new robot_state::RobotState(*(traj[i - 1])));
-        // ungrasped_state->setToDefaultValues(ungrasped_state->getJointModelGroup(eef_group_name), eef_group_name + "_home");
-        ungrasped_state->update();
-        clear_path = true;
-        return clear_path;
-      }
-      return clear_path; // This happens when robot has collision at traj[0] false
-    }
-  }
-
   if (traj.size() == 1) // This happens when traj size is one and noCollision true
   {
-    clear_path = true;
-    return clear_path;
+    ungrasped_state->update();
+    return true;
   }
 
-  ungrasped_state->setToDefaultValues(ungrasped_state->getJointModelGroup(eef_group_name), eef_group_name + "_home");
+  if ((found_cartesian_path - 0.9) >= std::numeric_limits<double>::epsilon())
+    ungrasped_state->setToDefaultValues(ungrasped_state->getJointModelGroup(eef_group_name), eef_group_name + "_home");
+
+  ungrasped_state->update();
   clear_path = true;
   return clear_path;
 }
@@ -560,24 +469,15 @@ const std::string& planning_group
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
 
-  const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(ungrasped_state));
+  const robot_state::RobotStatePtr cp_start_state = std::make_shared<robot_state::RobotState>(ungrasped_state);
   const robot_state::JointModelGroup* arm_joint_group = goal_state.getJointModelGroup(planning_group);
   const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
-  // robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
-  //                                                                                 planning_scene_,
-  //                                                                                 boost::cref(planning_group), _1, _2, _3);
-
-  // double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
-  //                                                                    traj,
-  //                                                                    tip_link,
-  //                                                                    tool_tip_pose,
-  //                                                                    true,
-  //                                                                    0.001,
-  //                                                                    0.0,
-  //                                                                    stateValidityCallbackFn);
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  boost::cref(*planning_scene_),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
 
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
@@ -585,7 +485,8 @@ const std::string& planning_group
                                                                      tool_tip_pose,
                                                                      true,
                                                                      0.001,
-                                                                     0.0);
+                                                                     0.0,
+                                                                     stateValidityCallbackFn);
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
@@ -596,16 +497,6 @@ const std::string& planning_group
   if (!((found_cartesian_path - 0.9) >= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
-  }
-
-  for (std::size_t i = 0; i < traj.size(); ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    if (!noCollision(*traj[i]))
-    {
-      return clear_path;
-    }
   }
 
   clear_path = true;
@@ -622,24 +513,15 @@ const std::string& planning_group
   hyStateSpace_->object_transit_motion_planner_num += 1;
   auto start_ik = std::chrono::high_resolution_clock::now();
 
-  const robot_state::RobotStatePtr cp_start_state(new robot_state::RobotState(start_state));
+  const robot_state::RobotStatePtr cp_start_state = std::make_shared<robot_state::RobotState>(start_state);
   const robot_state::JointModelGroup* arm_joint_group = goal_state.getJointModelGroup(planning_group);
   const moveit::core::LinkModel* tip_link = arm_joint_group->getOnlyOneEndEffectorTip();
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
-  // robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
-  //                                                                                 planning_scene_,
-  //                                                                                 boost::cref(planning_group), _1, _2, _3);
-
-  // double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
-  //                                                                    traj,
-  //                                                                    tip_link,
-  //                                                                    tool_tip_pose,
-  //                                                                    true,
-  //                                                                    0.001,
-  //                                                                    0.0,
-  //                                                                    stateValidityCallbackFn);
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+                                                                                  boost::cref(*planning_scene_),
+                                                                                  boost::cref(planning_group), _1, _2, _3);
 
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
@@ -647,7 +529,8 @@ const std::string& planning_group
                                                                      tool_tip_pose,
                                                                      true,
                                                                      0.001,
-                                                                     0.0);
+                                                                     0.0,
+                                                                     stateValidityCallbackFn);
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;
@@ -656,16 +539,6 @@ const std::string& planning_group
   if (!(fabs(found_cartesian_path - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
-  }
-
-  for (std::size_t i = 0; i < traj.size(); ++i)
-  {
-    setMimicJointPositions(traj[i], planning_group);
-    traj[i]->update();
-    if (!noCollision(*traj[i]))
-    {
-      return clear_path;
-    }
   }
 
   clear_path = true;

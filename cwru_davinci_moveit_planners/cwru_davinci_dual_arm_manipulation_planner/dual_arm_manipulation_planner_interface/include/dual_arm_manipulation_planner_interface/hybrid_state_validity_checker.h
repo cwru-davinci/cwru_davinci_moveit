@@ -52,8 +52,6 @@
 #include <ompl/base/StateValidityChecker.h>
 #include <ompl/base/SpaceInformation.h>
 
-#include <chrono>  // for high_resolution_clock
-
 namespace dual_arm_manipulation_planner_interface
 {
 
@@ -121,7 +119,7 @@ public:
 
   static bool isRobotStateValid
   (
-  const planning_scene::PlanningScenePtr& planning_scene,
+  const planning_scene::PlanningScene& planning_scene,
   const std::string& planning_group,
   robot_state::RobotState* state,
   const robot_state::JointModelGroup* group,
@@ -145,11 +143,11 @@ protected:
   void loadNeedleModel();
 
 protected:
-  HybridObjectStateSpace                    *hyStateSpace_;
+  HybridObjectStateSpace                    *hyStateSpace_ = nullptr;
 
-  planning_scene::PlanningScenePtr          planning_scene_;
+  planning_scene::PlanningScenePtr          planning_scene_ = nullptr;
 
-  robot_model::RobotModelConstPtr           kmodel_;
+  robot_model::RobotModelConstPtr           kmodel_ = nullptr;
 
   collision_detection::CollisionRequest     collision_request_simple_;
 

@@ -95,13 +95,13 @@ public:
   );
 
 protected:
-  HybridObjectStateSpacePtr                    m_pHyStateSpace;
+  HybridObjectStateSpacePtr                    m_pHyStateSpace = nullptr;
 
-  std::shared_ptr<HybridStateValidityChecker>  m_pHyStateValidator;
+  std::shared_ptr<HybridStateValidityChecker>  m_pHyStateValidator = nullptr;
 
-  ompl::base::SpaceInformationPtr              m_pSpaceInfor;
+  ompl::base::SpaceInformationPtr              m_pSpaceInfor = nullptr;
 
-  ompl::base::ProblemDefinitionPtr             m_pProblemDef;
+  ompl::base::ProblemDefinitionPtr             m_pProblemDef = nullptr;
 
   std::shared_ptr<ompl::geometric::RRTConnect> m_pRRTConnectPlanner;
 
@@ -109,7 +109,7 @@ protected:
 
   bool                                         m_Verbose;
 
-  ompl::geometric::PathGeometric*              m_pSlnPath;
+  ompl::geometric::PathGeometric*              m_pSlnPath = nullptr;
 
 protected:
   void setupStateSpace
@@ -191,7 +191,7 @@ protected:
   bool planGraspStateToUngraspedState
   (
   const robot_state::RobotStateConstPtr& pHandoffRobotState,
-  const robot_state::RobotStatePtr& pUngraspedRobotState,
+  robot_state::RobotStatePtr& pUngraspedRobotState,
   const std::string& fromSupportGroup,
   MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );

@@ -96,7 +96,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
   else
   {
     // convert ompl state to moveit robot state
-    const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr kstate = std::make_shared<robot_state::RobotState>(kmodel_);
 
     if (!hybridStateToRobotState(pHybridState, kstate))
     {
@@ -105,8 +105,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 
     if (pHybridState->jointsComputed())
     {
-      is_valid = noCollision(*kstate);
-      // is_valid = (planning_scene_) ? (!planning_scene_->isStateColliding(*kstate)) : false;
+      is_valid = (planning_scene_) ? (!planning_scene_->isStateColliding(*kstate)) : false;
       kstate->clearAttachedBodies();
       if (!is_valid)
       {
@@ -382,16 +381,6 @@ const robot_state::RobotState& rstate
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->collision_checking_duration_ += elapsed;
 
-  if (collision_result.collision)
-  {
-    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
-    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
-         it != contactMap.end(); ++it)
-    {
-      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-    }
-  }
   return no_collision;
 }
 
@@ -430,7 +419,7 @@ const robot_state::RobotState& rstate
 
 bool HybridStateValidityChecker::isRobotStateValid
 (
-const planning_scene::PlanningScenePtr& planning_scene,
+const planning_scene::PlanningScene& planning_scene,
 const std::string& planning_group,
 robot_state::RobotState* state,
 const robot_state::JointModelGroup* group,
@@ -444,18 +433,10 @@ const double* ik_solution
     state->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
   state->update();
 
-  if (!planning_scene)
+  if (&planning_scene == nullptr)
   {
     return false;
   }
 
-  // return !planning_scene->isStateColliding(*state,"", true);
-  planning_scene->setCurrentState(*state);
-  collision_detection::CollisionRequest collision_request;
-  collision_request.contacts = true;
-  collision_detection::CollisionResult collision_result;
-  planning_scene->checkCollision(collision_request, collision_result, *state);
-  bool noCollision = (!collision_result.collision) ? 1 : 0;
-
-  return noCollision;
+  return !planning_scene.isStateColliding(*state);
 }
