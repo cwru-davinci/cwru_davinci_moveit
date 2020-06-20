@@ -282,7 +282,7 @@ const std::string& planning_group
     Eigen::Vector3d approach_dir = grasped_tool_tip_pose.linear() * (distance * unit_approach_dir);
     pregrasp_tool_tip_pose.translation() = grasped_tool_tip_pose.translation() - approach_dir;
     std::size_t attempts = 1;
-    double timeout = 0.1;
+    double timeout = 0.005;
     found_ik = pre_grasp_state->setFromIK(arm_joint_group, pregrasp_tool_tip_pose, attempts, timeout, stateValidityCallbackFn);
     if (found_ik)
       break;

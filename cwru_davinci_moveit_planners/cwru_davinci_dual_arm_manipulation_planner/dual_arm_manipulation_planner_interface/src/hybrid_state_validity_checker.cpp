@@ -205,8 +205,8 @@ bool attachedObject
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
     const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(supportGroup);
-    std::size_t attempts = 2;
-    double timeout = 0.1;
+    std::size_t attempts = 1;
+    double timeout = 0.005;
     bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
     if (!found_ik)

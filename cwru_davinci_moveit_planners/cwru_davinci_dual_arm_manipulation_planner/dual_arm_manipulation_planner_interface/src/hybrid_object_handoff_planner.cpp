@@ -407,7 +407,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     Eigen::Vector3d approachDist = graspedToolTipPose.linear() * (distance * unitApproachDir);
     pregraspToolTipPose.translation() = graspedToolTipPose.translation() - approachDist;
     std::size_t attempts = 1;
-    double timeout = 0.1;
+    double timeout = 0.005;
     foundIK = pPreGraspRobotState->setFromIK(pToSupportJntGroup, pregraspToolTipPose, attempts, timeout);
     if (foundIK)
       break;
