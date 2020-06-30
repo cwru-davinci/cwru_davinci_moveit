@@ -59,6 +59,17 @@ const std::string& robotDescription
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
 }
 
+DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
+(
+)
+{
+  if (m_pHyStartState && m_pHyGoalState)
+  {
+    m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyStartState);
+    m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyGoalState);
+  }
+}
+
 bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 (
 )

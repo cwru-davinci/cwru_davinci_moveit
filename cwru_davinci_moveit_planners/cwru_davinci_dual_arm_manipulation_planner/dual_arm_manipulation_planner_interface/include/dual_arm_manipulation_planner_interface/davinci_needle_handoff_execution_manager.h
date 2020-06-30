@@ -63,7 +63,7 @@ public:
   const std::string& robotDescription = "robot_description"
   );
 
-  ~DavinciNeedleHandoffExecutionManager(){};
+  ~DavinciNeedleHandoffExecutionManager();
 
   bool planNeedleHandoffTraj
   (
