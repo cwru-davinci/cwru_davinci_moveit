@@ -207,7 +207,6 @@ const std::string& gs_active_group
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     hyStateSpace_->hand_off_duration_ += elapsed;
-    // publishRobotState(*handoff_state);
     return able_to_handoff;
   }
 
@@ -532,7 +531,6 @@ const std::string& planning_group
                                                                      0.001,
                                                                      0.0,
                                                                      stateValidityCallbackFn);
-
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->ik_solving_duration_ += elapsed;

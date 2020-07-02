@@ -189,6 +189,6 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  ros::waitForShutdown();
+  ros::shutdown();
   return 0;
 }
