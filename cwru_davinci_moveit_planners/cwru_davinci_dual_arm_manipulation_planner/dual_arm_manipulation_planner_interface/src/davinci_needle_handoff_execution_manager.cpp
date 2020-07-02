@@ -159,9 +159,6 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
         }
-        m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
-        if (jawPosition > 0.0)
-          m_pSupportArmGroup->control_jaw(0.0, 1.0);
       }
       ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
     }
