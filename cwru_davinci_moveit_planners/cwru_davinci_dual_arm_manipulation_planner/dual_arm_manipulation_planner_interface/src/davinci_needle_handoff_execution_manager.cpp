@@ -55,7 +55,8 @@ const std::string& robotDescription
    m_NodeHandlePrivate(nodeHandlePrivate),
    m_GraspInfo(possibleGrasps),
    m_ObjectName(objectName),
-   m_RobotModelLoader(robotDescription)
+   m_RobotModelLoader(robotDescription),
+   m_NeedlePoseMd(nodeHandle)
 {
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
 
@@ -121,6 +122,10 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
           return false;
         }
       }
+
+      if (!perturbNeedlePose(i))
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is NOT perturbed");
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is perturbed");
 
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
       m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
@@ -225,13 +230,6 @@ const std::vector<double>& goalJointPosition
 
   //  construct start state
   m_pHandoffPlanner->m_pHyStateSpace->getSubspaces()[0]->copyState(m_pHyStartState->components[0], objStartPose);
-  // m_pHyStartState->se3State().setXYZ(objStartPose->getX(),
-  //                                    objStartPose->getY(),
-  //                                    objStartPose->getZ());
-  // m_pHyStartState->se3State().rotation().x = objStartPose->rotation().x;
-  // m_pHyStartState->se3State().rotation().y = objStartPose->rotation().y;
-  // m_pHyStartState->se3State().rotation().z = objStartPose->rotation().z;
-  // m_pHyStartState->se3State().rotation().w = objStartPose->rotation().w;
 
   m_pHyStartState->armIndex().value = startSupportArmIdx;
   m_pHyStartState->graspIndex().value = startGraspIdx;
@@ -241,14 +239,6 @@ const std::vector<double>& goalJointPosition
 
   //  construct goal state
   m_pHandoffPlanner->m_pHyStateSpace->getSubspaces()[0]->copyState(m_pHyGoalState->components[0], objGoalPose);
-
-  // m_pHyGoalState->se3State().setXYZ(objGoalPose->getX(),
-  //                                   objGoalPose->getY(),
-  //                                   objGoalPose->getZ());
-  // m_pHyGoalState->se3State().rotation().x = objGoalPose->rotation().x;
-  // m_pHyGoalState->se3State().rotation().y = objGoalPose->rotation().y;
-  // m_pHyGoalState->se3State().rotation().z = objGoalPose->rotation().z;
-  // m_pHyGoalState->se3State().rotation().w = objGoalPose->rotation().w;
 
   m_pHyGoalState->armIndex().value = goalSupportArmIdx;
   m_pHyGoalState->graspIndex().value = goalGraspIdx;
@@ -482,7 +472,7 @@ const int targetState
   const Eigen::Affine3d targetTipPose = 
     pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
 
-  while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-2))
+  while (!isTwoPoseEqual(currentNeedlePose, targetNeedlePose, 1e-2))
   {
     MoveGroupJointTrajectorySegment jntTrajSeg;
     double time = 0.0;
@@ -523,10 +513,94 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     m_pHandoffPlanner->m_pSlnPath->getState(ithTraj + 1)->as<HybridObjectStateSpace::StateType>(), desNeedlePose);
 
   const Eigen::Affine3d& currentNeedlePose = updateNeedlePose();
-  if (currentNeedlePose.isApprox(desNeedlePose, 1e-2))
+  if (isTwoPoseEqual(currentNeedlePose, desNeedlePose, 1e-2))
   {
     return true;
   }
 
   return m_pHandoffPlanner->localPlanObjectTransit(currentNeedlePose, ithTraj, jntTrajectoryBtwStates);
+}
+
+bool DavinciNeedleHandoffExecutionManager::perturbNeedlePose
+(
+int ithTrajSeg
+)
+{
+  if (m_pHandoffPlanner)
+  {
+    m_pSupportArmGroup.reset(new psm_interface(m_HandoffJntTraj[ithTrajSeg][2].second.begin()->first, m_NodeHandle));
+    m_pSupportArmGroup->control_jaw(0.5, 1.0);
+    turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
+
+    const HybridObjectStateSpace::StateType* pNextState = m_pHandoffPlanner->m_pSlnPath->getState(ithTrajSeg + 1)->as<HybridObjectStateSpace::StateType>();
+    Eigen::Affine3d idealNeedlePose;
+    m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pNextState, idealNeedlePose);
+    if (!m_NeedlePoseMd.perturbNeedlePose(0.1, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
+      return false;
+
+    return true;
+  }
+
+ return false;
+}
+
+bool DavinciNeedleHandoffExecutionManager::isTwoPoseEqual
+(
+const Eigen::Affine3d &pose_1,
+const Eigen::Affine3d &pose_2,
+double tol
+)
+{
+  Eigen::Vector3d pose_1_vec = pose_1.translation();
+  Eigen::Vector3d pose_2_vec = pose_2.translation();
+
+  Eigen::Matrix3d rot_1 = pose_1.linear();
+  Eigen::Matrix3d rot_2 = pose_2.linear();
+
+  if(isTwoVectorEqual(pose_1_vec, pose_2_vec, tol) && isTwoRotationEqual(rot_1, rot_2, tol))
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool DavinciNeedleHandoffExecutionManager::isTwoVectorEqual
+(
+const Eigen::Vector3d &a,
+const Eigen::Vector3d &b,
+double tol
+)
+{
+  Eigen::Vector3d diff_vec = a - b;
+
+  if(diff_vec.norm() < tol)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool DavinciNeedleHandoffExecutionManager::isTwoRotationEqual
+(
+const Eigen::Matrix3d &a,
+const Eigen::Matrix3d &b,
+double tol
+)
+{
+  Eigen::Matrix3d diff = a * b.inverse() - Eigen::Matrix3d::Identity();
+
+  if(diff.norm() < tol)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }

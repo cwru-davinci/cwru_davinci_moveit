@@ -115,6 +115,13 @@ public:
   PathJointTrajectory& handoffPathJntTraj
   );
 
+  inline const std::shared_ptr<og::PathGeometric>& getSolutionPath
+  (
+  ) const
+  {
+    return m_pPath;
+  }
+
 protected:
   void getSolutionPathFromData();
 
@@ -136,7 +143,7 @@ protected:
 
 protected:
   std::vector<ob::State* >                           m_SlnStates;
-  std::unique_ptr<og::PathGeometric>                 m_pPath;
+  std::shared_ptr<og::PathGeometric>                 m_pPath;
 };
 
 HybridObjectHandoffPlannerTester::HybridObjectHandoffPlannerTester
@@ -581,7 +588,7 @@ void HybridObjectHandoffPlannerTester::getSolutionPathFromData()
                           distance_zero(opt.identityCost()));
 
     // Extracting the path
-    m_pPath = std::make_unique<og::PathGeometric>(m_pSpaceInfor);
+    m_pPath = std::make_shared<og::PathGeometric>(m_pSpaceInfor);
     for (ob::PlannerData::Graph::Vertex pos = boost::vertex(data.getGoalIndex(0), graph);
          prev[pos] != pos;
          pos = prev[pos])

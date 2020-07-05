@@ -68,11 +68,20 @@ public:
   virtual ~HybridStateValidityChecker()
   {}
 
-  virtual bool isValid(const ompl::base::State* state) const override;
+  virtual bool isValid
+  (
+  const ompl::base::State* state
+  ) const override;
 
-  virtual double cost(const ompl::base::State* state) const;
+  virtual double cost
+  (
+  const ompl::base::State* state
+  ) const;
 
-  virtual double clearance(const ompl::base::State* state) const override;
+  virtual double clearance
+  (
+  const ompl::base::State* state
+  ) const override;
 
   bool hybridStateToRobotState
   (
@@ -136,6 +145,13 @@ public:
   uint8_t& noCollision,
   const robot_state::RobotState& rstate
   ) const;
+
+  inline const std::string& objectName
+  (
+  ) const
+  {
+    return m_ObjectName;
+  }
 
 protected:
   void defaultSettings();

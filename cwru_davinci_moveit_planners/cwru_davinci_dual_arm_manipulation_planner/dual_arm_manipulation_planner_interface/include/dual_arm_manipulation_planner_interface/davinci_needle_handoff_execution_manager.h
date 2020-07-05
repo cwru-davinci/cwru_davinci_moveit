@@ -47,6 +47,8 @@
 // cwru_davinci_grasp
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
+#include <cwru_davinci_grasp/davinci_needle_pose_publisher.h>
+
 namespace dual_arm_manipulation_planner_interface
 {
 class DavinciNeedleHandoffExecutionManager
@@ -88,6 +90,10 @@ public:
   (
   );
 
+  const Eigen::Affine3d& updateNeedlePose
+  (
+  );
+
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
 
@@ -122,10 +128,7 @@ protected:
   std::string                                                     m_ObjectName;
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
 
-public:
-  const Eigen::Affine3d& updateNeedlePose
-  (
-  );
+  DummyNeedleModifier                                             m_NeedlePoseMd;
 
 private:
   bool turnOnStickyFinger
@@ -157,6 +160,32 @@ private:
   bool correctObjectTransfer
   (
   const int targetState
+  );
+
+  bool perturbNeedlePose
+  (
+  int ithTrajSeg
+  );
+
+  bool isTwoPoseEqual
+  (
+  const Eigen::Affine3d &pose_1,
+  const Eigen::Affine3d &pose_2,
+  double tol
+  );
+
+  bool isTwoVectorEqual
+  (
+  const Eigen::Vector3d &a,
+  const Eigen::Vector3d &b,
+  double tol
+  );
+
+  bool isTwoRotationEqual
+  (
+  const Eigen::Matrix3d &a,
+  const Eigen::Matrix3d &b,
+  double tol
   );
 };
 }
