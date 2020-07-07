@@ -800,7 +800,7 @@ const int ithTraj,
 MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
-  //Decide new collision free plan by partial planning
+  // Decide new collision free plan by partial planning
   ob::ScopedState<HybridObjectStateSpace> pHyFromState(m_pHyStateSpace);  // make a copy otherwise local modification will apply globally
   m_pHyStateSpace->copyState(pHyFromState.get(), m_pSlnPath->getState(ithTraj));
   m_pHyStateSpace->eigen3dToSE3(needlePose, pHyFromState.get());

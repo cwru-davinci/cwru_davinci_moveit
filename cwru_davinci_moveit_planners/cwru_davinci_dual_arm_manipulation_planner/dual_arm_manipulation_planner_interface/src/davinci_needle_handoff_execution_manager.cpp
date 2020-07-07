@@ -129,12 +129,15 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
       m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
+      // open gripper of incoming supporting arm
+      m_pSupportArmGroup->control_jaw(0.5, 0.2);
+
       m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(preGraspToGraspedJntTrajSeg.begin()->first));
       turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
-        const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
-        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, gripperJntTra, 3.0))
+        // const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
+        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, 0.5, 3.0))
         {
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -143,20 +146,27 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         m_pMoveItSupportArmGroupInterf->attachObject(m_ObjectName);
       }
 
+      // close gripper of incoming supporting arm
+      m_pSupportArmGroup->control_jaw(0.0, 0.2);
       changeNeedleTrackerMode(i + 1);
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
       m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
+      // open gripper of incoming resting arm
+      m_pSupportArmGroup->control_jaw(0.5, 0.2);
       turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
-        const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
-        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, gripperJntTra, 3.0))
+        // const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
+        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, 0.5, 3.0))
         {
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
         }
       }
+
+      // close gripper of incoming reseting arm
+      m_pSupportArmGroup->control_jaw(0.0, 0.2);
 
       const MoveGroupJointTrajectorySegment& ungraspedToSafePlaceJntTrajSeg = m_HandoffJntTraj[i][3].second;
       m_pSupportArmGroup.reset(new psm_interface(ungraspedToSafePlaceJntTrajSeg.begin()->first, m_NodeHandle));
@@ -472,7 +482,7 @@ const int targetState
   const Eigen::Affine3d targetTipPose = 
     pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
 
-  while (!isTwoPoseEqual(currentNeedlePose, targetNeedlePose, 1e-2))
+  while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
   {
     MoveGroupJointTrajectorySegment jntTrajSeg;
     double time = 0.0;
@@ -507,7 +517,7 @@ const int ithTraj,
 MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
-  //Take in and compare the snapshot of the needle with planned needle pose
+  // Take in and compare the snapshot of the needle with planned needle pose
   Eigen::Affine3d desNeedlePose;
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(
     m_pHandoffPlanner->m_pSlnPath->getState(ithTraj + 1)->as<HybridObjectStateSpace::StateType>(), desNeedlePose);
