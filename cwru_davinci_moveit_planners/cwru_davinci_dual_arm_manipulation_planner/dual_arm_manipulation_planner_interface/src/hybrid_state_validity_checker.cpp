@@ -331,7 +331,7 @@ void HybridStateValidityChecker::loadNeedleModel()
   try
   {
     needle_mesh = shapes::createMeshFromResource("package://sim_gazebo/"
-                                                 "props/needle_pf/mesh/needle_pf.dae",
+                                                 "props/needle/mesh/needle_thin.dae",
                                                  scale_vec);
     if (!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
       throw "Needle model is not loaded";
