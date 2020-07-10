@@ -82,7 +82,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 )
 {
   moveit_msgs::MoveItErrorCodes errorCodes;
-  if (!m_PlanningStatus == ob::PlannerStatus::EXACT_SOLUTION || m_HandoffJntTraj.empty())
+  if (m_PlanningStatus != ob::PlannerStatus::EXACT_SOLUTION || m_HandoffJntTraj.empty())
   {
     errorCodes.val = errorCodes.FAILURE;
     ROS_INFO("DavinciNeedleHandoffExecutionManager: "
@@ -97,7 +97,11 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
     {
       const MoveGroupJointTrajectorySegment& jntTrajSeg = m_HandoffJntTraj[i][0].second;
       m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
-      return correctObjectTransfer(i + 1);
+      if(!correctObjectTransfer(i + 1))
+      {
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+        return false;
+      }
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
@@ -464,6 +468,32 @@ bool DavinciNeedleHandoffExecutionManager::correctObjectTransfer
 const int targetState
 )
 {
+  // std::vector<double> currentJointPosition;
+  // if (!m_pSupportArmGroup || !m_pHandoffPlanner)
+  // {
+  //   return false;
+  // }
+
+  // m_pSupportArmGroup->get_fresh_position(currentJointPosition);
+  // const std::string supportGroup = m_pSupportArmGroup->get_psm_name();
+
+  // const robot_state::RobotStatePtr pCurrentRobotState = std::make_shared<robot_state::RobotState>(m_pHandoffPlanner->m_pHyStateValidator->robotModel());
+  // const moveit::core::LinkModel* pTipLink = pCurrentRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip();
+  // pCurrentRobotState->setToDefaultValues();
+  // pCurrentRobotState->setJointGroupPositions(supportGroup, currentJointPosition);
+  // m_pHandoffPlanner->m_pHyStateValidator->setMimicJointPositions(pCurrentRobotState, supportGroup);
+  // pCurrentRobotState->update();
+  // Eigen::Affine3d currentNeedlePose = updateNeedlePose();
+  // const Eigen::Affine3d currentToolTipPose = pCurrentRobotState->getGlobalLinkTransform(pTipLink);
+  // const Eigen::Affine3d currentGrasp = currentToolTipPose.inverse() * currentNeedlePose;
+
+  if (!m_pSupportArmGroup || !m_pHandoffPlanner)
+  {
+    return false;
+  }
+
+  Eigen::Affine3d currentNeedlePose = updateNeedlePose();
+
   const HybridObjectStateSpace::StateType* pTargetHyState = m_pHandoffPlanner->m_pSlnPath->getState(targetState)->as<HybridObjectStateSpace::StateType>();
 
   if (!pTargetHyState)
@@ -473,22 +503,20 @@ const int targetState
 
   Eigen::Affine3d targetNeedlePose;
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pTargetHyState, targetNeedlePose);
-  Eigen::Affine3d currentNeedlePose = updateNeedlePose();
+  // const Eigen::Affine3d targetTipPose = targetNeedlePose * currentGrasp.inverse();
 
-  const robot_state::RobotStatePtr pTargetRobotState(new robot_state::RobotState(m_pHandoffPlanner->m_pHyStateValidator->robotModel()));
-  const std::string& supportGroup = m_pSupportArmGroup->get_psm_name();
-  pTargetRobotState->setJointGroupPositions(supportGroup, pTargetHyState->jointVariables().values);
-  pTargetRobotState->update();
-  const Eigen::Affine3d targetTipPose = 
-    pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
+  // const robot_state::RobotStatePtr pTargetRobotState(new robot_state::RobotState(m_pHandoffPlanner->m_pHyStateValidator->robotModel()));
+  // pTargetRobotState->setJointGroupPositions(supportGroup, pTargetHyState->jointVariables().values);
+  // pTargetRobotState->update();
+  // const Eigen::Affine3d targetTipPose = 
+  //   pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
 
   while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
   {
     MoveGroupJointTrajectorySegment jntTrajSeg;
     double time = 0.0;
     bool moveForward = m_pHandoffPlanner->localPlanObjectTransfer(currentNeedlePose,
-                                                                  targetTipPose,
-                                                                  supportGroup,
+                                                                  targetNeedlePose,
                                                                   m_pSupportArmGroup,
                                                                   jntTrajSeg,
                                                                   time);
@@ -517,6 +545,10 @@ const int ithTraj,
 MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
+  if(!m_pHandoffPlanner)
+  {
+    return false;
+  }
   // Take in and compare the snapshot of the needle with planned needle pose
   Eigen::Affine3d desNeedlePose;
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(

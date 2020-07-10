@@ -76,15 +76,14 @@ public:
   bool testExecuteNeedleHandoffTraj
   (
   const PathJointTrajectory& handoffPathJntTraj,
-  const std::shared_ptr<og::PathGeometric>& slnPath,
   const HybridObjectHandoffPlannerTester& testPlanner
   )
   {
-    m_pHandoffPlanner = std::dynamic_pointer_cast<HybridObjectHandoffPlanner>(std::make_shared<HybridObjectHandoffPlanner>(testPlanner));
+    m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>(testPlanner);
     if (!m_pHandoffPlanner)
       return false;
 
-    m_pHandoffPlanner->setSolutionPath(slnPath.get());
+    // m_pHandoffPlanner->setSolutionPath(slnPath.get());
     m_HandoffJntTraj = handoffPathJntTraj;
     return executeNeedleHandoffTraj();
   }
@@ -123,7 +122,7 @@ TEST(TestHybridRRT, HybridObjectHandoffPlanner)
   // tester.testConnectStates();
   PathJointTrajectory handoffPathJntTraj;
   EXPECT_TRUE(tester.testGetSolutionPathJointTrajectory(handoffPathJntTraj));
-  EXPECT_TRUE(managerTester.testExecuteNeedleHandoffTraj(handoffPathJntTraj, tester.getSolutionPath(), tester));
+  EXPECT_TRUE(managerTester.testExecuteNeedleHandoffTraj(handoffPathJntTraj, tester));
 //  const ompl::base::SpaceInformationPtr& si = tester.getSpaceInformation();
 //  // create a random start state
 //  ob::ScopedState<HybridObjectStateSpace> start(si);
@@ -161,7 +160,7 @@ int main(int argc, char** argv)
   testing::InitGoogleTest(&argc, argv);
   ros::init(argc, argv, "test_hybrid_object_handoff_planner");
   ros::AsyncSpinner spinner(1);
-  ros::Duration(3.0).sleep();
   spinner.start();
+  ros::Duration(3.0).sleep();
   return RUN_ALL_TESTS();
 }

@@ -103,7 +103,8 @@ PathJointTrajectory& handoffPathJntTraj
     return false;
   }
 
-  m_pSlnPath = m_pProblemDef->getSolutionPath()->as<og::PathGeometric>();
+  // m_pSlnPath = m_pProblemDef->getSolutionPath()->as<og::PathGeometric>();
+  m_pSlnPath = std::make_shared<og::PathGeometric>(*(m_pProblemDef->getSolutionPath()->as<og::PathGeometric>()));
 
   if(!m_pSlnPath)
   {
@@ -817,7 +818,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   }
 
   // if have new plan, then generate new handoff trajectories
-  if (!planHandoff(pHyFromState.get(), pHyToState.get(), jntTrajectoryBtwStates))
+  if (!planHandoff(pHyFromState.get(), pHyToState.get(), jntTrajectoryBtwStates, true))
   {
     return false;
   }
@@ -828,8 +829,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 bool HybridObjectHandoffPlanner::localPlanObjectTransfer
 (
 const Eigen::Affine3d& currentNeedlePose,
-const Eigen::Affine3d& targetTipPose,
-const std::string& supportGroup,
+const Eigen::Affine3d& targetNeedlePose,
 const PSMInterfacePtr& pSupportArmGroup,
 MoveGroupJointTrajectorySegment& jntTrajSeg,
 double& time
@@ -837,6 +837,7 @@ double& time
 {
   std::vector<double> currentJointPosition;
   pSupportArmGroup->get_fresh_position(currentJointPosition);
+  const std::string& supportGroup = pSupportArmGroup->get_psm_name();
 
   const robot_state::RobotStatePtr pCurrentRobotState = std::make_shared<robot_state::RobotState>(m_pHyStateValidator->robotModel());
   if (!pCurrentRobotState)
@@ -852,16 +853,16 @@ double& time
   const Eigen::Affine3d currentToolTipPose = pCurrentRobotState->getGlobalLinkTransform(pTipLink);
   const Eigen::Affine3d currentGrasp = currentToolTipPose.inverse() * currentNeedlePose;
 
-  Eigen::Quaterniond currentQua(currentToolTipPose.linear());
-  Eigen::Quaterniond targetQua(targetTipPose.linear());
+  Eigen::Quaterniond currentQua(currentNeedlePose.linear());
+  Eigen::Quaterniond targetQua(targetNeedlePose.linear());
 
-  double percentage = (distanceBtwPoses(currentToolTipPose, targetTipPose) <= 0.5) ? 1.0 : 0.5;
+  double percentage = (distanceBtwPoses(currentNeedlePose, targetNeedlePose) <= 0.5) ? 1.0 : 0.5;
 
-  Eigen::Affine3d toolTipPose(currentQua.slerp(percentage, targetQua));
-  toolTipPose.translation() = percentage * targetTipPose.translation() + (1 - percentage) * currentToolTipPose.translation();
+  // Eigen::Affine3d toolTipPose(currentQua.slerp(percentage, targetQua));
+  Eigen::Affine3d interNeedlePose(currentQua.slerp(percentage, targetQua));
+  interNeedlePose.translation() = percentage * targetNeedlePose.translation() + (1 - percentage) * currentNeedlePose.translation();
 
-  Eigen::Vector3d vec = (currentToolTipPose.translation() - toolTipPose.translation());
-  time = (((currentToolTipPose.translation() - toolTipPose.translation()).norm()) / 0.001) * 0.2;
+  time = (((currentNeedlePose.translation() - interNeedlePose.translation()).norm()) / 0.001) * 0.2;
   moveit::core::AttachedBody *pNeedleModel = m_pHyStateValidator->createAttachedBody(supportGroup, "needle_r", currentGrasp);
   pCurrentRobotState->attachBody(pNeedleModel);
   pCurrentRobotState->update();
@@ -869,7 +870,7 @@ double& time
   double foundCartesianPath = pCurrentRobotState->computeCartesianPath(pCurrentRobotState->getJointModelGroup(supportGroup),
                                                                        traj,
                                                                        pTipLink,
-                                                                       toolTipPose,
+                                                                       interNeedlePose * currentGrasp.inverse(),
                                                                        true,
                                                                        0.001,
                                                                        0.0);
@@ -902,4 +903,25 @@ double& time
   jntTrajSeg = {{supportGroup, supportGroupJntTraj}};
 
   return true;
+}
+
+void HybridObjectHandoffPlanner::getCurrentGrasp
+(
+Eigen::Affine3d& currentGrasp,
+const Eigen::Affine3d& currentNeedlePose,
+const std::string& supportGroup,
+const PSMInterfacePtr& pSupportArmGroup
+)
+{
+  std::vector<double> currentJointPosition;
+  pSupportArmGroup->get_fresh_position(currentJointPosition);
+
+  const robot_state::RobotStatePtr pCurrentRobotState = std::make_shared<robot_state::RobotState>(m_pHyStateValidator->robotModel());
+  const moveit::core::LinkModel* pTipLink = pCurrentRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip();
+  pCurrentRobotState->setToDefaultValues();
+  pCurrentRobotState->setJointGroupPositions(supportGroup, currentJointPosition);
+  m_pHyStateValidator->setMimicJointPositions(pCurrentRobotState, supportGroup);
+  pCurrentRobotState->update();
+  const Eigen::Affine3d currentToolTipPose = pCurrentRobotState->getGlobalLinkTransform(pTipLink);
+  currentGrasp = currentToolTipPose.inverse() * currentNeedlePose;
 }

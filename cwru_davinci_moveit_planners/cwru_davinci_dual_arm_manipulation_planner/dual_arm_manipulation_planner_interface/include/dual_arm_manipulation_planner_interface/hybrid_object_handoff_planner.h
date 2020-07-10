@@ -94,21 +94,6 @@ public:
   PathJointTrajectory& handoffPathJntTraj
   );
 
-  bool correctObjectTransit
-  (
-  const Eigen::Affine3d& needlePose,
-  const int ithTraj,
-  MoveGroupJointTrajectory& jntTrajectoryBtwStates
-  );
-
-  bool correctObjectTransfer
-  (
-  const Eigen::Affine3d& needlePose,
-  const int targetState,
-  const PSMInterfacePtr& pSupportArmGroup,
-  std::function<const Eigen::Affine3d&()> updateNdlPoseFcn
-  );
-
   int stepsBtwStates
   (
   const Eigen::Affine3d& needlePose,
@@ -121,13 +106,13 @@ public:
   const Eigen::Affine3d& targetPose
   );
 
-  inline void setSolutionPath
-  (
-  ompl::geometric::PathGeometric* input
-  )
-  {
-    m_pSlnPath = static_cast<ompl::geometric::PathGeometric*>(input);
-  }
+  // inline void setSolutionPath
+  // (
+  // ompl::geometric::PathGeometric* input
+  // )
+  // {
+  //   *m_pSlnPath = static_cast<ompl::geometric::PathGeometric&>(*input);
+  // }
 
 protected:
   HybridObjectStateSpacePtr                        m_pHyStateSpace = nullptr;
@@ -144,8 +129,8 @@ protected:
 
   bool                                             m_Verbose;
 
-  // std::shared_ptr<ompl::geometric::PathGeometric>  m_pSlnPath = nullptr;
-  ompl::geometric::PathGeometric*                  m_pSlnPath = nullptr;
+  std::shared_ptr<ompl::geometric::PathGeometric>  m_pSlnPath = nullptr;
+  // ompl::geometric::PathGeometric*                  m_pSlnPath = nullptr;
 
 protected:
   void setupStateSpace
@@ -253,11 +238,18 @@ protected:
   bool localPlanObjectTransfer
   (
   const Eigen::Affine3d& currentNeedlePose,
-  const Eigen::Affine3d& targetTipPose,
-  const std::string& supportGroup,
+  const Eigen::Affine3d& targetNeedlePose,
   const PSMInterfacePtr& pSupportArmGroup,
   MoveGroupJointTrajectorySegment& jntTrajSeg,
   double& time
+  );
+
+  void getCurrentGrasp
+  (
+  Eigen::Affine3d& currentGrasp,
+  const Eigen::Affine3d& currentNeedlePose,
+  const std::string& supportGroup,
+  const PSMInterfacePtr& pSupportArmGroup
   );
 
 protected:
