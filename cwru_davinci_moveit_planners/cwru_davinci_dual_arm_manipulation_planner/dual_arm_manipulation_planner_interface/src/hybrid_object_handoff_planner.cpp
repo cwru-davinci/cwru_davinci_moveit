@@ -351,8 +351,7 @@ bool HybridObjectHandoffPlanner::planHandoff
 (
 const HybridObjectStateSpace::StateType* pHyFromState,
 const HybridObjectStateSpace::StateType* pHyToState,
-MoveGroupJointTrajectory& jntTrajectoryBtwStates,
-bool isAttachNeedle
+MoveGroupJointTrajectory& jntTrajectoryBtwStates
 )
 {
   if (!m_pHyStateValidator)
@@ -362,39 +361,16 @@ bool isAttachNeedle
   }
 
   const robot_state::RobotStatePtr pRobotFromState = std::make_shared<robot_state::RobotState>(m_pHyStateValidator->robotModel());
-  if (isAttachNeedle && pRobotFromState)
+  if (!pRobotFromState || !m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyFromState, pRobotFromState))
   {
-    if (!m_pHyStateValidator->hybridStateToRobotState(pHyFromState, pRobotFromState))
-    {
-      printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
-      return false;
-    }
+    printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
+    return false;
   }
-  else if (!isAttachNeedle && pRobotFromState)
-  {
-    if (!m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyFromState, pRobotFromState))
-    {
-      printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
-      return false;
-    }
-  }
-
   const robot_state::RobotStatePtr pRobotToState = std::make_shared<robot_state::RobotState>(m_pHyStateValidator->robotModel());
-  if (isAttachNeedle && pRobotToState)
+  if (!pRobotToState || !m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyToState, pRobotToState))
   {
-    if (!m_pHyStateValidator->hybridStateToRobotState(pHyToState, pRobotToState))
-    {
-      printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
-      return false;
-    }
-  }
-  else if (!isAttachNeedle && pRobotToState)
-  {
-    if (!m_pHyStateValidator->hybridStateToRobotStateNoAttachedObject(pHyToState, pRobotToState))
-    {
-      printf("HybridObjectHandoffPlanner: Invalid FromState to be connected");
-      return false;
-    }
+    printf("HybridObjectHandoffPlanner: Invalid ToState to be connected");
+    return false;
   }
 
   // an intermediate state when needle is supporting by two grippers
@@ -410,37 +386,6 @@ bool isAttachNeedle
   pRobotToState->copyJointGroupPositions(toSupportGroup, toSupportGroupJntPosition);
   pHandoffRobotState->setJointGroupPositions(toSupportGroup, toSupportGroupJntPosition);
   m_pHyStateValidator->setMimicJointPositions(pHandoffRobotState, toSupportGroup);
-
-  if (isAttachNeedle)
-  {
-    const moveit::core::AttachedBody* ss_needle_body = pRobotFromState->getAttachedBody(m_pHyStateValidator->objectName());
-    const moveit::core::AttachedBody* gs_needle_body = pRobotToState->getAttachedBody(m_pHyStateValidator->objectName());
-
-    std::set<std::string> touch_links = ss_needle_body->getTouchLinks();
-    touch_links.insert(gs_needle_body->getTouchLinks().begin(), gs_needle_body->getTouchLinks().end());
-
-    trajectory_msgs::JointTrajectory dettach_posture = ss_needle_body->getDetachPosture();
-    trajectory_msgs::JointTrajectory gs_dettach_posture = gs_needle_body->getDetachPosture();
-
-    dettach_posture.joint_names.insert(dettach_posture.joint_names.end(),
-                                       gs_dettach_posture.joint_names.begin(),
-                                       gs_dettach_posture.joint_names.end());
-  
-    dettach_posture.points.insert(dettach_posture.points.end(),
-                                  gs_dettach_posture.points.begin(),
-                                  gs_dettach_posture.points.end());
-
-
-    pHandoffRobotState->attachBody(gs_needle_body->getName(), gs_needle_body->getShapes(),
-                                   gs_needle_body->getFixedTransforms(), touch_links,
-                                   gs_needle_body->getAttachedLinkName(), gs_needle_body->getDetachPosture());
-    pHandoffRobotState->update();
-
-    if (!m_pHyStateValidator->noCollision(*pHandoffRobotState))
-    {
-      return false;
-    }
-  }
   pHandoffRobotState->update();
 
   jntTrajectoryBtwStates.clear();
@@ -818,7 +763,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   }
 
   // if have new plan, then generate new handoff trajectories
-  if (!planHandoff(pHyFromState.get(), pHyToState.get(), jntTrajectoryBtwStates, true))
+  if (!planHandoff(pHyFromState.get(), pHyToState.get(), jntTrajectoryBtwStates))
   {
     return false;
   }
@@ -875,13 +820,14 @@ double& time
                                                                        0.001,
                                                                        0.0);
 
-  if (!((foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
+  if (!(fabs(foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }
 
   JointTrajectory supportGroupJntTraj;
   supportGroupJntTraj.resize(traj.size());
+  m_pHyStateValidator->setMimicJointPositions(traj.back(), supportGroup);
   traj.back()->update();
   if (!m_pHyStateValidator->noCollision(*traj.back()))
   {
@@ -891,6 +837,7 @@ double& time
 
   for (std::size_t i = 0; i < traj.size() - 1; ++i)
   {
+    m_pHyStateValidator->setMimicJointPositions(traj[i], supportGroup);
     traj[i]->update();
     if (!m_pHyStateValidator->noCollision(*traj[i]))
     {

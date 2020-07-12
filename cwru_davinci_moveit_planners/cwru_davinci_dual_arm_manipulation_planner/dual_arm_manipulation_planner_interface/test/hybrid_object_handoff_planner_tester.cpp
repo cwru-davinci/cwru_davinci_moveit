@@ -143,7 +143,6 @@ protected:
 
 protected:
   std::vector<ob::State* >                           m_SlnStates;
-  // std::shared_ptr<og::PathGeometric>                 m_pPath;
 };
 
 HybridObjectHandoffPlannerTester::HybridObjectHandoffPlannerTester

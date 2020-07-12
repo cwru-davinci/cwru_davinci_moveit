@@ -166,27 +166,6 @@ private:
   (
   int ithTrajSeg
   );
-
-  bool isTwoPoseEqual
-  (
-  const Eigen::Affine3d &pose_1,
-  const Eigen::Affine3d &pose_2,
-  double tol
-  );
-
-  bool isTwoVectorEqual
-  (
-  const Eigen::Vector3d &a,
-  const Eigen::Vector3d &b,
-  double tol
-  );
-
-  bool isTwoRotationEqual
-  (
-  const Eigen::Matrix3d &a,
-  const Eigen::Matrix3d &b,
-  double tol
-  );
 };
 }
 

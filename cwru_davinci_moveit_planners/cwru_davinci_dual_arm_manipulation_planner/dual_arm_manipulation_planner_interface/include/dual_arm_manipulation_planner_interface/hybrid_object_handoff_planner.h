@@ -106,14 +106,6 @@ public:
   const Eigen::Affine3d& targetPose
   );
 
-  // inline void setSolutionPath
-  // (
-  // ompl::geometric::PathGeometric* input
-  // )
-  // {
-  //   *m_pSlnPath = static_cast<ompl::geometric::PathGeometric&>(*input);
-  // }
-
 protected:
   HybridObjectStateSpacePtr                        m_pHyStateSpace = nullptr;
 
@@ -130,7 +122,6 @@ protected:
   bool                                             m_Verbose;
 
   std::shared_ptr<ompl::geometric::PathGeometric>  m_pSlnPath = nullptr;
-  // ompl::geometric::PathGeometric*                  m_pSlnPath = nullptr;
 
 protected:
   void setupStateSpace
@@ -174,8 +165,7 @@ protected:
   (
   const HybridObjectStateSpace::StateType* pHyFromState,
   const HybridObjectStateSpace::StateType* pHyToState,
-  MoveGroupJointTrajectory& jntTrajectoryBtwStates,
-  bool isAttachNeedle = false
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
   bool planNeedleGrasping

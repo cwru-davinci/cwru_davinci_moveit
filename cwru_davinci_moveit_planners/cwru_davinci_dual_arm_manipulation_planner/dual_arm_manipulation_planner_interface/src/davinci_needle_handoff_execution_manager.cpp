@@ -120,7 +120,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = safePlaceToPreGraspJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, 8.0))
+        if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, 5.0))
         {
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -142,7 +142,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
         double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, jawPosition, 3.0))
+        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, jawPosition, 2.0))
         {
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -164,7 +164,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
         double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, jawPosition, 3.0))
+        if (!m_pSupportArmGroup->execute_trajectory_t(armJntTra, jawPosition, 2.0))
         {
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -180,7 +180,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, 8.0))
+        if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, 5.0))
         {
           ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -470,25 +470,6 @@ bool DavinciNeedleHandoffExecutionManager::correctObjectTransfer
 const int targetState
 )
 {
-  // std::vector<double> currentJointPosition;
-  // if (!m_pSupportArmGroup || !m_pHandoffPlanner)
-  // {
-  //   return false;
-  // }
-
-  // m_pSupportArmGroup->get_fresh_position(currentJointPosition);
-  // const std::string supportGroup = m_pSupportArmGroup->get_psm_name();
-
-  // const robot_state::RobotStatePtr pCurrentRobotState = std::make_shared<robot_state::RobotState>(m_pHandoffPlanner->m_pHyStateValidator->robotModel());
-  // const moveit::core::LinkModel* pTipLink = pCurrentRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip();
-  // pCurrentRobotState->setToDefaultValues();
-  // pCurrentRobotState->setJointGroupPositions(supportGroup, currentJointPosition);
-  // m_pHandoffPlanner->m_pHyStateValidator->setMimicJointPositions(pCurrentRobotState, supportGroup);
-  // pCurrentRobotState->update();
-  // Eigen::Affine3d currentNeedlePose = updateNeedlePose();
-  // const Eigen::Affine3d currentToolTipPose = pCurrentRobotState->getGlobalLinkTransform(pTipLink);
-  // const Eigen::Affine3d currentGrasp = currentToolTipPose.inverse() * currentNeedlePose;
-
   if (!m_pSupportArmGroup || !m_pHandoffPlanner)
   {
     return false;
@@ -505,13 +486,6 @@ const int targetState
 
   Eigen::Affine3d targetNeedlePose;
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pTargetHyState, targetNeedlePose);
-  // const Eigen::Affine3d targetTipPose = targetNeedlePose * currentGrasp.inverse();
-
-  // const robot_state::RobotStatePtr pTargetRobotState(new robot_state::RobotState(m_pHandoffPlanner->m_pHyStateValidator->robotModel()));
-  // pTargetRobotState->setJointGroupPositions(supportGroup, pTargetHyState->jointVariables().values);
-  // pTargetRobotState->update();
-  // const Eigen::Affine3d targetTipPose = 
-  //   pTargetRobotState->getGlobalLinkTransform(pTargetRobotState->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
 
   while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
   {
@@ -557,7 +531,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     m_pHandoffPlanner->m_pSlnPath->getState(ithTraj + 1)->as<HybridObjectStateSpace::StateType>(), desNeedlePose);
 
   const Eigen::Affine3d& currentNeedlePose = updateNeedlePose();
-  if (isTwoPoseEqual(currentNeedlePose, desNeedlePose, 1e-2))
+  if (currentNeedlePose.isApprox(desNeedlePose, 1e-3))
   {
     return true;
   }
@@ -573,7 +547,7 @@ int ithTrajSeg
   if (m_pHandoffPlanner)
   {
     m_pSupportArmGroup.reset(new psm_interface(m_HandoffJntTraj[ithTrajSeg][2].second.begin()->first, m_NodeHandle));
-    m_pSupportArmGroup->control_jaw(0.5, 1.0);
+    m_pSupportArmGroup->control_jaw(0.25, 1.0);
     turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
 
     const HybridObjectStateSpace::StateType* pNextState = m_pHandoffPlanner->m_pSlnPath->getState(ithTrajSeg + 1)->as<HybridObjectStateSpace::StateType>();
@@ -586,65 +560,4 @@ int ithTrajSeg
   }
 
  return false;
-}
-
-bool DavinciNeedleHandoffExecutionManager::isTwoPoseEqual
-(
-const Eigen::Affine3d &pose_1,
-const Eigen::Affine3d &pose_2,
-double tol
-)
-{
-  Eigen::Vector3d pose_1_vec = pose_1.translation();
-  Eigen::Vector3d pose_2_vec = pose_2.translation();
-
-  Eigen::Matrix3d rot_1 = pose_1.linear();
-  Eigen::Matrix3d rot_2 = pose_2.linear();
-
-  if(isTwoVectorEqual(pose_1_vec, pose_2_vec, tol) && isTwoRotationEqual(rot_1, rot_2, tol))
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
-bool DavinciNeedleHandoffExecutionManager::isTwoVectorEqual
-(
-const Eigen::Vector3d &a,
-const Eigen::Vector3d &b,
-double tol
-)
-{
-  Eigen::Vector3d diff_vec = a - b;
-
-  if(diff_vec.norm() < tol)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
-bool DavinciNeedleHandoffExecutionManager::isTwoRotationEqual
-(
-const Eigen::Matrix3d &a,
-const Eigen::Matrix3d &b,
-double tol
-)
-{
-  Eigen::Matrix3d diff = a * b.inverse() - Eigen::Matrix3d::Identity();
-
-  if(diff.norm() < tol)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
 }
