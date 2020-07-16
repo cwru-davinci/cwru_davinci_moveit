@@ -90,6 +90,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
     return false;
   }
 
+  int lastHandoffIdx = lastHandoffTrajSeg();
   ROS_INFO("DavinciNeedleHandoffExecutionManager: total number of trajectories is %d", (int)m_HandoffJntTraj.size());
   for (std::size_t i = 0; i < m_HandoffJntTraj.size(); ++i)
   {
@@ -127,10 +128,6 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         }
       }
 
-      if (!perturbNeedlePose(i))
-        ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is NOT perturbed");
-      ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is perturbed");
-
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
       m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
       // open gripper of incoming supporting arm
@@ -153,13 +150,14 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 
       // close gripper of incoming supporting arm
       m_pSupportArmGroup->control_jaw(0.0, 0.2);
+      const std::string& toSupportGroup = m_pSupportArmGroup->get_psm_name();
       changeNeedleTrackerMode(i + 1);
 
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
       m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
       // open gripper of incoming resting arm
-      m_pSupportArmGroup->control_jaw(0.5, 0.2);
       turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
+      m_pSupportArmGroup->control_jaw(0.5, 0.2);
       {
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
@@ -171,6 +169,13 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         }
       }
 
+      const std::string& toRestGroup = m_pSupportArmGroup->get_psm_name();
+      // if needle perturbation happens it is only allowed to happen at non-last trajectory segment
+      if ((i != lastHandoffIdx) && !perturbNeedlePose(i, toSupportGroup))
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is NOT perturbed");
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is perturbed");
+
+      m_pSupportArmGroup.reset(new psm_interface(toRestGroup, m_NodeHandle));
       // close gripper of incoming reseting arm
       m_pSupportArmGroup->control_jaw(0.0, 0.2);
 
@@ -541,23 +546,44 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 
 bool DavinciNeedleHandoffExecutionManager::perturbNeedlePose
 (
-int ithTrajSeg
+int ithTrajSeg,
+const std::string& toSupportGroup
 )
 {
-  if (m_pHandoffPlanner)
+  if (!m_pHandoffPlanner)
   {
-    m_pSupportArmGroup.reset(new psm_interface(m_HandoffJntTraj[ithTrajSeg][2].second.begin()->first, m_NodeHandle));
-    m_pSupportArmGroup->control_jaw(0.25, 1.0);
-    turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
+    return false;
+  }
+  m_pSupportArmGroup.reset(new psm_interface(toSupportGroup, m_NodeHandle));
+  m_pSupportArmGroup->control_jaw(0.3, 0.5);
+  turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
 
-    const HybridObjectStateSpace::StateType* pNextState = m_pHandoffPlanner->m_pSlnPath->getState(ithTrajSeg + 1)->as<HybridObjectStateSpace::StateType>();
-    Eigen::Affine3d idealNeedlePose;
-    m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pNextState, idealNeedlePose);
-    if (!m_NeedlePoseMd.perturbNeedlePose(0.1, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
-      return false;
+  const HybridObjectStateSpace::StateType* pNextState = m_pHandoffPlanner->m_pSlnPath->getState(ithTrajSeg + 1)->as<HybridObjectStateSpace::StateType>();
+  Eigen::Affine3d idealNeedlePose;
+  m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pNextState, idealNeedlePose);
 
-    return true;
+  double radToPerturb = 0.1;
+  if (m_Distribution(m_Generator))
+  {
+    radToPerturb = -0.1;
+  }
+  if (!m_NeedlePoseMd.perturbNeedlePose(radToPerturb, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
+    return false;
+
+  turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
+  m_pSupportArmGroup->control_jaw(0.0, 0.5);
+  return true;
+}
+
+int DavinciNeedleHandoffExecutionManager::lastHandoffTrajSeg
+(
+)
+{
+  for (std::size_t i = m_HandoffJntTraj.size(); i --> 0;)
+  {
+    if( m_HandoffJntTraj[i].size() == 4 )
+      return i;
   }
 
- return false;
+  return 0;
 }

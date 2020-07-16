@@ -99,6 +99,9 @@ private:
 
   bool m_FreshNeedlePose;
 
+  std::bernoulli_distribution m_Distribution;
+  std::default_random_engine m_Generator;
+
 protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
@@ -164,7 +167,12 @@ private:
 
   bool perturbNeedlePose
   (
-  int ithTrajSeg
+  int ithTrajSeg,
+  const std::string& toSupportGroup
+  );
+
+  int lastHandoffTrajSeg
+  (
   );
 };
 }

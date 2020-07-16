@@ -110,7 +110,7 @@ private:
     stats.max = *std::max_element(running_time.begin(), running_time.end());
     stats.min = *std::min_element(running_time.begin(), running_time.end());
 
-    double accum = std::accumulate(running_time.begin(), running_time.end(), 0);
+    double accum = std::accumulate(running_time.begin(), running_time.end(), 0.0);
     double mean = accum / running_time.size();
     stats.mean = mean;
 
