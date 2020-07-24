@@ -56,7 +56,8 @@ const std::string& robotDescription
    m_GraspInfo(possibleGrasps),
    m_ObjectName(objectName),
    m_RobotModelLoader(robotDescription),
-   m_NeedlePoseMd(nodeHandle)
+   m_NeedlePoseMd(nodeHandle),
+   m_UniformRealDistribution(-0.2, 0.2)
 {
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
 
@@ -562,11 +563,11 @@ const std::string& toSupportGroup
   Eigen::Affine3d idealNeedlePose;
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pNextState, idealNeedlePose);
 
-  double radToPerturb = 0.1;
-  if (m_Distribution(m_Generator))
-  {
-    radToPerturb = -0.1;
-  }
+  double radToPerturb = m_UniformRealDistribution(m_Generator);
+  // if (m_BernoulliDistribution(m_Generator))
+  // {
+  //   radToPerturb = -0.1;
+  // }
   if (!m_NeedlePoseMd.perturbNeedlePose(radToPerturb, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
     return false;
 

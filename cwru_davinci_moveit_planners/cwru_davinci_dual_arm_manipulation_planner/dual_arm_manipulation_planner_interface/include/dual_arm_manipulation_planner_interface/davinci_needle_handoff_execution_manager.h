@@ -97,10 +97,11 @@ public:
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
 
-  bool m_FreshNeedlePose;
-
-  std::bernoulli_distribution m_Distribution;
-  std::default_random_engine m_Generator;
+private:
+  bool                                                   m_FreshNeedlePose;
+  std::bernoulli_distribution                            m_BernoulliDistribution;
+  std::default_random_engine                             m_Generator;
+  std::uniform_real_distribution<double>                 m_UniformRealDistribution;
 
 protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
