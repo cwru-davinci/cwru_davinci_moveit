@@ -556,7 +556,7 @@ const std::string& toSupportGroup
     return false;
   }
   m_pSupportArmGroup.reset(new psm_interface(toSupportGroup, m_NodeHandle));
-  m_pSupportArmGroup->control_jaw(0.3, 0.5);
+  m_pSupportArmGroup->control_jaw(0.5, 0.5);
   turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
 
   const HybridObjectStateSpace::StateType* pNextState = m_pHandoffPlanner->m_pSlnPath->getState(ithTrajSeg + 1)->as<HybridObjectStateSpace::StateType>();

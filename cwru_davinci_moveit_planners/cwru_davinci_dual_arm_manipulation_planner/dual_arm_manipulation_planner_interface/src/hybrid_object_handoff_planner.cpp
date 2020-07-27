@@ -753,7 +753,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 
   ob::ScopedState<HybridObjectStateSpace> pHyToState(m_pHyStateSpace);
   m_pHyStateSpace->copyState(pHyToState.get(), m_pSlnPath->getState(ithTraj + 1));
-  m_pHyStateSpace->eigen3dToSE3(needlePose, pHyToState.get());
+  m_pHyStateSpace->getSubspace(0)->copyState(pHyToState->components[0], pHyFromState->components[0]);
   pHyToState->clearKnownInformation();
 
   // first use local planner to check collision

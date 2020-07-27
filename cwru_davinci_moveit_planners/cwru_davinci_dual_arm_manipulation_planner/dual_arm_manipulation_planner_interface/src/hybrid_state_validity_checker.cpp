@@ -194,13 +194,13 @@ bool attachedObject
   pRSstate->setToDefaultValues();
 
   const std::string supportGroup = (pHyState->armIndex().value == 1) ? "psm_one" : "psm_two";
+  // convert object pose to robot tip pose
+  // this is the gripper tool tip link frame wrt /base_link
+  Eigen::Affine3d object_pose;  // object pose w/rt base frame
+  hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
+
   if (!pHyState->jointsComputed())
   {
-    // convert object pose to robot tip pose
-    // this is the gripper tool tip link frame wrt /base_link
-    Eigen::Affine3d object_pose;  // object pose w/rt base frame
-    hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
-
     Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
@@ -230,10 +230,17 @@ bool attachedObject
 
   if (attachedObject)
   {
+    const Eigen::Affine3d tool_tip_pose = pRSstate->getGlobalLinkTransform(pRSstate->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
+    Eigen::Affine3d grasp_pose = tool_tip_pose.inverse() * object_pose;
+
+    if (grasp_pose.isApprox(hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose, 1e-4))
+    {
+      grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
+    }
     // attach object to supporting joint group of robot
     moveit::core::AttachedBody *pNeedleModel = createAttachedBody(supportGroup,
                                                                   m_ObjectName,
-                                                                  pHyState->graspIndex().value);
+                                                                  grasp_pose);
     pRSstate->attachBody(pNeedleModel);
     pRSstate->update();
   }
@@ -438,5 +445,5 @@ const double* ik_solution
     return false;
   }
 
-  return !planning_scene.isStateColliding(*state);
+  return !planning_scene.isStateColliding(*state, "", true);
 }
