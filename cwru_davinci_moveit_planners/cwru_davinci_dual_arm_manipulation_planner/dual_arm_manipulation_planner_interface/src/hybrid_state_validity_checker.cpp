@@ -372,7 +372,9 @@ const std::string& planning_group
 
 bool HybridStateValidityChecker::noCollision
 (
-const robot_state::RobotState& rstate
+const robot_state::RobotState& rstate,
+const std::string& planningGroup,
+bool needleInteraction
 ) const
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
@@ -382,6 +384,38 @@ const robot_state::RobotState& rstate
   collision_request.contacts = true;
   collision_detection::CollisionResult collision_result;
   planning_scene_->checkCollision(collision_request, collision_result, rstate);
+
+  if (!needleInteraction && (collision_result.contacts.size() < 3))
+  {
+    collision_detection::AllowedCollisionMatrix acm = planning_scene_->getAllowedCollisionMatrix();
+    const std::string psm = (planningGroup == "psm_one") ? "PSM1" : "PSM2";
+    collision_detection::CollisionResult::ContactMap::const_iterator it;
+    for (it = collision_result.contacts.begin(); it != collision_result.contacts.end(); ++it)
+    {
+      if (it->first.first == m_ObjectName)
+      {
+        if (it->first.second == psm + "_tool_wrist_sca_ee_link_1" || it->first.second == psm + "_tool_wrist_sca_ee_link_2")
+          acm.setEntry(it->first.first, it->first.second, true);
+      }
+      else if (it->first.second == m_ObjectName)
+      {
+        if (it->first.first == psm + "_tool_wrist_sca_ee_link_1" || it->first.first == psm + "_tool_wrist_sca_ee_link_2")
+          acm.setEntry(it->first.first, it->first.second, true);
+      }
+    }
+    collision_result.clear();
+    planning_scene_->checkCollision(collision_request, collision_result, rstate, acm);
+  }
+  if (collision_result.collision)
+  {
+    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
   bool no_collision = !collision_result.collision;
 
   auto finish_ik = std::chrono::high_resolution_clock::now();

@@ -502,7 +502,11 @@ const int targetState
                                                                   m_pSupportArmGroup,
                                                                   jntTrajSeg,
                                                                   time);
-    if (!moveForward)
+    if (!moveForward && targetState != (m_HandoffJntTraj.size()+1))
+    {
+      return true;  // if either kinematics or collision results in failure, but not bring to final goal state
+    }
+    else if (!moveForward && targetState == (m_HandoffJntTraj.size()+1))
     {
       return false;
     }
@@ -542,7 +546,12 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     return true;
   }
 
-  return m_pHandoffPlanner->localPlanObjectTransit(currentNeedlePose, ithTraj, jntTrajectoryBtwStates);
+  m_pSupportArmGroup.reset(new psm_interface(m_pHandoffPlanner->m_pSlnPath->getState(ithTraj)->as<HybridObjectStateSpace::StateType>()->armIndex().value, m_NodeHandle));
+  if(!m_pSupportArmGroup)
+    return false;
+  std::vector<double> currentJointPosition;
+  m_pSupportArmGroup->get_fresh_position(currentJointPosition);
+  return m_pHandoffPlanner->localPlanObjectTransit(currentJointPosition, currentNeedlePose, ithTraj, jntTrajectoryBtwStates);
 }
 
 bool DavinciNeedleHandoffExecutionManager::perturbNeedlePose
@@ -555,19 +564,21 @@ const std::string& toSupportGroup
   {
     return false;
   }
+  const Eigen::Affine3d currentNeedlePose = updateNeedlePose();  // before opening jaw, remember current needle pose
   m_pSupportArmGroup.reset(new psm_interface(toSupportGroup, m_NodeHandle));
   m_pSupportArmGroup->control_jaw(0.5, 0.5);
   turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
 
-  const HybridObjectStateSpace::StateType* pNextState = m_pHandoffPlanner->m_pSlnPath->getState(ithTrajSeg + 1)->as<HybridObjectStateSpace::StateType>();
   Eigen::Affine3d idealNeedlePose;
+  const HybridObjectStateSpace::StateType* pNextState = m_pHandoffPlanner->m_pSlnPath->getState(ithTrajSeg + 1)->as<HybridObjectStateSpace::StateType>();
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pNextState, idealNeedlePose);
 
+  if (!currentNeedlePose.isApprox(idealNeedlePose, 1e-3))
+  {
+    idealNeedlePose = currentNeedlePose;
+  }
+
   double radToPerturb = m_UniformRealDistribution(m_Generator);
-  // if (m_BernoulliDistribution(m_Generator))
-  // {
-  //   radToPerturb = -0.1;
-  // }
   if (!m_NeedlePoseMd.perturbNeedlePose(radToPerturb, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
     return false;
 

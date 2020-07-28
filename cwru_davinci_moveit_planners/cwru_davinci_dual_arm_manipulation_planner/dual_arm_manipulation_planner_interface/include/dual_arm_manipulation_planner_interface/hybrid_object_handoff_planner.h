@@ -218,6 +218,7 @@ protected:
 
   bool localPlanObjectTransit
   (
+  const std::vector<double>& currentJointPosition,
   const Eigen::Affine3d& needlePose,
   const int ithTraj,
   MoveGroupJointTrajectory& jntTrajectoryBtwStates

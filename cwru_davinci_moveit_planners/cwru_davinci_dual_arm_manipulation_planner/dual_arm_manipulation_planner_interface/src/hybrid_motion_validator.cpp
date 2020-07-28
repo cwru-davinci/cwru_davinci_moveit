@@ -376,7 +376,7 @@ const std::string& planning_group
   hyStateSpace_->ik_solving_duration_ += elapsed;
 
   bool clear_path = false;
-  if (!((found_cartesian_path - 0.9) >= std::numeric_limits<double>::epsilon()))
+  if (!((found_cartesian_path - 0.8) >= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
   }
@@ -421,7 +421,7 @@ const std::string& planning_group
   setMimicJointPositions(ungrasped_state, planning_group);  // this line cannot be removed, as copyJointGroupPosition does not copy mimic joints's value
   ungrasped_state->update();
 
-  if (!noCollision(*ungrasped_state))
+  if (!noCollision(*ungrasped_state, planning_group, false))
     return false;
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
@@ -494,7 +494,7 @@ const std::string& planning_group
 
 
   bool clear_path = false;
-  if (!((found_cartesian_path - 0.9) >= std::numeric_limits<double>::epsilon()))
+  if (!((found_cartesian_path - 0.8) >= std::numeric_limits<double>::epsilon()))
   {
     return clear_path;
   }

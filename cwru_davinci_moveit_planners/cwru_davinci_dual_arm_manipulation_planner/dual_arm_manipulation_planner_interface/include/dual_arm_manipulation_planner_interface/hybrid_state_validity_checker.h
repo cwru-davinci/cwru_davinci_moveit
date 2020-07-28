@@ -137,7 +137,9 @@ public:
 
   bool noCollision
   (
-  const robot_state::RobotState& rstate
+  const robot_state::RobotState& rstate,
+  const std::string& planningGroup = "",
+  bool needleInteraction = true
   ) const;
 
   void noCollisionThread

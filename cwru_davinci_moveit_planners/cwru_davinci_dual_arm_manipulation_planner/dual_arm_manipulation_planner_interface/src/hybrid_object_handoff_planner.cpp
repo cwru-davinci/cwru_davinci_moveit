@@ -533,7 +533,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                     0.003,
                                                                     0.0);
 
-    bool order = true; // forward: true, backward: false
+  bool order = true; // forward: true, backward: false
   if (!(fabs(foundCartesianPath - 1.0) <= std::numeric_limits<double>::epsilon()))
   {
     *pRobotFromState = *pPreGraspRobotState;  // this will call RobotState copy() function make deep copy
@@ -547,7 +547,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                0.003,
                                                                0.0);
 
-    if (!((foundCartesianPath - 0.9) >= std::numeric_limits<double>::epsilon()))
+    if (!((foundCartesianPath - 0.8) >= std::numeric_limits<double>::epsilon()))
     {
       return false;
     }
@@ -719,7 +719,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
                                                                          0.003,
                                                                          0.0);
 
-  if (!((foundCartesianPath - 0.9) >= std::numeric_limits<double>::epsilon()))
+  if (!((foundCartesianPath - 0.8) >= std::numeric_limits<double>::epsilon()))
   {
     return false;
   }
@@ -741,6 +741,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
 
 bool HybridObjectHandoffPlanner::localPlanObjectTransit
 (
+const std::vector<double>& currentJointPosition,
 const Eigen::Affine3d& needlePose,
 const int ithTraj,
 MoveGroupJointTrajectory& jntTrajectoryBtwStates
@@ -749,6 +750,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   // Decide new collision free plan by partial planning
   ob::ScopedState<HybridObjectStateSpace> pHyFromState(m_pHyStateSpace);  // make a copy otherwise local modification will apply globally
   m_pHyStateSpace->copyState(pHyFromState.get(), m_pSlnPath->getState(ithTraj));
+  m_pHyStateSpace->setJointValues(currentJointPosition, pHyFromState.get());
   m_pHyStateSpace->eigen3dToSE3(needlePose, pHyFromState.get());
 
   ob::ScopedState<HybridObjectStateSpace> pHyToState(m_pHyStateSpace);
