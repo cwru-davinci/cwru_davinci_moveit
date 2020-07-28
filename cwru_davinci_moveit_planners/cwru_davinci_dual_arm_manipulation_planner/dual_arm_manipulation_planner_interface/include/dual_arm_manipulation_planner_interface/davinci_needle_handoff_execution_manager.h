@@ -175,6 +175,12 @@ private:
   int lastHandoffTrajSeg
   (
   );
+
+  double distanceBtwTwoRobotStates
+  (
+  const HybridObjectStateSpace::StateType* currentHyState,
+  const std::vector<double>& currentJointPosition
+  );
 };
 }
 

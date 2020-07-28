@@ -385,7 +385,7 @@ bool needleInteraction
   collision_detection::CollisionResult collision_result;
   planning_scene_->checkCollision(collision_request, collision_result, rstate);
 
-  if (!needleInteraction && (collision_result.contacts.size() < 3))
+  if (!needleInteraction && (collision_result.contacts.size() > 0 && collision_result.contacts.size() < 3))
   {
     collision_detection::AllowedCollisionMatrix acm = planning_scene_->getAllowedCollisionMatrix();
     const std::string psm = (planningGroup == "psm_one") ? "PSM1" : "PSM2";

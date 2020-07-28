@@ -107,10 +107,11 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
-      if (!correctObjectTransit(i, m_HandoffJntTraj[i]))
-      {
-        return false;
-      }
+      // if (!correctObjectTransit(i, m_HandoffJntTraj[i]))
+      // {
+      //   return false;
+      // }
+      correctObjectTransit(i, m_HandoffJntTraj[i]);
 
       m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(m_HandoffJntTraj[i][2].second.begin()->first));
       m_pMoveItSupportArmGroupInterf->detachObject(m_ObjectName);
@@ -193,6 +194,14 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         }
       }
       ROS_INFO("DavinciNeedleHandoffExecutionManager: the number %d trajectory has been executed", (int)i);
+
+      // after handoff motion, correct needle pose once
+      m_pSupportArmGroup.reset(new psm_interface(toSupportGroup, m_NodeHandle));
+      if(!correctObjectTransfer(i + 1) && (i == m_HandoffJntTraj.size()))
+      {
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+        return false;
+      }
     }
   }
 
@@ -540,18 +549,30 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(
     m_pHandoffPlanner->m_pSlnPath->getState(ithTraj + 1)->as<HybridObjectStateSpace::StateType>(), desNeedlePose);
 
+  const HybridObjectStateSpace::StateType* currentHyState = m_pHandoffPlanner->m_pSlnPath->getState(ithTraj)->as<HybridObjectStateSpace::StateType>();
+
+  m_pSupportArmGroup.reset(new psm_interface(currentHyState->armIndex().value, m_NodeHandle));
+  if(!m_pSupportArmGroup)
+  {
+    return false;
+  }
+  std::vector<double> currentJointPosition;
+  m_pSupportArmGroup->get_fresh_position(currentJointPosition);
+
   const Eigen::Affine3d& currentNeedlePose = updateNeedlePose();
-  if (currentNeedlePose.isApprox(desNeedlePose, 1e-3))
+  if (currentNeedlePose.isApprox(desNeedlePose, 1e-3) && (distanceBtwTwoRobotStates(currentHyState, currentJointPosition) < 1e-1))
   {
     return true;
   }
 
-  m_pSupportArmGroup.reset(new psm_interface(m_pHandoffPlanner->m_pSlnPath->getState(ithTraj)->as<HybridObjectStateSpace::StateType>()->armIndex().value, m_NodeHandle));
-  if(!m_pSupportArmGroup)
+  const MoveGroupJointTrajectory temp = jntTrajectoryBtwStates;  // make a copy in case localPlanObjectTransit fails
+  if(!m_pHandoffPlanner->localPlanObjectTransit(currentJointPosition, currentNeedlePose, ithTraj, jntTrajectoryBtwStates))
+  {
+    jntTrajectoryBtwStates = temp;
     return false;
-  std::vector<double> currentJointPosition;
-  m_pSupportArmGroup->get_fresh_position(currentJointPosition);
-  return m_pHandoffPlanner->localPlanObjectTransit(currentJointPosition, currentNeedlePose, ithTraj, jntTrajectoryBtwStates);
+  }
+
+  return true;
 }
 
 bool DavinciNeedleHandoffExecutionManager::perturbNeedlePose
@@ -598,4 +619,22 @@ int DavinciNeedleHandoffExecutionManager::lastHandoffTrajSeg
   }
 
   return 0;
+}
+
+double DavinciNeedleHandoffExecutionManager::distanceBtwTwoRobotStates
+(
+const HybridObjectStateSpace::StateType* currentHyState,
+const std::vector<double>& currentJointPosition
+)
+{
+  std::vector<double> idealJointPosition;
+  m_pHandoffPlanner->m_pHyStateSpace->copyJointValues(currentHyState, idealJointPosition);
+
+  double diffSum = 0.0;
+  for (std::size_t i = 0; i < currentJointPosition.size(); ++i)
+  {
+    diffSum += fabs(currentJointPosition[i] - idealJointPosition[i]);
+  }
+
+  return diffSum;
 }

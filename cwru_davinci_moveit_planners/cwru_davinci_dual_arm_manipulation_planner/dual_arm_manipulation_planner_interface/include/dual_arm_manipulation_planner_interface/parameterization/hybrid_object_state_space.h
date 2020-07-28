@@ -310,6 +310,12 @@ public:
   StateType* state
   ) const;
 
+  void copyJointValues
+  (
+  const StateType* state,
+  std::vector<double>& joint_values
+  ) const;
+
   int getJointSpaceDimension() const;
 
   virtual bool isHybrid() const;

@@ -352,6 +352,23 @@ StateType* state
   return true;
 }
 
+void HybridObjectStateSpace::copyJointValues
+(
+const StateType* state,
+std::vector<double>& joint_values
+) const
+{
+  const ompl::base::RealVectorStateSpace::StateType& joint_variable = state->jointVariables();
+  int joint_space_size = components_[3]->as<RealVectorStateSpace>()->getDimension();
+  joint_values.clear();
+  joint_values.resize(joint_space_size);
+
+  for (std::size_t i = 0; i < joint_space_size; ++i)
+  {
+    joint_values[i] = joint_variable[i];
+  }
+}
+
 int HybridObjectStateSpace::getJointSpaceDimension() const
 {
   return components_[3]->as<RealVectorStateSpace>()->getDimension();
