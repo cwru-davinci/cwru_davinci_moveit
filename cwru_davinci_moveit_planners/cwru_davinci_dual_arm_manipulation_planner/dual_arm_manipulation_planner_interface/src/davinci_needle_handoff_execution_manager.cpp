@@ -57,7 +57,8 @@ const std::string& robotDescription
    m_ObjectName(objectName),
    m_RobotModelLoader(robotDescription),
    m_NeedlePoseMd(nodeHandle),
-   m_UniformRealDistribution(-0.2, 0.2)
+   m_UniformRealDistribution(-0.2, 0.2),
+   m_PiecewiseDistribution(m_Intervals.begin(), m_Intervals.end(), m_Weights.begin())
 {
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
 
@@ -609,7 +610,7 @@ const std::string& toSupportGroup
     idealNeedlePose = currentNeedlePose;
   }
 
-  double radToPerturb = m_UniformRealDistribution(m_RandSeed);
+  double radToPerturb = m_PiecewiseDistribution(m_RandSeed);
   if (!m_NeedlePoseMd.perturbNeedlePose(radToPerturb, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
     return false;
 

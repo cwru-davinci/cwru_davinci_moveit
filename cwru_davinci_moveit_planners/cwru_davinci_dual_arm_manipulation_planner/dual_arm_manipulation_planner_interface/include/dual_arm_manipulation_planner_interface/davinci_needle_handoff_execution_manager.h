@@ -102,6 +102,9 @@ private:
   std::bernoulli_distribution                            m_BernoulliDistribution;
   std::default_random_engine                             m_Generator;
   std::uniform_real_distribution<double>                 m_UniformRealDistribution;
+  std::array<double,4>                                   m_Intervals{{-0.2, -0.1, 0.1, 0.2}};
+  std::array<double,3>                                   m_Weights{{5.0, 1.0, 5.0}};
+  std::piecewise_constant_distribution<double>           m_PiecewiseDistribution;
   std::random_device                                     m_RandSeed;
 
 protected:
