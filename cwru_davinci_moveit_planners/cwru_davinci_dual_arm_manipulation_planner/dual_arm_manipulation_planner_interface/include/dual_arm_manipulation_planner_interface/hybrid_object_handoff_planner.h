@@ -230,7 +230,8 @@ protected:
   (
   const Eigen::Affine3d& currentNeedlePose,
   const Eigen::Affine3d& targetNeedlePose,
-  const PSMInterfacePtr& pSupportArmGroup,
+  const std::vector<double>& currentJointPosition,
+  const std::string& supportGroup,
   MoveGroupJointTrajectorySegment& jntTrajSeg,
   double& time
   );

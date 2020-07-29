@@ -102,6 +102,7 @@ private:
   std::bernoulli_distribution                            m_BernoulliDistribution;
   std::default_random_engine                             m_Generator;
   std::uniform_real_distribution<double>                 m_UniformRealDistribution;
+  std::random_device                                     m_RandSeed;
 
 protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;

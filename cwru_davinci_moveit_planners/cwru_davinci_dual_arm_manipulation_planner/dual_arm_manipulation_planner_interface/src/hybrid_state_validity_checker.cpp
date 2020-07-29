@@ -392,6 +392,7 @@ bool needleInteraction
     collision_detection::CollisionResult::ContactMap::const_iterator it;
     for (it = collision_result.contacts.begin(); it != collision_result.contacts.end(); ++it)
     {
+      ROS_INFO("Handoff Replanning found contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
       if (it->first.first == m_ObjectName)
       {
         if (it->first.second == psm + "_tool_wrist_sca_ee_link_1" || it->first.second == psm + "_tool_wrist_sca_ee_link_2")

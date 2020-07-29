@@ -777,15 +777,12 @@ bool HybridObjectHandoffPlanner::localPlanObjectTransfer
 (
 const Eigen::Affine3d& currentNeedlePose,
 const Eigen::Affine3d& targetNeedlePose,
-const PSMInterfacePtr& pSupportArmGroup,
+const std::vector<double>& currentJointPosition,
+const std::string& supportGroup,
 MoveGroupJointTrajectorySegment& jntTrajSeg,
 double& time
 )
 {
-  std::vector<double> currentJointPosition;
-  pSupportArmGroup->get_fresh_position(currentJointPosition);
-  const std::string& supportGroup = pSupportArmGroup->get_psm_name();
-
   const robot_state::RobotStatePtr pCurrentRobotState = std::make_shared<robot_state::RobotState>(m_pHyStateValidator->robotModel());
   if (!pCurrentRobotState)
   {

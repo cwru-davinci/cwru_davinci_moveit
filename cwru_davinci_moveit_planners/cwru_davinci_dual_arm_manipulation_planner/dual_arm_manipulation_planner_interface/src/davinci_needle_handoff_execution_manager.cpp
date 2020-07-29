@@ -101,17 +101,16 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       m_pSupportArmGroup.reset(new psm_interface(jntTrajSeg.begin()->first, m_NodeHandle));
       if(!correctObjectTransfer(i + 1))
       {
-        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute needle transfer trajectory");
         return false;
       }
     }
     else if (m_HandoffJntTraj[i].size() == 4)  // object Transfer
     {
-      // if (!correctObjectTransit(i, m_HandoffJntTraj[i]))
-      // {
-      //   return false;
-      // }
-      correctObjectTransit(i, m_HandoffJntTraj[i]);
+      if (!correctObjectTransit(i, m_HandoffJntTraj[i]))
+      {
+        return false;
+      }
 
       m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(m_HandoffJntTraj[i][2].second.begin()->first));
       m_pMoveItSupportArmGroupInterf->detachObject(m_ObjectName);
@@ -502,21 +501,29 @@ const int targetState
   Eigen::Affine3d targetNeedlePose;
   m_pHandoffPlanner->m_pHyStateSpace->se3ToEigen3d(pTargetHyState, targetNeedlePose);
 
+  const std::string supportGroup = m_pSupportArmGroup->get_psm_name();
+  std::vector<double> currentJointPosition;
+
   while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
   {
     MoveGroupJointTrajectorySegment jntTrajSeg;
     double time = 0.0;
+    m_pSupportArmGroup->get_fresh_position(currentJointPosition);
+
     bool moveForward = m_pHandoffPlanner->localPlanObjectTransfer(currentNeedlePose,
                                                                   targetNeedlePose,
-                                                                  m_pSupportArmGroup,
+                                                                  currentJointPosition,
+                                                                  supportGroup,
                                                                   jntTrajSeg,
                                                                   time);
     if (!moveForward && targetState != (m_HandoffJntTraj.size()+1))
     {
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: Needle transfer partial correction failed, keep executing the rest of trajectories");
       return true;  // if either kinematics or collision results in failure, but not bring to final goal state
     }
     else if (!moveForward && targetState == (m_HandoffJntTraj.size()+1))
     {
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: Needle transfer partial correction failed, stops due to no more further step");
       return false;
     }
 
@@ -525,12 +532,13 @@ const int targetState
     const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
     if (!m_pSupportArmGroup->execute_trajectory_t(jntTra, jawPosition, time))
     {
-      ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
+      ROS_INFO("DavinciNeedleHandoffExecutionManager: Failed to execute partial corrected needle transfer trajectory");
       return false;
     }
     currentNeedlePose = updateNeedlePose();
   }
 
+  ROS_INFO("DavinciNeedleHandoffExecutionManager: Needle transfer correction succeeded.");
   return true;
 }
 
@@ -569,9 +577,11 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   if(!m_pHandoffPlanner->localPlanObjectTransit(currentJointPosition, currentNeedlePose, ithTraj, jntTrajectoryBtwStates))
   {
     jntTrajectoryBtwStates = temp;
-    return false;
+    ROS_INFO("DavinciNeedleHandoffExecutionManager: Handoff correction failed, keep using original plan");
+    return true;
   }
 
+  ROS_INFO("DavinciNeedleHandoffExecutionManager: Handoff correction succeeded, start to use new plan");
   return true;
 }
 
@@ -599,7 +609,7 @@ const std::string& toSupportGroup
     idealNeedlePose = currentNeedlePose;
   }
 
-  double radToPerturb = m_UniformRealDistribution(m_Generator);
+  double radToPerturb = m_UniformRealDistribution(m_RandSeed);
   if (!m_NeedlePoseMd.perturbNeedlePose(radToPerturb, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
     return false;
 
