@@ -116,7 +116,7 @@ public:
   const std::string& planning_group
   ) const;
 
-  inline const robot_model::RobotModelConstPtr& robotModel() const
+  const robot_model::RobotModelConstPtr& robotModel() const
   {
     return kmodel_;
   }
@@ -148,7 +148,7 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-  inline const std::string& objectName
+  const std::string& objectName
   (
   ) const
   {

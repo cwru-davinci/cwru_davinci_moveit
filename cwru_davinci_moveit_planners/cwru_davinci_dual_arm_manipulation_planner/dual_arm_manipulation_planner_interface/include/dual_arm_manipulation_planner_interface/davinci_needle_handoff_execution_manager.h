@@ -90,6 +90,13 @@ public:
   (
   );
 
+  void resetPlannerStatus
+  (
+  )
+  {
+    m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
+  }
+
   const Eigen::Affine3d& updateNeedlePose
   (
   );

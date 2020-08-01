@@ -404,7 +404,7 @@ public:
   const StateType* state2
   ) const;
 
-  inline const std::vector<cwru_davinci_grasp::GraspInfo>& graspTransformations() const
+  const std::vector<cwru_davinci_grasp::GraspInfo>& graspTransformations() const
   {
     return m_PossibleGrasps;
   }
