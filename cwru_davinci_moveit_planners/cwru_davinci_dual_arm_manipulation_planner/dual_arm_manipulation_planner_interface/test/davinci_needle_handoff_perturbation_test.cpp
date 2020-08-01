@@ -73,8 +73,8 @@ std::vector<ob::ScopedState<HybridObjectStateSpace>>& goalStatesVec
     while (!is_gs_valid)
     {
       stateSampler->sampleUniform(goal.get());
-      goal->graspIndex().value = 147;
-      goal->armIndex().value = 1;
+      // goal->graspIndex().value = 147;
+      // goal->armIndex().value = 1;
       goal->setJointsComputed(false);
       is_gs_valid = hybridPlannerSpaceInforPtr->isValid(goal.get());
     }
