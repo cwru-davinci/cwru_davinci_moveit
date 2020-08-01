@@ -66,6 +66,9 @@ const std::string& robotDescription
     m_NodeHandle.subscribe("/updated_needle_pose", 1, &DavinciNeedleHandoffExecutionManager::needlePoseCallBack, this);
 
   m_PfGraspClient = m_NodeHandle.serviceClient<uv_msgs::pf_grasp>("/pf_grasp");
+
+  m_PSMOneStickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1");
+  m_PSMTwoStickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2_tool_wrist_sca_ee_link_1");
 }
 
 DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
@@ -280,8 +283,32 @@ const std::vector<double>& goalJointPosition
   return true;
 }
 
+bool DavinciNeedleHandoffExecutionManager::setupStartAndGoalStateInPlanner
+(
+const ompl::base::ScopedState<HybridObjectStateSpace>& start,
+const ompl::base::ScopedState<HybridObjectStateSpace>& goal
+)
+{
+  if (!m_pHandoffPlanner)
+  {
+    return false;
+  }
+
+  m_pHandoffPlanner->m_pRRTConnectPlanner->clear();
+  m_pHandoffPlanner->setupProblemDefinition(start.get(), goal.get());
+  m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
+  m_pHandoffPlanner->m_pRRTConnectPlanner->setProblemDefinition(m_pHandoffPlanner->m_pProblemDef);
+
+  if (!m_pHandoffPlanner->m_pRRTConnectPlanner->isSetup())
+  {
+    m_pHandoffPlanner->m_pRRTConnectPlanner->setup();
+  }
+  return true;
+}
+
 bool DavinciNeedleHandoffExecutionManager::initializePlanner
 (
+bool withStartAndGoalState
 )
 {
   if (!m_NodeHandlePrivate.hasParam("se3_bounds"))
@@ -390,8 +417,13 @@ bool DavinciNeedleHandoffExecutionManager::initializePlanner
                                            m_RobotModelLoader.getModel(),
                                            objectName);
 
-  m_pHandoffPlanner->m_pHyStateSpace->enforceBounds(m_pHyGoalState);
-  m_pHandoffPlanner->setupProblemDefinition(m_pHyStartState, m_pHyGoalState);
+  if (withStartAndGoalState)
+  {
+    m_pHandoffPlanner->setupProblemDefinition(m_pHyStartState, m_pHyGoalState);
+    m_pHandoffPlanner->m_pHyStateSpace->enforceBounds(m_pHyGoalState);
+  }
+
+  m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
   m_pHandoffPlanner->setupPlanner(maxDistance);
   return true;
 }
@@ -416,14 +448,9 @@ bool DavinciNeedleHandoffExecutionManager::turnOnStickyFinger
 const std::string& supportArmGroup
 )
 {
-  ros::ServiceClient stickyFingerClient;
-  (supportArmGroup == "psm_one") ?
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1") :
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2_tool_wrist_sca_ee_link_1");
-
   std_srvs::SetBool graspCommand;
   graspCommand.request.data = true;
-  stickyFingerClient.call(graspCommand);
+  (supportArmGroup == "psm_one") ? m_PSMOneStickyFingerClient.call(graspCommand) : m_PSMTwoStickyFingerClient.call(graspCommand);
 }
 
 bool DavinciNeedleHandoffExecutionManager::turnOffStickyFinger
@@ -431,14 +458,9 @@ bool DavinciNeedleHandoffExecutionManager::turnOffStickyFinger
 const std::string& supportArmGroup
 )
 {
-  ros::ServiceClient stickyFingerClient;
-  (supportArmGroup == "psm_one") ?
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1") :
-  stickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2_tool_wrist_sca_ee_link_1");
-
   std_srvs::SetBool graspCommand;
   graspCommand.request.data = false;
-  stickyFingerClient.call(graspCommand);
+  (supportArmGroup == "psm_one") ? m_PSMOneStickyFingerClient.call(graspCommand) : m_PSMTwoStickyFingerClient.call(graspCommand);
 }
 
 void DavinciNeedleHandoffExecutionManager::needlePoseCallBack

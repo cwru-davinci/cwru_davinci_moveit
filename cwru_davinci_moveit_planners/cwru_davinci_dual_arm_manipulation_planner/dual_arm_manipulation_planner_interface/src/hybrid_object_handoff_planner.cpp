@@ -71,6 +71,8 @@ const double solveTime
   if (m_pRRTConnectPlanner && m_pRRTConnectPlanner->isSetup())
   {
     auto startTs = std::chrono::high_resolution_clock::now();
+    m_pProblemDef->print(std::cout);
+    m_pSpaceInfor->printSettings(std::cout);
 
     m_Solved = m_pRRTConnectPlanner->ob::Planner::solve(solveTime);
     auto finish = std::chrono::high_resolution_clock::now();
@@ -100,6 +102,7 @@ PathJointTrajectory& handoffPathJntTraj
 {
   if (!m_Solved || !m_pProblemDef->hasExactSolution())
   {
+    m_pRRTConnectPlanner->clear();
     return false;
   }
 
@@ -108,6 +111,7 @@ PathJointTrajectory& handoffPathJntTraj
 
   if(!m_pSlnPath)
   {
+    m_pRRTConnectPlanner->clear();
     return false;
   }
 
@@ -137,10 +141,13 @@ PathJointTrajectory& handoffPathJntTraj
     MoveGroupJointTrajectory jntTrajectoryBtwStates;
     if (!connectStates(constSlnStates[i], constSlnStates[i + 1], jntTrajectoryBtwStates))
     {
+      m_pRRTConnectPlanner->clear();
       return false;
     }
     handoffPathJntTraj[i] = jntTrajectoryBtwStates;
   }
+
+  m_pRRTConnectPlanner->clear();
   return true;
 }
 
@@ -248,7 +255,10 @@ const double maxDistance
   }
   m_pRRTConnectPlanner->setProblemDefinition(m_pProblemDef);
   m_pRRTConnectPlanner->setRange(maxDistance);
-  m_pRRTConnectPlanner->setup();
+  if (!m_pRRTConnectPlanner->isSetup())
+  {
+    m_pRRTConnectPlanner->setup();
+  }
 }
 
 bool HybridObjectHandoffPlanner::connectStates

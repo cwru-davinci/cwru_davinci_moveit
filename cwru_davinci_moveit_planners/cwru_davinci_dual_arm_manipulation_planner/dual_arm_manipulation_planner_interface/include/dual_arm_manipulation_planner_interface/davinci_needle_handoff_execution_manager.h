@@ -86,15 +86,36 @@ public:
   const std::vector<double>& goalJointPosition
   );
 
+  bool setupStartAndGoalStateInPlanner
+  (
+  const ompl::base::ScopedState<HybridObjectStateSpace>& start,
+  const ompl::base::ScopedState<HybridObjectStateSpace>& goal
+  );
+
   bool initializePlanner
   (
+  bool withStartAndGoalState = true
   );
+
+  bool initializePlannerWithoutState
+  (
+  )
+  {
+    return initializePlanner(false);
+  }
 
   void resetPlannerStatus
   (
   )
   {
     m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
+  }
+
+  const ompl::base::SpaceInformationPtr& plannerSpaceInformation
+  (
+  )
+  {
+    return m_pHandoffPlanner->m_pSpaceInfor;
   }
 
   const Eigen::Affine3d& updateNeedlePose
@@ -127,6 +148,8 @@ protected:
 
   ros::Subscriber                                                 m_NeedlePoseSub;
   ros::ServiceClient                                              m_PfGraspClient;
+  ros::ServiceClient                                              m_PSMOneStickyFingerClient;
+  ros::ServiceClient                                              m_PSMTwoStickyFingerClient;
 
   Eigen::Affine3d                                                 m_NeedlePose;
 
