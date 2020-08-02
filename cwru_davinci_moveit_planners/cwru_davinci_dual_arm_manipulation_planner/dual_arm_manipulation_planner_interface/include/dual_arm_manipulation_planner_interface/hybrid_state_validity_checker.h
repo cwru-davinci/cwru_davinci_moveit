@@ -126,20 +126,23 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-  static bool isRobotStateValid
+  bool isRobotStateValid
   (
   const planning_scene::PlanningScene& planning_scene,
   const std::string& planning_group,
+  bool needleInteraction,
+  bool verbose,
   robot_state::RobotState* state,
   const robot_state::JointModelGroup* group,
   const double* ik_solution
-  );
+  ) const;
 
   bool noCollision
   (
   const robot_state::RobotState& rstate,
   const std::string& planningGroup = "",
-  bool needleInteraction = true
+  bool needleInteraction = true,
+  bool verbose = false
   ) const;
 
   void noCollisionThread

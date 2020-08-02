@@ -272,9 +272,11 @@ const std::string& planning_group
 
   auto start_ik = std::chrono::high_resolution_clock::now();
 
-  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&HybridMotionValidator::isRobotStateValid,
+                                                                                  this,
                                                                                   boost::cref(*planning_scene_),
-                                                                                  boost::cref(planning_group), _1, _2, _3);
+                                                                                  boost::cref(planning_group),
+                                                                                  true, true, _1, _2, _3);
   bool found_ik = false;
   double distance = 0.01;
   while (distance <= 0.015)
@@ -358,9 +360,11 @@ const std::string& planning_group
   const Eigen::Affine3d tool_tip_home = start_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
-  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&HybridStateValidityChecker::isRobotStateValid,
+                                                                                  this,
                                                                                   boost::cref(*planning_scene_),
-                                                                                  boost::cref(planning_group), _1, _2, _3);
+                                                                                  boost::cref(planning_group),
+                                                                                  true, true, _1, _2, _3);
 
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
@@ -421,16 +425,18 @@ const std::string& planning_group
   setMimicJointPositions(ungrasped_state, planning_group);  // this line cannot be removed, as copyJointGroupPosition does not copy mimic joints's value
   ungrasped_state->update();
 
-  if (!noCollision(*ungrasped_state, planning_group, false))
+  if (!noCollision(*ungrasped_state, planning_group, false, true))
     return false;
   std::vector<robot_state::RobotStatePtr> traj;
   double translation_step_max = 0.001, rotation_step_max = 0.0;
   moveit::core::MaxEEFStep max_step(translation_step_max, rotation_step_max);
   moveit::core::JumpThreshold jump_threshold;
 
-  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&HybridStateValidityChecker::isRobotStateValid,
+                                                                                  this,
                                                                                   boost::cref(*planning_scene_),
-                                                                                  boost::cref(planning_group), _1, _2, _3);
+                                                                                  boost::cref(planning_group),
+                                                                                  false, true, _1, _2, _3);
   double found_cartesian_path = ungrasped_state->computeCartesianPath(ungrasped_state->getJointModelGroup(planning_group),
                                                                       traj,
                                                                       tip_link,
@@ -475,9 +481,11 @@ const std::string& planning_group
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
-  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&HybridStateValidityChecker::isRobotStateValid,
+                                                                                  this,
                                                                                   boost::cref(*planning_scene_),
-                                                                                  boost::cref(planning_group), _1, _2, _3);
+                                                                                  boost::cref(planning_group),
+                                                                                  true, true, _1, _2, _3);
 
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,
@@ -519,9 +527,11 @@ const std::string& planning_group
   const Eigen::Affine3d tool_tip_pose = goal_state.getGlobalLinkTransform(tip_link);
 
   std::vector<robot_state::RobotStatePtr> traj;
-  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&isRobotStateValid,
+  robot_state::GroupStateValidityCallbackFn stateValidityCallbackFn = boost::bind(&HybridStateValidityChecker::isRobotStateValid,
+                                                                                  this,
                                                                                   boost::cref(*planning_scene_),
-                                                                                  boost::cref(planning_group), _1, _2, _3);
+                                                                                  boost::cref(planning_group),
+                                                                                  true, true, _1, _2, _3);
 
   double found_cartesian_path = cp_start_state->computeCartesianPath(cp_start_state->getJointModelGroup(planning_group),
                                                                      traj,

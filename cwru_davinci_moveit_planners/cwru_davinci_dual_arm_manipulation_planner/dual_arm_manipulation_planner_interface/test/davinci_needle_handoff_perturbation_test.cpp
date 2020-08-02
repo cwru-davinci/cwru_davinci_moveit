@@ -200,19 +200,24 @@ int main(int argc, char** argv)
     const std::string& initialArm = (startStatesVec[i]->armIndex().value == 1) ? "psm_one" : "psm_two";
     pSimpleGrasp->changePlanningGroup(initialArm);
 
-    if (!pSimpleGrasp->pickNeedle(objectName, cwru_davinci_grasp::NeedlePickMode::RANDOM))
+    // execute needle grasping first
+    if (!pSimpleGrasp->selectPickNeedle(objectName, graspPoses[startStatesVec[i]->graspIndex().value]))
     {
-      ROS_INFO("%s: needle picked up in RANDOM way", nodeHandle.getNamespace().c_str());
-      return -1;
+      ROS_INFO("%s: did not pick needle up in SELECT way", nodeHandle.getNamespace().c_str());
+      if (!pSimpleGrasp->pickNeedle(objectName, cwru_davinci_grasp::NeedlePickMode::RANDOM))
+      {
+        ROS_INFO("%s: did not pick needle up in RANDOM way", nodeHandle.getNamespace().c_str());
+        return -1;
+      }
+      ROS_INFO("%s: needle is picked up in RANDOM way", nodeHandle.getNamespace().c_str());
+      cwru_davinci_grasp::GraspInfo initialGraspInfo = pSimpleGrasp->getSelectedGraspInfo();
+      initialGraspInfo = graspPoses[initialGraspInfo.graspParamInfo.grasp_id];
+      startStatesVec[i]->graspIndex().value = initialGraspInfo.graspParamInfo.grasp_id;
     }
+    ROS_INFO("%s: needle is picked up in SELECT way", nodeHandle.getNamespace().c_str());
 
     ros::Duration(1.0).sleep();
     ros::spinOnce();
-
-    // execute needle grasping first
-    cwru_davinci_grasp::GraspInfo initialGraspInfo = pSimpleGrasp->getSelectedGraspInfo();
-    initialGraspInfo = graspPoses[initialGraspInfo.graspParamInfo.grasp_id];
-    startStatesVec[i]->graspIndex().value = initialGraspInfo.graspParamInfo.grasp_id;
 
     geometry_msgs::Pose needlePose = pSimpleGrasp->getNeedlePose().pose;
     startStatesVec[i]->se3State().setXYZ(needlePose.position.x,
@@ -244,6 +249,15 @@ int main(int argc, char** argv)
       ROS_ERROR("Davinci handoff perturbation test failed at %dth trial, failed at EXECUTING handoff trajectory", i);
       return -1;
     }
+
+    char answer;
+    std::cout << "Continue (y/n)? ";
+    std::cin >> answer;
+    double okToMove = (answer == 'y') ? true : false;
+    if (!okToMove)
+      break;
+
+    ros::Duration(2.0).sleep();
   }
 
   ros::shutdown();

@@ -126,7 +126,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = safePlaceToPreGraspJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.1))
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -144,7 +144,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
         double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.1))
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.05))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -167,7 +167,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
         double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.1))
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.05))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -190,7 +190,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.1))
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -554,7 +554,7 @@ const int targetState
     double jawPosition = 0.0;
     m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
     const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-    if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.1))
+    if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
     {
       ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute partial corrected needle transfer trajectory");
       return false;

@@ -374,7 +374,8 @@ bool HybridStateValidityChecker::noCollision
 (
 const robot_state::RobotState& rstate,
 const std::string& planningGroup,
-bool needleInteraction
+bool needleInteraction,
+bool verbose
 ) const
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
@@ -407,7 +408,7 @@ bool needleInteraction
     collision_result.clear();
     planning_scene_->checkCollision(collision_request, collision_result, rstate, acm);
   }
-  if (collision_result.collision)
+  if (collision_result.collision && verbose)
   {
     ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
     collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
@@ -417,13 +418,12 @@ bool needleInteraction
       ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
     }
   }
-  bool no_collision = !collision_result.collision;
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->collision_checking_duration_ += elapsed;
 
-  return no_collision;
+  return !collision_result.collision;
 }
 
 void HybridStateValidityChecker::noCollisionThread
@@ -463,10 +463,12 @@ bool HybridStateValidityChecker::isRobotStateValid
 (
 const planning_scene::PlanningScene& planning_scene,
 const std::string& planning_group,
+bool needleInteraction,
+bool verbose,
 robot_state::RobotState* state,
 const robot_state::JointModelGroup* group,
 const double* ik_solution
-)
+) const
 {
   state->setJointGroupPositions(group, ik_solution);
   const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
@@ -480,5 +482,44 @@ const double* ik_solution
     return false;
   }
 
-  return !planning_scene.isStateColliding(*state, "", true);
+  collision_detection::CollisionRequest collision_request;
+  collision_request.contacts = true;
+  collision_detection::CollisionResult collision_result;
+  planning_scene.checkCollision(collision_request, collision_result, *state);
+
+  if (!needleInteraction && (collision_result.contacts.size() > 0 && collision_result.contacts.size() < 3))
+  {
+    collision_detection::AllowedCollisionMatrix acm = planning_scene.getAllowedCollisionMatrix();
+    const std::string psm = (planning_group == "psm_one") ? "PSM1" : "PSM2";
+    collision_detection::CollisionResult::ContactMap::const_iterator it;
+    for (it = collision_result.contacts.begin(); it != collision_result.contacts.end(); ++it)
+    {
+      ROS_INFO("Handoff Replanning found contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+      if (it->first.first == m_ObjectName)
+      {
+        if (it->first.second == psm + "_tool_wrist_sca_ee_link_1" || it->first.second == psm + "_tool_wrist_sca_ee_link_2")
+          acm.setEntry(it->first.first, it->first.second, true);
+      }
+      else if (it->first.second == m_ObjectName)
+      {
+        if (it->first.first == psm + "_tool_wrist_sca_ee_link_1" || it->first.first == psm + "_tool_wrist_sca_ee_link_2")
+          acm.setEntry(it->first.first, it->first.second, true);
+      }
+    }
+    collision_result.clear();
+    planning_scene.checkCollision(collision_request, collision_result, *state, acm);
+  }
+
+  if (collision_result.collision && verbose)
+  {
+    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
+
+  return !collision_result.collision;
 }

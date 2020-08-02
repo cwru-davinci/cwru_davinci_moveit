@@ -4,6 +4,6 @@
         <rosparam command="load" file="$(find cwru_davinci_dual_arm_manipulation_planner)/dual_arm_manipulation_planner_interface/config/hardware_handoff_planning_inputs.yaml"/>
         <rosparam command="load" file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/config/ompl_planning.yaml"/>
         <param name="/planning_plugin" value="ompl_interface/OMPLPlanner"/>
-        <param name="num_test" type="int" value="3"/>
+        <param name="num_test" type="int" value="20"/>
     </node>
 </launch>
