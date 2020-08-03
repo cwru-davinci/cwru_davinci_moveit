@@ -523,3 +523,24 @@ const double* ik_solution
 
   return !collision_result.collision;
 }
+
+void HybridStateValidityChecker::setJawPosition
+(
+double radian,
+const std::string& planningGroup,
+const robot_state::RobotStatePtr& pRState
+)
+{
+  const std::string eef_group_name = pRState->getJointModelGroup(planningGroup)->getAttachedEndEffectorNames()[0];
+  std::vector<double> eef_joint_position;
+  pRState->copyJointGroupPositions(eef_group_name, eef_joint_position);
+
+  for (std::size_t i = 0; i < eef_joint_position.size(); ++i)
+  {
+    eef_joint_position[i] = radian;
+  }
+
+  pRState->setJointGroupPositions(eef_group_name, eef_joint_position);
+  setMimicJointPositions(pRState, planningGroup);  // this line cannot be removed, as copyJointGroupPosition does not copy mimic joints's value
+  pRState->update();
+}

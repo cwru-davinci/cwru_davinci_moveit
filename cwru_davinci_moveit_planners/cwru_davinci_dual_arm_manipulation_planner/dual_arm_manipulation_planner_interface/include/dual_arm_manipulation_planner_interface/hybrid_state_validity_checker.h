@@ -158,6 +158,13 @@ public:
     return m_ObjectName;
   }
 
+  void setJawPosition
+  (
+  double radian,
+  const std::string& planningGroup,
+  const robot_state::RobotStatePtr& pRState
+  );
+
 protected:
   void defaultSettings();
 

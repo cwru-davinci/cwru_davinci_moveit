@@ -126,7 +126,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = safePlaceToPreGraspJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.08))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -144,7 +144,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
         double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.05))
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.08))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -167,7 +167,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
         double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.05))
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.08))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -178,7 +178,8 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       // if needle perturbation happens it is only allowed to happen at non-last trajectory segment
       if ((i != lastHandoffIdx) && !perturbNeedlePose(i, toSupportGroup))
         ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is NOT perturbed");
-      ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is perturbed");
+      else
+        ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is perturbed");
 
       m_pSupportArmGroup.reset(new psm_interface(toRestGroup, m_NodeHandle));
       // close gripper of incoming reseting arm
@@ -190,7 +191,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.08))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -542,7 +543,7 @@ const int targetState
                                                                   time);
     if (!moveForward && targetState != (m_HandoffJntTraj.size()+1))
     {
-      ROS_INFO("DavinciNeedleHandoffExecutionManager: Needle transfer partial correction failed, keep executing the rest of trajectories");
+      ROS_WARN("DavinciNeedleHandoffExecutionManager: Needle transfer partial correction failed, keep executing the rest of trajectories");
       return true;  // if either kinematics or collision results in failure, but not bring to final goal state
     }
     else if (!moveForward && targetState == (m_HandoffJntTraj.size()+1))
@@ -554,7 +555,7 @@ const int targetState
     double jawPosition = 0.0;
     m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
     const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-    if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.05))
+    if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.08))
     {
       ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute partial corrected needle transfer trajectory");
       return false;
@@ -600,8 +601,13 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   const MoveGroupJointTrajectory temp = jntTrajectoryBtwStates;  // make a copy in case localPlanObjectTransit fails
   if(!m_pHandoffPlanner->localPlanObjectTransit(currentJointPosition, currentNeedlePose, ithTraj, jntTrajectoryBtwStates))
   {
+    if (!m_pHandoffPlanner->validateOriginalHandoffPath(currentNeedlePose, currentJointPosition, temp))
+    {
+      ROS_ERROR("DavinciNeedleHandoffExecutionManager: Handoff correction failed, Original plan results in collision");
+      return false;
+    }
+    ROS_WARN("DavinciNeedleHandoffExecutionManager: Handoff correction failed, Original plan looks good");
     jntTrajectoryBtwStates = temp;
-    ROS_ERROR("DavinciNeedleHandoffExecutionManager: Handoff correction failed, keep using original plan");
     return true;
   }
 
@@ -621,7 +627,7 @@ const std::string& toSupportGroup
   }
   const Eigen::Affine3d currentNeedlePose = updateNeedlePose();  // before opening jaw, remember current needle pose
   m_pSupportArmGroup.reset(new psm_interface(toSupportGroup, m_NodeHandle));
-  m_pSupportArmGroup->control_jaw(0.5, 0.5);
+  m_pSupportArmGroup->control_jaw(0.5, 0.1);
   turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
 
   Eigen::Affine3d idealNeedlePose;
@@ -636,9 +642,12 @@ const std::string& toSupportGroup
   double radToPerturb = m_PiecewiseDistribution(m_RandSeed);
   if (!m_NeedlePoseMd.perturbNeedlePose(radToPerturb, m_GraspInfo[pNextState->graspIndex().value], idealNeedlePose, true))
     return false;
+  ROS_INFO("DavinciNeedleHandoffExecutionManager: Defined perturbation radian is %f", radToPerturb);
 
   turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
-  m_pSupportArmGroup->control_jaw(0.0, 0.5);
+  m_pSupportArmGroup->control_jaw(0.0, 0.05);
+  m_NeedlePoseMd.radianOfChange(radToPerturb, idealNeedlePose, updateNeedlePose());
+  ROS_INFO("DavinciNeedleHandoffExecutionManager: Actual perturbation radian is %f", radToPerturb);
   return true;
 }
 

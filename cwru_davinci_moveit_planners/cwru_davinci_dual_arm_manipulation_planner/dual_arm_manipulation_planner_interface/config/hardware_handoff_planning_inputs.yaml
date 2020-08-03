@@ -1,4 +1,4 @@
-initial_support_arm : 'psm_two'
+initial_support_arm : 'psm_one'
 
 # translation x, y, z, orientation, x, y, z, w, arm index, grasp index
 # goal state for hardware

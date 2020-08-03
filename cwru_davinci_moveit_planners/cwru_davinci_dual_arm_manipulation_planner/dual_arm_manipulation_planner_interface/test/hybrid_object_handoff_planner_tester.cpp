@@ -122,6 +122,11 @@ public:
   //   return m_pPath;
   // }
 
+  bool testValidateOriginalHandoffPath
+  (
+  const PathJointTrajectory& handoffPathJntTraj
+  );
+
 protected:
   void getSolutionPathFromData();
 
@@ -233,6 +238,31 @@ PathJointTrajectory& handoffPathJntTraj
       return false;
     }
     handoffPathJntTraj[i] = jntTrajectoryBtwStates;
+  }
+  return true;
+}
+
+bool HybridObjectHandoffPlannerTester::testValidateOriginalHandoffPath
+(
+const PathJointTrajectory& handoffPathJntTraj
+)
+{
+  EXPECT_TRUE(!m_SlnStates.empty());
+  EXPECT_TRUE(m_pHyStateSpace);
+  Eigen::Affine3d currentNeedlePose;
+  std::vector<double> currentJointPosition;
+
+  for (std::size_t i = 0; i < handoffPathJntTraj.size(); ++i)
+  {
+    if (handoffPathJntTraj[i].size() == 1)
+      continue;
+
+    const HybridObjectStateSpace::StateType* hyState = m_SlnStates[i]->as<HybridObjectStateSpace::StateType>();
+    m_pHyStateSpace->copyJointValues(hyState, currentJointPosition);
+    m_pHyStateSpace->se3ToEigen3d(hyState, currentNeedlePose);
+
+    if (!validateOriginalHandoffPath(currentNeedlePose, currentJointPosition, handoffPathJntTraj[i]))
+      return false;
   }
   return true;
 }

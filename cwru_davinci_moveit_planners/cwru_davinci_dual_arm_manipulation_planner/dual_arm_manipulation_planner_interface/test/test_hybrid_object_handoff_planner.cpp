@@ -122,6 +122,7 @@ TEST(TestHybridRRT, HybridObjectHandoffPlanner)
   // tester.testConnectStates();
   PathJointTrajectory handoffPathJntTraj;
   EXPECT_TRUE(plannerTester.testGetSolutionPathJointTrajectory(handoffPathJntTraj));
+  EXPECT_TRUE(plannerTester.testValidateOriginalHandoffPath(handoffPathJntTraj));
   EXPECT_TRUE(managerTester.testExecuteNeedleHandoffTraj(handoffPathJntTraj, plannerTester));
 //  const ompl::base::SpaceInformationPtr& si = tester.getSpaceInformation();
 //  // create a random start state

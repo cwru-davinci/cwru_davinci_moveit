@@ -236,6 +236,13 @@ protected:
   double& time
   );
 
+  bool validateOriginalHandoffPath
+  (
+  const Eigen::Affine3d& currentNeedlePose,
+  const std::vector<double>& currentJointPosition,
+  const MoveGroupJointTrajectory& jntTrajectoryBtwStates
+  );
+
   void getCurrentGrasp
   (
   Eigen::Affine3d& currentGrasp,
