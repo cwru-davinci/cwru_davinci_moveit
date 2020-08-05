@@ -158,12 +158,36 @@ public:
     return m_ObjectName;
   }
 
+  bool validateTrajectory
+  (
+  const std::string& planningGroup,
+  const robot_state::RobotStatePtr& pRobotState,
+  const std::vector<std::vector<double>>& armJntTraj,
+  double jaw = 0.0,
+  bool verbose = false,
+  bool needleInteraction = true
+  );
+
+  bool detechNeedleGrasped
+  (
+  const robot_state::RobotState& rstate,
+  const std::string& planningGroup,
+  bool verbose = false
+  );
+
   void setJawPosition
   (
   double radian,
   const std::string& planningGroup,
   const robot_state::RobotStatePtr& pRState
   );
+
+  const planning_scene::PlanningScenePtr& getPlanningScene
+  (
+  )
+  {
+    return planning_scene_;
+  }
 
 protected:
   void defaultSettings();

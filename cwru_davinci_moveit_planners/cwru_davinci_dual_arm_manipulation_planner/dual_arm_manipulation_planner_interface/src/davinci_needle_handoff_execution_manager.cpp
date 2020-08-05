@@ -593,17 +593,18 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
   m_pSupportArmGroup->get_fresh_position(currentJointPosition);
 
   const Eigen::Affine3d& currentNeedlePose = updateNeedlePose();
-  if (currentNeedlePose.isApprox(desNeedlePose, 1e-3) && (distanceBtwTwoRobotStates(currentHyState, currentJointPosition) < 1e-1))
+  if (currentNeedlePose.isApprox(desNeedlePose, 1e-3) && (distanceBtwTwoRobotStates(currentHyState, currentJointPosition) < 1e-2))
   {
+    ROS_INFO("DavinciNeedleHandoffExecutionManager: No need to correct handoff path, use original plan");
     return true;
   }
 
-  const MoveGroupJointTrajectory temp = jntTrajectoryBtwStates;  // make a copy in case localPlanObjectTransit fails
+  MoveGroupJointTrajectory temp = jntTrajectoryBtwStates;  // make a copy in case localPlanObjectTransit fails
   if(!m_pHandoffPlanner->localPlanObjectTransit(currentJointPosition, currentNeedlePose, ithTraj, jntTrajectoryBtwStates))
   {
     if (!m_pHandoffPlanner->validateOriginalHandoffPath(currentNeedlePose, currentJointPosition, temp))
     {
-      ROS_ERROR("DavinciNeedleHandoffExecutionManager: Handoff correction failed, Original plan results in collision");
+      ROS_ERROR("DavinciNeedleHandoffExecutionManager: Handoff correction failed, Original plan also fails");
       return false;
     }
     ROS_WARN("DavinciNeedleHandoffExecutionManager: Handoff correction failed, Original plan looks good");

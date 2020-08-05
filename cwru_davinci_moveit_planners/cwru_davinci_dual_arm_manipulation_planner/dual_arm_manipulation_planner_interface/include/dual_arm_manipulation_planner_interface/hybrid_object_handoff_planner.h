@@ -243,6 +243,22 @@ protected:
   const MoveGroupJointTrajectory& jntTrajectoryBtwStates
   );
 
+  bool replanGraspToUngrasped
+  (
+  MoveGroupJointTrajectorySegment& newPathToUngrasp,
+  const Eigen::Affine3d& toRestGroupInitialToolTipPose,
+  robot_state::RobotStatePtr& pCurrentRobotState,
+  const std::string& toRestGroup
+  );
+
+  bool replanUnGraspToSafePlace
+  (
+  MoveGroupJointTrajectorySegment& newPathToHome,
+  const std::vector<double>& toRestJointPosition,
+  const robot_state::RobotStatePtr& pCurrentRobotState,
+  const std::string& toRestGroup
+  );
+
   void getCurrentGrasp
   (
   Eigen::Affine3d& currentGrasp,

@@ -340,7 +340,7 @@ StateType* state
   int joint_space_size = components_[3]->as<RealVectorStateSpace>()->getDimension();
   if (joint_values.size() != joint_space_size)
   {
-    printf("Robot's JointModelGroup Variables Dimension is NOT %d", joint_space_size);
+    printf("Robot's JointModelGroup Variables Dimension is NOT %d \n", joint_space_size);
     return false;
   }
 
