@@ -14,7 +14,7 @@ set_target_properties(${DUAL_ARM_PLANNER_LIB} PROPERTIES VERSION ${${PROJECT_NAM
 
 #find_package(OpenMP)
 
-target_link_libraries(${DUAL_ARM_PLANNER_LIB} ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(${DUAL_ARM_PLANNER_LIB} davinci_needle_pose_publisher ${OMPL_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 #set_target_properties(${DUAL_ARM_PLANNER_LIB} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 #set_target_properties(${DUAL_ARM_PLANNER_LIB} PROPERTIES LINK_FLAGS "${OpenMP_CXX_FLAGS}")
 

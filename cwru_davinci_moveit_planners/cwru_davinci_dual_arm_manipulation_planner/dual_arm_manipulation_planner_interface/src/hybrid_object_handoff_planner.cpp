@@ -818,6 +818,13 @@ double& time
                                                                        true,
                                                                        0.001,
                                                                        0.0);
+  // double foundCartesianPath = pCurrentRobotState->computeCartesianPath(pCurrentRobotState->getJointModelGroup(supportGroup),
+  //                                                                      traj,
+  //                                                                      pTipLink,
+  //                                                                      interNeedlePose * currentGrasp.inverse(),
+  //                                                                      true,
+  //                                                                      moveit::core::MaxEEFStep(0.0005, 0.01),
+  //                                                                      moveit::core::JumpThreshold(0.0));
 
   if (!(fabs(foundCartesianPath - 0.0) >= 1e-2))
   {
@@ -886,7 +893,7 @@ const MoveGroupJointTrajectory& jntTrajectoryBtwStates
   // detect if needle is grasped by toSupportGroup
   if (!m_pHyStateValidator->detechNeedleGrasped(*pCurrentRobotState, toSupportGroup, true))
   {
-    ROS_ERROR("HybridObjectHandoffPlanner: Validation of original handoff path fails because it can reach to grasp");
+    ROS_ERROR("HybridObjectHandoffPlanner: Validation of original handoff path fails because it can NOT reach to grasp");
     return false;
   }
 

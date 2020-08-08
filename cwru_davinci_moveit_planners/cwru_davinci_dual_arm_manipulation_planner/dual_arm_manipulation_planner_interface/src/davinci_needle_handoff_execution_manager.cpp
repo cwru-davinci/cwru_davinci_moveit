@@ -40,6 +40,9 @@
 #include <std_srvs/SetBool.h>
 #include <uv_msgs/pf_grasp.h>
 
+#define DEFAULT_NEEDLE_POSE_TOPIC "/updated_needle_pose"
+#define DEFAULT_JAW_OPENING 0.5
+
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
 
@@ -56,15 +59,24 @@ const std::string& robotDescription
    m_GraspInfo(possibleGrasps),
    m_ObjectName(objectName),
    m_RobotModelLoader(robotDescription),
-   m_NeedlePoseMd(nodeHandle),
+   m_NeedlePoseMd(nodeHandle, nodeHandlePrivate),
    m_UniformRealDistribution(-0.2, 0.2),
    m_PiecewiseDistribution(m_Intervals.begin(), m_Intervals.end(), m_Weights.begin())
 {
   m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>();
 
-  m_NeedlePoseSub =
-    m_NodeHandle.subscribe("/updated_needle_pose", 1, &DavinciNeedleHandoffExecutionManager::needlePoseCallBack, this);
+  if (!nodeHandlePrivate.param<std::string>("needle_pose_topic", m_NEEDLE_POSE_TOPIC, DEFAULT_NEEDLE_POSE_TOPIC))
+  {
+    m_NeedlePoseSub = 
+        m_NodeHandle.subscribe(DEFAULT_NEEDLE_POSE_TOPIC, 1, &DavinciNeedleHandoffExecutionManager::needlePoseCallBack, this);
+  }
+  else
+  {
+    m_NeedlePoseSub = 
+        m_NodeHandle.subscribe(m_NEEDLE_POSE_TOPIC, 1, &DavinciNeedleHandoffExecutionManager::needlePoseCallBack, this);
+  }
 
+  nodeHandlePrivate.param<double>("jaw_opening", m_JawOpening, DEFAULT_JAW_OPENING);
   m_PfGraspClient = m_NodeHandle.serviceClient<uv_msgs::pf_grasp>("/pf_grasp");
 
   m_PSMOneStickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1");
@@ -126,7 +138,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = safePlaceToPreGraspJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.08))
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.03))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -136,15 +148,15 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       const MoveGroupJointTrajectorySegment& preGraspToGraspedJntTrajSeg = m_HandoffJntTraj[i][1].second;
       m_pSupportArmGroup.reset(new psm_interface(preGraspToGraspedJntTrajSeg.begin()->first, m_NodeHandle));
       // open gripper of incoming supporting arm
-      m_pSupportArmGroup->control_jaw(0.5, 0.2);
+      m_pSupportArmGroup->control_jaw(m_JawOpening, 0.2);
 
       m_pMoveItSupportArmGroupInterf.reset(new MoveGroupInterface(preGraspToGraspedJntTrajSeg.begin()->first));
       turnOnStickyFinger(m_pSupportArmGroup->get_psm_name());
       {
         const JointTrajectory& armJntTra = preGraspToGraspedJntTrajSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++preGraspToGraspedJntTrajSeg.begin())->second;
-        double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.08))
+        double jawPosition = m_JawOpening;
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.05))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -162,12 +174,12 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
       m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
       // open gripper of incoming resting arm
       turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());
-      m_pSupportArmGroup->control_jaw(0.5, 0.2);
+      m_pSupportArmGroup->control_jaw(m_JawOpening, 0.2);
       {
         const JointTrajectory& armJntTra = graspToUngraspedJntSeg.begin()->second;
         // const JointTrajectory& gripperJntTra = (++graspToUngraspedJntSeg.begin())->second;
-        double jawPosition = 0.5;
-        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.08))
+        double jawPosition = m_JawOpening;
+        if (!m_pSupportArmGroup->execute_trajectory(armJntTra, jawPosition, 0.03))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -191,7 +203,7 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         double jawPosition = 0.0;
         m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
         const JointTrajectory& jntTra = ungraspedToSafePlaceJntTrajSeg.begin()->second;
-        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.08))
+        if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.03))
         {
           ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute handoff trajectories");
           return false;
@@ -529,7 +541,7 @@ const int targetState
   const std::string supportGroup = m_pSupportArmGroup->get_psm_name();
   std::vector<double> currentJointPosition;
 
-  while (!currentNeedlePose.isApprox(targetNeedlePose, 1e-3))
+  while (!currentNeedlePose.isApprox(targetNeedlePose, 2e-3))
   {
     MoveGroupJointTrajectorySegment jntTrajSeg;
     double time = 0.0;
@@ -555,7 +567,7 @@ const int targetState
     double jawPosition = 0.0;
     m_pSupportArmGroup->get_gripper_fresh_position(jawPosition);
     const JointTrajectory& jntTra = jntTrajSeg.begin()->second;
-    if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.08))
+    if (!m_pSupportArmGroup->execute_trajectory(jntTra, jawPosition, 0.03))
     {
       ROS_ERROR("DavinciNeedleHandoffExecutionManager: Failed to execute partial corrected needle transfer trajectory");
       return false;
@@ -626,7 +638,10 @@ const std::string& toSupportGroup
   {
     return false;
   }
-  const Eigen::Affine3d currentNeedlePose = updateNeedlePose();  // before opening jaw, remember current needle pose
+
+  // const Eigen::Affine3d currentNeedlePose = updateNeedlePose();  // before opening jaw, remember current needle pose
+  Eigen::Affine3d currentNeedlePose;
+  m_NeedlePoseMd.getCurrentNeedlePose(currentNeedlePose);
   m_pSupportArmGroup.reset(new psm_interface(toSupportGroup, m_NodeHandle));
   m_pSupportArmGroup->control_jaw(0.5, 0.1);
   turnOffStickyFinger(m_pSupportArmGroup->get_psm_name());

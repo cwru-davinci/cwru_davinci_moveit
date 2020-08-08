@@ -135,6 +135,7 @@ private:
   std::piecewise_constant_distribution<double>           m_PiecewiseDistribution;
   std::random_device                                     m_RandSeed;
 
+  std::string                                            m_NEEDLE_POSE_TOPIC;
 protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
@@ -167,7 +168,7 @@ protected:
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
 
   DummyNeedleModifier                                             m_NeedlePoseMd;
-
+  double                                                          m_JawOpening;
 private:
   bool turnOnStickyFinger
   (
