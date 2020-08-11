@@ -122,6 +122,11 @@ public:
   (
   );
 
+  bool globalReplanning
+  (
+  const double solveTime
+  );
+
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
 
@@ -159,8 +164,9 @@ protected:
   ros::NodeHandle                                                 m_NodeHandlePrivate;
   ros::NodeHandle                                                 m_NodeHandle;
 
-  HybridObjectStateSpace::StateType*                              m_pHyStartState = nullptr;
-  HybridObjectStateSpace::StateType*                              m_pHyGoalState  = nullptr;
+  HybridObjectStateSpace::StateType*                              m_pHyStartState    = nullptr;
+  HybridObjectStateSpace::StateType*                              m_pHyGoalState     = nullptr;
+  HybridObjectStateSpace::StateType*                              m_pHyFailedAtState = nullptr;
 
   double                                                          m_SE3Bounds[6];
   int                                                             m_ArmIndexBounds[2];
@@ -215,6 +221,14 @@ private:
   (
   const HybridObjectStateSpace::StateType* currentHyState,
   const std::vector<double>& currentJointPosition
+  );
+
+  void fillFailedState
+  (
+  int curArmIdx,
+  int curGrasp,
+  const Eigen::Affine3d& curNeedlePose,
+  const std::vector<double>& curJointPosition
   );
 };
 }

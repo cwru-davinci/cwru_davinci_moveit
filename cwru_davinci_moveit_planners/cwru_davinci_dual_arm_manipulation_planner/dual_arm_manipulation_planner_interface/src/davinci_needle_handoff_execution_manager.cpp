@@ -92,6 +92,9 @@ DavinciNeedleHandoffExecutionManager::~DavinciNeedleHandoffExecutionManager
     m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyStartState);
     m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyGoalState);
   }
+
+  if (m_pHyFailedAtState)
+    m_pHandoffPlanner->m_pHyStateSpace->freeState(m_pHyFailedAtState);
 }
 
 bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
@@ -305,6 +308,12 @@ const ompl::base::ScopedState<HybridObjectStateSpace>& goal
 {
   if (!m_pHandoffPlanner)
   {
+    return false;
+  }
+  if (!m_pHandoffPlanner->m_pSpaceInfor->satisfiesBounds(start.get())
+      || !m_pHandoffPlanner->m_pSpaceInfor->satisfiesBounds(goal.get()))
+  {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: Either start or goal state is NOT within the bounds");
     return false;
   }
 
@@ -561,6 +570,7 @@ const int targetState
     else if (!moveForward && targetState == (m_HandoffJntTraj.size()+1))
     {
       ROS_ERROR("DavinciNeedleHandoffExecutionManager: Needle transfer partial correction failed, stops due to no more further step");
+      fillFailedState(pTargetHyState->armIndex().value, pTargetHyState->graspIndex().value, currentNeedlePose, currentJointPosition);
       return false;
     }
 
@@ -617,6 +627,7 @@ MoveGroupJointTrajectory& jntTrajectoryBtwStates
     if (!m_pHandoffPlanner->validateOriginalHandoffPath(currentNeedlePose, currentJointPosition, temp))
     {
       ROS_ERROR("DavinciNeedleHandoffExecutionManager: Handoff correction failed, Original plan also fails");
+      fillFailedState(currentHyState->armIndex().value, currentHyState->graspIndex().value, currentNeedlePose, currentJointPosition);
       return false;
     }
     ROS_WARN("DavinciNeedleHandoffExecutionManager: Handoff correction failed, Original plan looks good");
@@ -696,4 +707,55 @@ const std::vector<double>& currentJointPosition
   }
 
   return diffSum;
+}
+
+bool DavinciNeedleHandoffExecutionManager::globalReplanning
+(
+const double solveTime
+)
+{
+  // reset start state to latest state
+  if (!m_pHyFailedAtState)
+  {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: FailedAtState is not initialized");
+    return false;
+  }
+
+  ompl::base::ScopedState<HybridObjectStateSpace> newStartState(m_pHandoffPlanner->m_pSpaceInfor);
+  newStartState = m_pHyFailedAtState;
+
+  ompl::base::ScopedState<HybridObjectStateSpace> goalState(m_pHandoffPlanner->m_pSpaceInfor);
+  goalState = m_pHyGoalState;
+
+  if (!setupStartAndGoalStateInPlanner(newStartState, goalState))
+  {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: Replanning setup fails");
+    return false;
+  }
+
+  if(!planNeedleHandoffTraj(solveTime))
+  {
+    ROS_ERROR("DavinciNeedleHandoffExecutionManager: Replanning planning stage fails");
+    return false;
+  }
+
+  return true;
+}
+
+void DavinciNeedleHandoffExecutionManager::fillFailedState
+(
+int curArmIdx,
+int curGraspIdx,
+const Eigen::Affine3d& curNeedlePose,
+const std::vector<double>& curJointPosition
+)
+{
+  m_pHyFailedAtState = m_pHandoffPlanner->m_pHyStateSpace->allocState()->as<HybridObjectStateSpace::StateType>();
+
+  m_pHandoffPlanner->m_pHyStateSpace->eigen3dToSE3(curNeedlePose, m_pHyFailedAtState);
+  m_pHyFailedAtState->armIndex().value = curArmIdx;
+  m_pHyFailedAtState->graspIndex().value = curGraspIdx;
+  m_pHandoffPlanner->m_pHyStateSpace->setJointValues(curJointPosition, m_pHyFailedAtState);
+  m_pHyFailedAtState->setJointsComputed(true);
+  m_pHyFailedAtState->markValid();
 }
