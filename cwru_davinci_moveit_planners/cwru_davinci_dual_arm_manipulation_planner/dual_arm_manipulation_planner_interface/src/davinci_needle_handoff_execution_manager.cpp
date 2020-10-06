@@ -79,6 +79,25 @@ const std::string& robotDescription
   nodeHandlePrivate.param<double>("jaw_opening", m_JawOpening, DEFAULT_JAW_OPENING);
   m_PfGraspClient = m_NodeHandle.serviceClient<uv_msgs::pf_grasp>("/pf_grasp");
 
+  XmlRpc::XmlRpcValue xmlPerturbBounds;
+  m_NodeHandlePrivate.getParam("perturbation_radius_bound", xmlPerturbBounds);
+  if (xmlPerturbBounds.getType() == XmlRpc::XmlRpcValue::TypeArray)
+  {
+    for (std::size_t i = 0; i < xmlPerturbBounds.size(); ++i)
+    {
+      ROS_ASSERT(xmlPerturbBounds[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+      m_Intervals[i] = static_cast<double>(xmlPerturbBounds[i]);
+    }
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Perturbation Radius bounds type is not type array?");
+  }
+  m_PiecewiseDistribution = std::piecewise_constant_distribution<double>(m_Intervals.begin(), m_Intervals.end(), m_Weights.begin());
+
+  nodeHandlePrivate.param<double>("jaw_opening", m_JawOpening, DEFAULT_JAW_OPENING);
+  m_PfGraspClient = m_NodeHandle.serviceClient<uv_msgs::pf_grasp>("/pf_grasp");
+
   m_PSMOneStickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1");
   m_PSMTwoStickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM2_tool_wrist_sca_ee_link_1");
 }
@@ -310,6 +329,7 @@ const ompl::base::ScopedState<HybridObjectStateSpace>& goal
   {
     return false;
   }
+
   if (!m_pHandoffPlanner->m_pSpaceInfor->satisfiesBounds(start.get())
       || !m_pHandoffPlanner->m_pSpaceInfor->satisfiesBounds(goal.get()))
   {
