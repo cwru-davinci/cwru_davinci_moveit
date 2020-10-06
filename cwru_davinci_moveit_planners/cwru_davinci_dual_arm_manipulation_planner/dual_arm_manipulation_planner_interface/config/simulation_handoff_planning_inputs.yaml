@@ -13,7 +13,7 @@ se3_bounds : [-0.012, 0.079, -0.036, 0.049, 0.138, 0.19]
 
 arm_index_bounds : [1, 2]
 
-perturbation_radius_bound: [-0.51, -0.49, 0.49, 0.51]
+perturbation_radius_bound: [0.0, 0.0, 0.0, 0.0]
 
 object_name : 'needle_r'
 

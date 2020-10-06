@@ -800,7 +800,8 @@ double& time
   Eigen::Quaterniond currentQua(currentNeedlePose.linear());
   Eigen::Quaterniond targetQua(targetNeedlePose.linear());
 
-  double percentage = (distanceBtwPoses(currentNeedlePose, targetNeedlePose) <= 0.5) ? 1.0 : 0.5;
+  // double percentage = (distanceBtwPoses(currentNeedlePose, targetNeedlePose) <= 0.5) ? 1.0 : 0.5;
+  double percentage = 1.0;
 
   // Eigen::Affine3d toolTipPose(currentQua.slerp(percentage, targetQua));
   Eigen::Affine3d interNeedlePose(currentQua.slerp(percentage, targetQua));
@@ -818,13 +819,6 @@ double& time
                                                                        true,
                                                                        0.001,
                                                                        0.0);
-  // double foundCartesianPath = pCurrentRobotState->computeCartesianPath(pCurrentRobotState->getJointModelGroup(supportGroup),
-  //                                                                      traj,
-  //                                                                      pTipLink,
-  //                                                                      interNeedlePose * currentGrasp.inverse(),
-  //                                                                      true,
-  //                                                                      moveit::core::MaxEEFStep(0.0005, 0.01),
-  //                                                                      moveit::core::JumpThreshold(0.0));
 
   if (!(fabs(foundCartesianPath - 0.0) >= 1e-2))
   {
