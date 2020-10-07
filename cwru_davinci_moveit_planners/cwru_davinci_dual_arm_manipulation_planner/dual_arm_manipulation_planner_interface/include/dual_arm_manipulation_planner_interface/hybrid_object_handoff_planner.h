@@ -95,21 +95,21 @@ public:
   );
 
 protected:
-  HybridObjectStateSpacePtr                    m_pHyStateSpace = nullptr;
+  HybridObjectStateSpacePtr                        m_pHyStateSpace = nullptr;
 
-  std::shared_ptr<HybridStateValidityChecker>  m_pHyStateValidator = nullptr;
+  std::shared_ptr<HybridStateValidityChecker>      m_pHyStateValidator = nullptr;
 
-  ompl::base::SpaceInformationPtr              m_pSpaceInfor = nullptr;
+  ompl::base::SpaceInformationPtr                  m_pSpaceInfor = nullptr;
 
-  ompl::base::ProblemDefinitionPtr             m_pProblemDef = nullptr;
+  ompl::base::ProblemDefinitionPtr                 m_pProblemDef = nullptr;
 
-  std::shared_ptr<ompl::geometric::RRTConnect> m_pRRTConnectPlanner;
+  std::shared_ptr<ompl::geometric::RRTConnect>     m_pRRTConnectPlanner;
 
-  ompl::base::PlannerStatus                    m_Solved;
+  ompl::base::PlannerStatus                        m_Solved;
 
-  bool                                         m_Verbose;
+  bool                                             m_Verbose;
 
-  ompl::geometric::PathGeometric*              m_pSlnPath = nullptr;
+  std::shared_ptr<ompl::geometric::PathGeometric>  m_pSlnPath = nullptr;
 
 protected:
   void setupStateSpace

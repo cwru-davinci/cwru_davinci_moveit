@@ -103,6 +103,8 @@ protected:
   std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf = nullptr;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
+  ros::ServiceClient                                              m_PSMOneStickyFingerClient;
+  ros::ServiceClient                                              m_PSMTwoStickyFingerClient;
 
   PathJointTrajectory                                             m_HandoffJntTraj;
 
@@ -116,6 +118,8 @@ protected:
   int                                                             m_ArmIndexBounds[2];
   std::string                                                     m_ObjectName;
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
+
+  double                                                          m_JawOpening;
 
 private:
   bool turnOnStickyFinger

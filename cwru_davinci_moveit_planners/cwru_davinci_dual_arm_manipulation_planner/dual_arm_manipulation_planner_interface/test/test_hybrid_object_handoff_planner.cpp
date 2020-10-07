@@ -44,6 +44,7 @@
 using namespace dual_arm_manipulation_planner_interface;
 using namespace hybrid_planner_test;
 namespace ob = ompl::base;
+namespace og = ompl::geometric;
 
 class DavinciNeedleHandoffExecutionManagerTester : public DavinciNeedleHandoffExecutionManager
 {
@@ -58,11 +59,31 @@ public:
     m_PlanningStatus = ob::PlannerStatus::EXACT_SOLUTION;
   }
 
+  DavinciNeedleHandoffExecutionManagerTester
+  (
+  const ros::NodeHandle& nodeHandle,
+  const ros::NodeHandle& nodeHandlePrivate,
+  const std::vector<cwru_davinci_grasp::GraspInfo>& possibleGrasps,
+  const std::string& objectName,
+  const std::string& robotDescription
+  )
+  : DavinciNeedleHandoffExecutionManager(nodeHandle,nodeHandlePrivate,possibleGrasps,objectName,robotDescription)
+  {
+    m_ObjectName = objectName;
+    m_PlanningStatus = ob::PlannerStatus::EXACT_SOLUTION;
+  }
+
   bool testExecuteNeedleHandoffTraj
   (
-  const PathJointTrajectory& handoffPathJntTraj
+  const PathJointTrajectory& handoffPathJntTraj,
+  const HybridObjectHandoffPlannerTester& plannerTester
   )
   {
+    m_pHandoffPlanner = std::make_shared<HybridObjectHandoffPlanner>(plannerTester);
+    if (!m_pHandoffPlanner)
+      return false;
+
+    // m_pHandoffPlanner->setSolutionPath(slnPath.get());
     m_HandoffJntTraj = handoffPathJntTraj;
     return executeNeedleHandoffTraj();
   }
@@ -90,15 +111,18 @@ TEST(TestHybridRRT, HybridObjectHandoffPlanner)
 
   EXPECT_TRUE(pSimpleGrasp->pickNeedle(objectName, cwru_davinci_grasp::NeedlePickMode::FINDGOOD));
 
-  HybridObjectHandoffPlannerTester tester(pSimpleGrasp->getAllPossibleNeedleGrasps(false),
-                                          robotModelLoader.getModel());
+  HybridObjectHandoffPlannerTester plannerTester(pSimpleGrasp->getAllPossibleNeedleGrasps(false),
+                                                 robotModelLoader.getModel());
 
-  DavinciNeedleHandoffExecutionManagerTester managerTester(objectName);
+  DavinciNeedleHandoffExecutionManagerTester managerTester(nodeHandle,
+                                                           nodeHandlePriv,
+                                                           pSimpleGrasp->getAllPossibleNeedleGrasps(false),
+                                                           objectName,
+                                                           "robot_description");
   // tester.testConnectStates();
   PathJointTrajectory handoffPathJntTraj;
-  EXPECT_TRUE(tester.testGetSolutionPathJointTrajectory(handoffPathJntTraj));
-  EXPECT_TRUE(managerTester.testExecuteNeedleHandoffTraj(handoffPathJntTraj));
-
+  EXPECT_TRUE(plannerTester.testGetSolutionPathJointTrajectory(handoffPathJntTraj));
+  EXPECT_TRUE(managerTester.testExecuteNeedleHandoffTraj(handoffPathJntTraj, plannerTester));
 //  const ompl::base::SpaceInformationPtr& si = tester.getSpaceInformation();
 //  // create a random start state
 //  ob::ScopedState<HybridObjectStateSpace> start(si);
@@ -136,7 +160,7 @@ int main(int argc, char** argv)
   testing::InitGoogleTest(&argc, argv);
   ros::init(argc, argv, "test_hybrid_object_handoff_planner");
   ros::AsyncSpinner spinner(1);
-  ros::Duration(3.0).sleep();
   spinner.start();
+  ros::Duration(3.0).sleep();
   return RUN_ALL_TESTS();
 }

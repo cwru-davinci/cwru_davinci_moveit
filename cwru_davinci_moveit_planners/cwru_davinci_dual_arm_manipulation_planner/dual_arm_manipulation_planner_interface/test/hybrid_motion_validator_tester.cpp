@@ -65,12 +65,12 @@ public:
   const robot_state::RobotState& goal_state
   );
 
-  inline const robot_model::RobotModelConstPtr getRobotModel() const
+  const robot_model::RobotModelConstPtr getRobotModel() const
   {
     return kmodel_;
   }
 
-  inline int getSucceededNum()
+  int getSucceededNum()
   {
     return succeeded_num_;
   }

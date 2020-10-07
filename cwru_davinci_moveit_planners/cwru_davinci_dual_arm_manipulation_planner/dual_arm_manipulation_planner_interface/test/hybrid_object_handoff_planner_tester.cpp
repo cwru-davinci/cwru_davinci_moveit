@@ -136,7 +136,6 @@ protected:
 
 protected:
   std::vector<ob::State* >                           m_SlnStates;
-  std::unique_ptr<og::PathGeometric>                 m_pPath;
 };
 
 HybridObjectHandoffPlannerTester::HybridObjectHandoffPlannerTester
@@ -581,18 +580,18 @@ void HybridObjectHandoffPlannerTester::getSolutionPathFromData()
                           distance_zero(opt.identityCost()));
 
     // Extracting the path
-    m_pPath = std::make_unique<og::PathGeometric>(m_pSpaceInfor);
+    m_pSlnPath = std::make_shared<og::PathGeometric>(m_pSpaceInfor);
     for (ob::PlannerData::Graph::Vertex pos = boost::vertex(data.getGoalIndex(0), graph);
          prev[pos] != pos;
          pos = prev[pos])
     {
-      m_pPath->append(vertices[pos]->getState());
+      m_pSlnPath->append(vertices[pos]->getState());
       printf("Vertex index along the solution path: %u\n", data.vertexIndex(*vertices[pos]));
     }
-    m_pPath->append(vertices[start]->getState());
+    m_pSlnPath->append(vertices[start]->getState());
     printf("Start vertex index along the solution path: %u\n", data.vertexIndex(*vertices[start]));
-    m_pPath->reverse();
-    m_SlnStates = m_pPath->getStates();
+    m_pSlnPath->reverse();
+    m_SlnStates = m_pSlnPath->getStates();
   }
 }
 

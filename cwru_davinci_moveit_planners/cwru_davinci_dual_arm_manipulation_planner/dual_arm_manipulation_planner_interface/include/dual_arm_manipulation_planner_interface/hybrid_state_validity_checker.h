@@ -68,11 +68,20 @@ public:
   virtual ~HybridStateValidityChecker()
   {}
 
-  virtual bool isValid(const ompl::base::State* state) const override;
+  virtual bool isValid
+  (
+  const ompl::base::State* state
+  ) const override;
 
-  virtual double cost(const ompl::base::State* state) const;
+  virtual double cost
+  (
+  const ompl::base::State* state
+  ) const;
 
-  virtual double clearance(const ompl::base::State* state) const override;
+  virtual double clearance
+  (
+  const ompl::base::State* state
+  ) const override;
 
   bool hybridStateToRobotState
   (
@@ -107,7 +116,7 @@ public:
   const std::string& planning_group
   ) const;
 
-  inline const robot_model::RobotModelConstPtr& robotModel() const
+  const robot_model::RobotModelConstPtr& robotModel() const
   {
     return kmodel_;
   }
@@ -117,18 +126,23 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-  static bool isRobotStateValid
+  bool isRobotStateValid
   (
   const planning_scene::PlanningScene& planning_scene,
   const std::string& planning_group,
+  bool needleInteraction,
+  bool verbose,
   robot_state::RobotState* state,
   const robot_state::JointModelGroup* group,
   const double* ik_solution
-  );
+  ) const;
 
   bool noCollision
   (
-  const robot_state::RobotState& rstate
+  const robot_state::RobotState& rstate,
+  const std::string& planningGroup = "",
+  bool needleInteraction = true,
+  bool verbose = false
   ) const;
 
   void noCollisionThread
@@ -136,6 +150,13 @@ public:
   uint8_t& noCollision,
   const robot_state::RobotState& rstate
   ) const;
+
+  const planning_scene::PlanningScenePtr& getPlanningScene
+  (
+  )
+  {
+    return planning_scene_;
+  }
 
 protected:
   void defaultSettings();

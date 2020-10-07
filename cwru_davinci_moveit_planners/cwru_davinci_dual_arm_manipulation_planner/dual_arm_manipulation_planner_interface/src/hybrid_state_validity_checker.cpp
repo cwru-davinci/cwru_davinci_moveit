@@ -91,7 +91,7 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
   bool is_valid = false;
   if (!si_->satisfiesBounds(state))
   {
-    printf("Invalid State: Out of bound.");
+    printf("Invalid State: Out of bound. \n");
   }
   else
   {
@@ -137,7 +137,7 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
   if (!hybridStateToRobotState(hs, kstate))
   {
-    printf("Invalid State: No IK solution.");
+    printf("Invalid State: No IK solution. \n");
     return false;
   }
 
@@ -167,7 +167,7 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 
   if (!hybridStateToRobotState(hs, kstate))
   {
-    printf("Invalid State: No IK solution.");
+    printf("Invalid State: No IK solution. \n");
     return false;
   }
 
@@ -187,20 +187,20 @@ bool attachedObject
 {
   if (!pHyState || !pRSstate)
   {
-    printf("HybridStateValidityChecker: Invalid state pointer.");
+    printf("HybridStateValidityChecker: Invalid state pointer. \n");
     return false;
   }
 
   pRSstate->setToDefaultValues();
 
   const std::string supportGroup = (pHyState->armIndex().value == 1) ? "psm_one" : "psm_two";
+  // convert object pose to robot tip pose
+  // this is the gripper tool tip link frame wrt /base_link
+  Eigen::Affine3d object_pose;  // object pose w/rt base frame
+  hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
+
   if (!pHyState->jointsComputed())
   {
-    // convert object pose to robot tip pose
-    // this is the gripper tool tip link frame wrt /base_link
-    Eigen::Affine3d object_pose;  // object pose w/rt base frame
-    hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
-
     Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
@@ -211,7 +211,7 @@ bool attachedObject
 
     if (!found_ik)
     {
-      printf("HybridStateValidityChecker: No IK solution.");
+      printf("HybridStateValidityChecker: No IK solution.\n");
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(false);
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->markInvalid();
       return found_ik;
@@ -365,23 +365,47 @@ const std::string& planning_group
 
 bool HybridStateValidityChecker::noCollision
 (
-const robot_state::RobotState& rstate
+const robot_state::RobotState& rstate,
+const std::string& planningGroup,
+bool needleInteraction,
+bool verbose
 ) const
 {
   auto start_ik = std::chrono::high_resolution_clock::now();
 
-  planning_scene_->setCurrentState(rstate);
   collision_detection::CollisionRequest collision_request;
   collision_request.contacts = true;
   collision_detection::CollisionResult collision_result;
-  planning_scene_->checkCollision(collision_request, collision_result, rstate);
-  bool no_collision = !collision_result.collision;
+
+  if (!needleInteraction)
+  {
+    collision_detection::AllowedCollisionMatrix acm = planning_scene_->getAllowedCollisionMatrix();
+    const std::string psm = (planningGroup == "psm_one") ? "PSM1" : "PSM2";
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_1", true);
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_2", true);
+    planning_scene_->checkCollision(collision_request, collision_result, rstate, acm);
+  }
+  else
+  {
+    planning_scene_->checkCollision(collision_request, collision_result, rstate);
+  }
+
+  if (collision_result.collision && verbose)
+  {
+    ROS_WARN("NoCollision: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_WARN("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
 
   auto finish_ik = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish_ik - start_ik;
   hyStateSpace_->collision_checking_duration_ += elapsed;
 
-  return no_collision;
+  return !collision_result.collision;
 }
 
 void HybridStateValidityChecker::noCollisionThread
@@ -421,10 +445,12 @@ bool HybridStateValidityChecker::isRobotStateValid
 (
 const planning_scene::PlanningScene& planning_scene,
 const std::string& planning_group,
+bool needleInteraction,
+bool verbose,
 robot_state::RobotState* state,
 const robot_state::JointModelGroup* group,
 const double* ik_solution
-)
+) const
 {
   state->setJointGroupPositions(group, ik_solution);
   const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
@@ -438,5 +464,33 @@ const double* ik_solution
     return false;
   }
 
-  return !planning_scene.isStateColliding(*state);
+  collision_detection::CollisionRequest collision_request;
+  collision_request.contacts = true;
+  collision_detection::CollisionResult collision_result;
+
+  if (!needleInteraction)
+  {
+    collision_detection::AllowedCollisionMatrix acm = planning_scene.getAllowedCollisionMatrix();
+    const std::string psm = (planning_group == "psm_one") ? "PSM1" : "PSM2";
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_1", true);
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_2", true);
+    planning_scene.checkCollision(collision_request, collision_result, *state, acm);
+  }
+  else
+  {
+    planning_scene.checkCollision(collision_request, collision_result, *state);
+  }
+
+  if (collision_result.collision && verbose)
+  {
+    ROS_WARN("IsRobotStateValid: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_WARN("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
+
+  return !collision_result.collision;
 }
