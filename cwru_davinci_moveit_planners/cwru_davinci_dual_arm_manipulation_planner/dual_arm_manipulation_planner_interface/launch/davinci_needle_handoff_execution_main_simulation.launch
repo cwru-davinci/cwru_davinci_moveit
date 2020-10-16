@@ -1,12 +1,13 @@
 <launch>
-    <!-- <node name="davinci_needle_pose_publisher" pkg="cwru_davinci_grasp" type="davinci_needle_pose_publisher" respawn="false" output="screen">
-        <rosparam command="load" file="$(find cwru_davinci_grasp)/config/grasping_and_needle_pose.yaml"/>
-    </node> -->
+    <arg name = "pub_mode" default = "0"/>
+
+    <node name="davinci_needle_pose_publisher" pkg="cwru_davinci_grasp" type="davinci_needle_pose_publisher_main" args="$(arg pub_mode)" respawn="false" output="screen"/>
 
     <node name="davinci_needle_handoff_execution_main" pkg="cwru_davinci_dual_arm_manipulation_planner" type="davinci_needle_handoff_execution_main" respawn="false" output="screen">
         <rosparam command="load" file="$(find cwru_davinci_grasp)/config/dvrk_psm_grasp_needle_data.yaml"/>
         <rosparam command="load" file="$(find cwru_davinci_dual_arm_manipulation_planner)/dual_arm_manipulation_planner_interface/config/simulation_handoff_planning_inputs.yaml"/>
         <param name="/planning_plugin" value="ompl_interface/OMPLPlanner"/>
         <rosparam command="load" file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/config/ompl_planning.yaml"/>
+        <param name="jaw_opening" type="double" value="0.5"/>
     </node>
 </launch>
