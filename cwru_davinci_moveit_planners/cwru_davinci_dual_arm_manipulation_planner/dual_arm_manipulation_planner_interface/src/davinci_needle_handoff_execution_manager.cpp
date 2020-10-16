@@ -146,6 +146,8 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
         m_pMoveItSupportArmGroupInterf->attachObject(m_ObjectName);
       }
 
+      // close gripper of incoming supporting arm
+      m_pSupportArmGroup->control_jaw(0.0, 0.2);
       const MoveGroupJointTrajectorySegment& graspToUngraspedJntSeg = m_HandoffJntTraj[i][2].second;
       m_pSupportArmGroup.reset(new psm_interface(graspToUngraspedJntSeg.begin()->first, m_NodeHandle));
       // open gripper of incoming resting arm

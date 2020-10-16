@@ -1,3 +1,5 @@
+**Version of the Code for Needle Regrasping When Obstacle Presents**
+
 The package is for daVinci to do dual arm manipulation. More specifically it is now for needle handoff project.
 
 This dual arm manipulation planner is implemented by [**RRT-CONNECT**](https://www.cs.cmu.edu/afs/cs/academic/class/15494-s14/readings/kuffner_icra2000.pdf). The RRT-CONNECT code base is from [**OMPL**](https://ompl.kavrakilab.org/). Robot description, collision check, and kinematics are done by using [**MoveIt**](https://moveit.ros.org/).
@@ -30,6 +32,7 @@ git clone https://github.com/lusu8892/cwru_davinci_moveit
 
 ### Some other packages needed before compiling
 ```
+git clone -b egocentric-simulation https://github.com/cwru-davinci/uv_geometry.git
 git clone https://github.com/lusu8892/cwru_davinci_grasp
 git clone https://github.com/cwru-davinci/uv_control.git
 git clone https://github.com/cwru-robotics/cwru_davinci_kinematics.git

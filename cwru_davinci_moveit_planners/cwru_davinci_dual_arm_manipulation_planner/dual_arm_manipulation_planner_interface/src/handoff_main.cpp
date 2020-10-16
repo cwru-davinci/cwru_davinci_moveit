@@ -129,6 +129,8 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
   while (!is_gs_valid)
   {
     stateSampler->sampleUniform(goal.get());
+    if (goal->se3State().getX() <= 0.095)
+      continue;
     goal->graspIndex().value = 147;
     goal->armIndex().value = 1;
     goal->setJointsComputed(false);

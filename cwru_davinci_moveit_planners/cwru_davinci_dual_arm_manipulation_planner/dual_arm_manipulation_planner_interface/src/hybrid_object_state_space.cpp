@@ -562,7 +562,7 @@ State* state
 
   ompl::RNG randNum;
   double random_num = randNum.gaussian01();
-  bool bound = 0.40;
+  bool bound = 0.35;
   bool within_1Sd = (random_num >= -bound && random_num <= bound) ? true : false;
   bool do_transit = within_1Sd ? true : false;
 
