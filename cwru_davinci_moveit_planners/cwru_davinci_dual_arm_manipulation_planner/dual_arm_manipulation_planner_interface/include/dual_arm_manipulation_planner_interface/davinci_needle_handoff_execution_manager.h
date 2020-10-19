@@ -175,6 +175,7 @@ protected:
 
   DummyNeedleModifier                                             m_NeedlePoseMd;
   double                                                          m_JawOpening;
+  bool                                                            m_IsPerturbation;
 private:
   bool turnOnStickyFinger
   (

@@ -42,6 +42,7 @@
 
 #define DEFAULT_NEEDLE_POSE_TOPIC "/updated_needle_pose"
 #define DEFAULT_JAW_OPENING 0.5
+#define DEFAULT_OFF_PERTURBATION false
 
 using namespace dual_arm_manipulation_planner_interface;
 namespace ob = ompl::base;
@@ -96,6 +97,7 @@ const std::string& robotDescription
   m_PiecewiseDistribution = std::piecewise_constant_distribution<double>(m_Intervals.begin(), m_Intervals.end(), m_Weights.begin());
 
   nodeHandlePrivate.param<double>("jaw_opening", m_JawOpening, DEFAULT_JAW_OPENING);
+  nodeHandlePrivate.param<bool>("is_perturbation", m_IsPerturbation, DEFAULT_OFF_PERTURBATION);
   m_PfGraspClient = m_NodeHandle.serviceClient<uv_msgs::pf_grasp>("/pf_grasp");
 
   m_PSMOneStickyFingerClient = m_NodeHandle.serviceClient<std_srvs::SetBool>("sticky_finger/PSM1_tool_wrist_sca_ee_link_1");
@@ -210,10 +212,13 @@ bool DavinciNeedleHandoffExecutionManager::executeNeedleHandoffTraj
 
       const std::string& toRestGroup = m_pSupportArmGroup->get_psm_name();
       // if needle perturbation happens it is only allowed to happen at non-last trajectory segment
-      if ((i != lastHandoffIdx) && !perturbNeedlePose(i, toSupportGroup))
-        ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is NOT perturbed");
-      else
-        ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is perturbed");
+      if (m_IsPerturbation)
+      {
+        if ((i != lastHandoffIdx) && !perturbNeedlePose(i, toSupportGroup))
+          ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is NOT perturbed");
+        else
+          ROS_INFO("DavinciNeedleHandoffExecutionManager: needle pose is perturbed");
+      }
 
       m_pSupportArmGroup.reset(new psm_interface(toRestGroup, m_NodeHandle));
       // close gripper of incoming reseting arm

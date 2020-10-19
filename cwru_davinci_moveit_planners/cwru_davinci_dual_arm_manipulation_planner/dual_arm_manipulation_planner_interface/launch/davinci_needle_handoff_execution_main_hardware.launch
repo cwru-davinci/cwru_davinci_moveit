@@ -4,5 +4,7 @@
         <rosparam command="load" file="$(find cwru_davinci_dual_arm_manipulation_planner)/dual_arm_manipulation_planner_interface/config/hardware_handoff_planning_inputs.yaml"/>
         <param name="/planning_plugin" value="ompl_interface/OMPLPlanner"/>
         <rosparam command="load" file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/config/ompl_planning.yaml"/>
+        <param name="jaw_opening" type="double" value="0.5"/>
+        <param name="is_perturbation" type="bool" value="false"/>
     </node>
 </launch>
