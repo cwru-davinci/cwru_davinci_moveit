@@ -98,6 +98,44 @@ private:
 class HybridObjectStateSpace : public ompl::base::CompoundStateSpace
 {
 public:
+
+  void printExecutionDuration(double* total_time, bool verbose = false);
+  void resetTimer();
+
+  static std::chrono::duration<double> object_transit_planning_duration_;
+
+  static std::chrono::duration<double> check_motion_duration_;
+
+  static std::chrono::duration<double> validity_checking_duration_;
+
+  static std::chrono::duration<double> interpolation_duration_;
+
+  static std::chrono::duration<double> hand_off_duration_;
+
+  static std::chrono::duration<double> ik_solving_duration_;
+
+  static std::chrono::duration<double> sampling_duration_;
+
+  static std::chrono::duration<double> choose_grasp_duration_;
+
+  static std::chrono::duration<double> compute_ik_duration_;
+
+  static std::chrono::duration<double> collision_checking_duration_;
+
+  static int sampling_num;
+
+  static int validty_check_num;
+
+  static int call_interpolation_num;
+
+  static int check_motion_num;
+
+  static int object_transit_motion_planner_num;
+
+  static int hand_off_planning_num;
+
+  static int hand_off_failed_num;
+
   class StateType : public ompl::base::CompoundStateSpace::StateType
   {
   public:
@@ -272,6 +310,12 @@ public:
   StateType* state
   ) const;
 
+  void copyJointValues
+  (
+  const StateType* state,
+  std::vector<double>& joint_values
+  ) const;
+
   int getJointSpaceDimension() const;
 
   virtual bool isHybrid() const;
@@ -360,7 +404,7 @@ public:
   const StateType* state2
   ) const;
 
-  inline const std::vector<cwru_davinci_grasp::GraspInfo>& graspTransformations() const
+  const std::vector<cwru_davinci_grasp::GraspInfo>& graspTransformations() const
   {
     return m_PossibleGrasps;
   }

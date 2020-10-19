@@ -47,6 +47,8 @@
 // cwru_davinci_grasp
 #include <cwru_davinci_grasp/davinci_simple_needle_grasper.h>
 
+#include <cwru_davinci_grasp/davinci_needle_pose_publisher.h>
+
 namespace dual_arm_manipulation_planner_interface
 {
 class DavinciNeedleHandoffExecutionManager
@@ -63,7 +65,7 @@ public:
   const std::string& robotDescription = "robot_description"
   );
 
-  ~DavinciNeedleHandoffExecutionManager(){};
+  ~DavinciNeedleHandoffExecutionManager();
 
   bool planNeedleHandoffTraj
   (
@@ -84,13 +86,61 @@ public:
   const std::vector<double>& goalJointPosition
   );
 
+  bool setupStartAndGoalStateInPlanner
+  (
+  const ompl::base::ScopedState<HybridObjectStateSpace>& start,
+  const ompl::base::ScopedState<HybridObjectStateSpace>& goal
+  );
+
   bool initializePlanner
   (
+  bool withStartAndGoalState = true
+  );
+
+  bool initializePlannerWithoutState
+  (
+  )
+  {
+    return initializePlanner(false);
+  }
+
+  void resetPlannerStatus
+  (
+  )
+  {
+    m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
+  }
+
+  const ompl::base::SpaceInformationPtr& plannerSpaceInformation
+  (
+  )
+  {
+    return m_pHandoffPlanner->m_pSpaceInfor;
+  }
+
+  const Eigen::Affine3d& updateNeedlePose
+  (
+  );
+
+  bool globalReplanning
+  (
+  const double solveTime
   );
 
 private:
   typedef moveit::planning_interface::MoveGroupInterface MoveGroupInterface;
 
+private:
+  bool                                                   m_FreshNeedlePose;
+  std::bernoulli_distribution                            m_BernoulliDistribution;
+  std::default_random_engine                             m_Generator;
+  std::uniform_real_distribution<double>                 m_UniformRealDistribution;
+  std::array<double,4>                                   m_Intervals{{-0.21, -0.19, 0.19, 0.21}};
+  std::array<double,3>                                   m_Weights{{5.0, 2.0, 5.0}};
+  std::piecewise_constant_distribution<double>           m_PiecewiseDistribution;
+  std::random_device                                     m_RandSeed;
+
+  std::string                                            m_NEEDLE_POSE_TOPIC;
 protected:
   std::vector<cwru_davinci_grasp::GraspInfo>                      m_GraspInfo;
 
@@ -98,25 +148,34 @@ protected:
 
   ompl::base::PlannerStatus                                       m_PlanningStatus = ompl::base::PlannerStatus::UNKNOWN;
 
-  PSMInterfacePtr                                                 m_pSupportArmGroup;
+  PSMInterfacePtr                                                 m_pSupportArmGroup = nullptr;
 
-  std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf;
+  std::unique_ptr<MoveGroupInterface>                             m_pMoveItSupportArmGroupInterf = nullptr;
 
   ros::Subscriber                                                 m_NeedlePoseSub;
+  ros::ServiceClient                                              m_PfGraspClient;
+  ros::ServiceClient                                              m_PSMOneStickyFingerClient;
+  ros::ServiceClient                                              m_PSMTwoStickyFingerClient;
+
+  Eigen::Affine3d                                                 m_NeedlePose;
 
   PathJointTrajectory                                             m_HandoffJntTraj;
 
   ros::NodeHandle                                                 m_NodeHandlePrivate;
   ros::NodeHandle                                                 m_NodeHandle;
 
-  HybridObjectStateSpace::StateType*                              m_pHyStartState;
-  HybridObjectStateSpace::StateType*                              m_pHyGoalState;
+  HybridObjectStateSpace::StateType*                              m_pHyStartState    = nullptr;
+  HybridObjectStateSpace::StateType*                              m_pHyGoalState     = nullptr;
+  HybridObjectStateSpace::StateType*                              m_pHyFailedAtState = nullptr;
 
   double                                                          m_SE3Bounds[6];
   int                                                             m_ArmIndexBounds[2];
   std::string                                                     m_ObjectName;
   robot_model_loader::RobotModelLoader                            m_RobotModelLoader;
 
+  DummyNeedleModifier                                             m_NeedlePoseMd;
+  double                                                          m_JawOpening;
+  bool                                                            m_IsPerturbation;
 private:
   bool turnOnStickyFinger
   (
@@ -126,6 +185,51 @@ private:
   bool turnOffStickyFinger
   (
   const std::string& supportArmGroup
+  );
+
+  void needlePoseCallBack
+  (
+  const geometry_msgs::PoseStamped& needlePose
+  );
+
+  bool changeNeedleTrackerMode
+  (
+  int ithState
+  );
+
+  bool correctObjectTransit
+  (
+  const int ithTraj,
+  MoveGroupJointTrajectory& jntTrajectoryBtwStates
+  );
+
+  bool correctObjectTransfer
+  (
+  const int targetState
+  );
+
+  bool perturbNeedlePose
+  (
+  int ithTrajSeg,
+  const std::string& toSupportGroup
+  );
+
+  int lastHandoffTrajSeg
+  (
+  );
+
+  double distanceBtwTwoRobotStates
+  (
+  const HybridObjectStateSpace::StateType* currentHyState,
+  const std::vector<double>& currentJointPosition
+  );
+
+  void fillFailedState
+  (
+  int curArmIdx,
+  int curGrasp,
+  const Eigen::Affine3d& curNeedlePose,
+  const std::vector<double>& curJointPosition
   );
 };
 }

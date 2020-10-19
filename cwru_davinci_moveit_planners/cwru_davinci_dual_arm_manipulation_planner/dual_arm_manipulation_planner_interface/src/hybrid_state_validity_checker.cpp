@@ -63,6 +63,10 @@ const std::string& objectName
   collision_request_simple_.contacts = true;
   collision_request_simple_.max_contacts = 1000;
 
+  hyStateSpace_->validity_checking_duration_ = std::chrono::duration<double>::zero();
+
+  hyStateSpace_->validty_check_num = 0;
+
   visual_tools_.reset(new moveit_visual_tools::MoveItVisualTools("/world", moveit_visual_tools::DISPLAY_ROBOT_STATE_TOPIC, kmodel_));
   visual_tools_->loadRobotStatePub("/davinci");
   loadNeedleModel();
@@ -70,6 +74,9 @@ const std::string& objectName
 
 bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
 {
+  auto start = std::chrono::high_resolution_clock::now();
+  hyStateSpace_->validty_check_num += 1;
+
   const auto *pHybridState = dynamic_cast<const HybridObjectStateSpace::StateType *>(state);
   if (!pHybridState)
   {
@@ -84,12 +91,12 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
   bool is_valid = false;
   if (!si_->satisfiesBounds(state))
   {
-    return is_valid;
+    printf("Invalid State: Out of bound. \n");
   }
   else
   {
     // convert ompl state to moveit robot state
-    const robot_state::RobotStatePtr kstate(new robot_state::RobotState(kmodel_));
+    const robot_state::RobotStatePtr kstate = std::make_shared<robot_state::RobotState>(kmodel_);
 
     if (!hybridStateToRobotState(pHybridState, kstate))
     {
@@ -111,6 +118,9 @@ bool HybridStateValidityChecker::isValid(const ompl::base::State* state) const
     }
   }
 
+  auto finish = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = finish - start;
+  hyStateSpace_->validity_checking_duration_ += elapsed;
   return is_valid;
 }
 
@@ -127,6 +137,7 @@ double HybridStateValidityChecker::cost(const ompl::base::State* state) const
 
   if (!hybridStateToRobotState(hs, kstate))
   {
+    printf("Invalid State: No IK solution. \n");
     return false;
   }
 
@@ -156,6 +167,7 @@ double HybridStateValidityChecker::clearance(const ompl::base::State* state) con
 
   if (!hybridStateToRobotState(hs, kstate))
   {
+    printf("Invalid State: No IK solution. \n");
     return false;
   }
 
@@ -175,29 +187,31 @@ bool attachedObject
 {
   if (!pHyState || !pRSstate)
   {
+    printf("HybridStateValidityChecker: Invalid state pointer. \n");
     return false;
   }
 
   pRSstate->setToDefaultValues();
 
   const std::string supportGroup = (pHyState->armIndex().value == 1) ? "psm_one" : "psm_two";
+  // convert object pose to robot tip pose
+  // this is the gripper tool tip link frame wrt /base_link
+  Eigen::Affine3d object_pose;  // object pose w/rt base frame
+  hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
+
   if (!pHyState->jointsComputed())
   {
-    // convert object pose to robot tip pose
-    // this is the gripper tool tip link frame wrt /base_link
-    Eigen::Affine3d object_pose;  // object pose w/rt base frame
-    hyStateSpace_->se3ToEigen3d(pHyState, object_pose);
-
     Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
     Eigen::Affine3d tool_tip_pose = object_pose * grasp_pose.inverse();
 
     const robot_state::JointModelGroup *selected_joint_model_group = pRSstate->getJointModelGroup(supportGroup);
-    std::size_t attempts = 2;
-    double timeout = 0.1;
+    std::size_t attempts = 1;
+    double timeout = 0.005;
     bool found_ik = pRSstate->setFromIK(selected_joint_model_group, tool_tip_pose, attempts, timeout);
 
     if (!found_ik)
     {
+      printf("HybridStateValidityChecker: No IK solution.\n");
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->setJointsComputed(false);
       const_cast<HybridObjectStateSpace::StateType *>(pHyState)->markInvalid();
       return found_ik;
@@ -216,10 +230,17 @@ bool attachedObject
 
   if (attachedObject)
   {
+    const Eigen::Affine3d tool_tip_pose = pRSstate->getGlobalLinkTransform(pRSstate->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
+    Eigen::Affine3d grasp_pose = tool_tip_pose.inverse() * object_pose;
+
+    if (grasp_pose.isApprox(hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose, 1e-4))
+    {
+      grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
+    }
     // attach object to supporting joint group of robot
     moveit::core::AttachedBody *pNeedleModel = createAttachedBody(supportGroup,
                                                                   m_ObjectName,
-                                                                  pHyState->graspIndex().value);
+                                                                  grasp_pose);
     pRSstate->attachBody(pNeedleModel);
     pRSstate->update();
   }
@@ -317,7 +338,7 @@ void HybridStateValidityChecker::loadNeedleModel()
   try
   {
     needle_mesh = shapes::createMeshFromResource("package://sim_gazebo/"
-                                                 "props/needle_pf/mesh/needle_pf.dae",
+                                                 "props/needle/mesh/needle_thin.dae",
                                                  scale_vec);
     if (!shapes::constructMsgFromShape(needle_mesh, mesh_msg))
       throw "Needle model is not loaded";
@@ -351,17 +372,47 @@ const std::string& planning_group
 
 bool HybridStateValidityChecker::noCollision
 (
-const robot_state::RobotState& rstate
+const robot_state::RobotState& rstate,
+const std::string& planningGroup,
+bool needleInteraction,
+bool verbose
 ) const
 {
-  planning_scene_->setCurrentState(rstate);
+  auto start_ik = std::chrono::high_resolution_clock::now();
+
   collision_detection::CollisionRequest collision_request;
   collision_request.contacts = true;
   collision_detection::CollisionResult collision_result;
-  planning_scene_->checkCollision(collision_request, collision_result, rstate);
-  bool no_collision = !collision_result.collision;
 
-  return no_collision;
+  if (!needleInteraction)
+  {
+    collision_detection::AllowedCollisionMatrix acm = planning_scene_->getAllowedCollisionMatrix();
+    const std::string psm = (planningGroup == "psm_one") ? "PSM1" : "PSM2";
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_1", true);
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_2", true);
+    planning_scene_->checkCollision(collision_request, collision_result, rstate, acm);
+  }
+  else
+  {
+    planning_scene_->checkCollision(collision_request, collision_result, rstate);
+  }
+
+  if (collision_result.collision && verbose)
+  {
+    ROS_WARN("NoCollision: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_WARN("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
+
+  auto finish_ik = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = finish_ik - start_ik;
+  hyStateSpace_->collision_checking_duration_ += elapsed;
+
+  return !collision_result.collision;
 }
 
 void HybridStateValidityChecker::noCollisionThread
@@ -372,22 +423,41 @@ const robot_state::RobotState& rstate
 {
   std::lock_guard<std::mutex> guard(planning_scene_mutex_);
 
+  auto start_ik = std::chrono::high_resolution_clock::now();
+
   planning_scene_->setCurrentState(rstate);
   collision_detection::CollisionRequest collision_request;
   collision_request.contacts = true;
   collision_detection::CollisionResult collision_result;
   planning_scene_->checkCollision(collision_request, collision_result, rstate);
   noCollision = (!collision_result.collision) ? 1 : 0;
+
+  auto finish_ik = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = finish_ik - start_ik;
+  hyStateSpace_->collision_checking_duration_ += elapsed;
+
+  if (collision_result.collision)
+  {
+    ROS_INFO("Invalid State: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_INFO("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
 }
 
 bool HybridStateValidityChecker::isRobotStateValid
 (
-const planning_scene::PlanningScenePtr& planning_scene,
+const planning_scene::PlanningScene& planning_scene,
 const std::string& planning_group,
+bool needleInteraction,
+bool verbose,
 robot_state::RobotState* state,
 const robot_state::JointModelGroup* group,
 const double* ik_solution
-)
+) const
 {
   state->setJointGroupPositions(group, ik_solution);
   const std::string outer_pitch_joint = (planning_group == "psm_one") ? "PSM1_outer_pitch" : "PSM2_outer_pitch";
@@ -396,10 +466,138 @@ const double* ik_solution
     state->setJointGroupPositions(planning_group + "_base_mimics", joint_val);
   state->update();
 
-  if (!planning_scene)
+  if (&planning_scene == nullptr)
   {
     return false;
   }
 
-  return !planning_scene->isStateColliding(*state);
+  collision_detection::CollisionRequest collision_request;
+  collision_request.contacts = true;
+  collision_detection::CollisionResult collision_result;
+
+  if (!needleInteraction)
+  {
+    collision_detection::AllowedCollisionMatrix acm = planning_scene.getAllowedCollisionMatrix();
+    const std::string psm = (planning_group == "psm_one") ? "PSM1" : "PSM2";
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_1", true);
+    acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_2", true);
+    planning_scene.checkCollision(collision_request, collision_result, *state, acm);
+  }
+  else
+  {
+    planning_scene.checkCollision(collision_request, collision_result, *state);
+  }
+
+  if (collision_result.collision && verbose)
+  {
+    ROS_WARN("IsRobotStateValid: Robot state is in collision with planning scene. \n");
+    collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+    for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin();
+         it != contactMap.end(); ++it)
+    {
+      ROS_WARN("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+    }
+  }
+
+  return !collision_result.collision;
+}
+
+bool HybridStateValidityChecker::validateTrajectory
+(
+const std::string& planningGroup,
+const robot_state::RobotStatePtr& pRobotState,
+const std::vector<std::vector<double>>& armJntTraj,
+double jaw,
+bool verbose,
+bool needleInteraction
+)
+{
+  setJawPosition(jaw, planningGroup, pRobotState);
+  for (std::size_t i = 0; i < armJntTraj.size(); ++i)
+  {
+    pRobotState->setJointGroupPositions(planningGroup, armJntTraj[i]);
+    setMimicJointPositions(pRobotState, planningGroup);
+    pRobotState->update();
+    if (!noCollision(*pRobotState, "", needleInteraction, verbose))
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool HybridStateValidityChecker::detechNeedleGrasped
+(
+const robot_state::RobotState& rstate,
+const std::string& planningGroup,
+bool verbose
+)
+{
+  collision_detection::CollisionRequest collision_request;
+  collision_request.contacts = true;
+  collision_detection::CollisionResult collision_result;
+  planning_scene_->checkCollision(collision_request, collision_result, rstate);
+
+  bool isNeedleGrasp = false;
+  if (!collision_result.collision)  // if no collision found, then needle is not grasped
+    return isNeedleGrasp;
+
+  // found collision, try to turn off needle interaction to see if collision still present
+  // turning off the needle interaction
+  collision_detection::AllowedCollisionMatrix acm = planning_scene_->getAllowedCollisionMatrix();
+  const std::string psm = (planningGroup == "psm_one") ? "PSM1" : "PSM2";
+  collision_detection::CollisionResult::ContactMap::const_iterator it;
+  for (it = collision_result.contacts.begin(); it != collision_result.contacts.end(); ++it)
+  {
+    ROS_WARN("DetechNeedleGrasped found contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+  }
+  acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_1", true);
+  acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_2", true);
+
+  // after turning off needle interaction, do collision again
+  collision_result.clear();
+  planning_scene_->checkCollision(collision_request, collision_result, rstate, acm);
+
+  if (collision_result.collision)  // after turn off needleInteraction still found collision
+  {
+    if (verbose)
+    {
+      ROS_WARN("DetechNeedleGrasped: Robot state is in collision with planning scene. \n");
+      collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
+      for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
+      {
+        ROS_WARN("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
+      }
+    }
+
+    // this is failure due to collision detected with other link
+    return isNeedleGrasp;
+  }
+
+  // after turn off needleInteraction no collision found,
+  // this means collision only happens btw needle and gripper links
+  isNeedleGrasp = true;
+  return isNeedleGrasp;
+}
+
+void HybridStateValidityChecker::setJawPosition
+(
+double radian,
+const std::string& planningGroup,
+const robot_state::RobotStatePtr& pRState
+)
+{
+  const std::string eef_group_name = pRState->getJointModelGroup(planningGroup)->getAttachedEndEffectorNames()[0];
+  std::vector<double> eef_joint_position;
+  pRState->copyJointGroupPositions(eef_group_name, eef_joint_position);
+
+  for (std::size_t i = 0; i < eef_joint_position.size(); ++i)
+  {
+    eef_joint_position[i] = radian;
+  }
+
+  pRState->setJointGroupPositions(eef_group_name, eef_joint_position);
+  setMimicJointPositions(pRState, planningGroup);  // this line cannot be removed, as copyJointGroupPosition does not copy mimic joints's value
+  pRState->update();
 }

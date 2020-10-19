@@ -139,11 +139,11 @@ int main(int argc, char** argv)
 
   if (!pSimpleGrasp->pickNeedle(objectName, cwru_davinci_grasp::NeedlePickMode::FINDGOOD))
   {
-    ROS_INFO("%s: needle picked up in FINDGOOD way", nodeHandle.getNamespace().c_str());
+    ROS_INFO("%s: did not pick needle up in FINDGOOD way", nodeHandle.getNamespace().c_str());
     return -1;
   }
 
-  ros::Duration(10.0).sleep();
+  ros::Duration(1.0).sleep();
   ros::spinOnce();
   // execute needle grasping first
   std::vector<cwru_davinci_grasp::GraspInfo> graspPoses = pSimpleGrasp->getAllPossibleNeedleGrasps(false);
@@ -186,9 +186,20 @@ int main(int argc, char** argv)
 
   if (!needleHandoffExecutor.executeNeedleHandoffTraj())
   {
-    return -1;
+    char answer;
+    std::cout << "Replanning (y/n)? " << std::endl;
+    std::cin >> answer;
+    double okToReplan = (answer == 'y') ? true : false;
+    if (okToReplan)
+    {
+      if (needleHandoffExecutor.globalReplanning(planningTime))
+      {
+        if (!needleHandoffExecutor.executeNeedleHandoffTraj())
+          return -1;
+      }
+    }
   }
 
-  ros::waitForShutdown();
+  ros::shutdown();
   return 0;
 }

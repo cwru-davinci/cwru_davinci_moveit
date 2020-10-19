@@ -50,10 +50,15 @@ HybridStateSampler::HybridStateSampler(const HybridObjectStateSpace* space)
   robot_model_loader_("robot_description")
 {
   kmodel_ = robot_model_loader_.getModel();
+
+  hyStateSpace_->sampling_duration_ = std::chrono::duration<double>::zero();
 }
 
 void HybridStateSampler::sampleUniform(State* state)
 {
+  auto start = std::chrono::high_resolution_clock::now();
+  hyStateSpace_->sampling_num += 1;
+
   ompl::base::DiscreteStateSampler arm_index_sampler(hyStateSpace_->getSubspace(1).get());
   ompl::base::DiscreteStateSampler grasp_index_sampler(hyStateSpace_->getSubspace(2).get());
 
@@ -82,6 +87,10 @@ void HybridStateSampler::sampleUniform(State* state)
   const Eigen::Affine3d grasp_pose = hyStateSpace_->graspTransformations()[hss->graspIndex().value].grasp_pose;
   const Eigen::Affine3d object_pose = tool_tip_pose * grasp_pose;
   hyStateSpace_->eigen3dToSE3(object_pose, hss);
+
+  auto finish = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = finish - start;
+  hyStateSpace_->sampling_duration_ += elapsed;
 }
 
 void HybridStateSampler::sampleUniformNear
@@ -195,6 +204,85 @@ const std::vector<cwru_davinci_grasp::GraspInfo>& possible_grasps
   lock();
 }
 
+std::chrono::duration<double> HybridObjectStateSpace::object_transit_planning_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::check_motion_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::validity_checking_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::interpolation_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::hand_off_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::ik_solving_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::sampling_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::choose_grasp_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::compute_ik_duration_ = std::chrono::duration<double>::zero();
+std::chrono::duration<double> HybridObjectStateSpace::collision_checking_duration_ = std::chrono::duration<double>::zero();
+
+int HybridObjectStateSpace::sampling_num = 0;
+int HybridObjectStateSpace::validty_check_num = 0;
+int HybridObjectStateSpace::call_interpolation_num = 0;
+int HybridObjectStateSpace::check_motion_num = 0;
+int HybridObjectStateSpace::object_transit_motion_planner_num = 0;
+int HybridObjectStateSpace::hand_off_planning_num = 0;
+int HybridObjectStateSpace::hand_off_failed_num = 0;
+
+void HybridObjectStateSpace::resetTimer()
+{
+  HybridObjectStateSpace::object_transit_planning_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::check_motion_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::validity_checking_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::interpolation_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::hand_off_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::ik_solving_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::sampling_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::choose_grasp_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::compute_ik_duration_ = std::chrono::duration<double>::zero();
+  HybridObjectStateSpace::collision_checking_duration_ = std::chrono::duration<double>::zero();
+
+  HybridObjectStateSpace::sampling_num = 0;
+  HybridObjectStateSpace::validty_check_num = 0;
+  HybridObjectStateSpace::call_interpolation_num = 0;
+  HybridObjectStateSpace::check_motion_num = 0;
+  HybridObjectStateSpace::object_transit_motion_planner_num = 0;
+  HybridObjectStateSpace::hand_off_planning_num = 0;
+  HybridObjectStateSpace::hand_off_failed_num = 0;
+}
+
+void HybridObjectStateSpace::printExecutionDuration(
+double* total_time,
+bool verbose
+)
+{
+
+  if (verbose)
+  {
+    std::cout << "Sampling Elapsed duration and times of called: " << sampling_duration_.count() << "s and "
+              << sampling_num << "\n"
+              << "Validity Check Elapsed duration and times of called: " << validity_checking_duration_.count()
+              << "s and " << validty_check_num << "\n"
+              << "Interpolation Elapsed duration: " << interpolation_duration_.count() << "s\n"
+              << "Interplate function has been called: " << call_interpolation_num << " times\n"
+              << "Compute IK Elapsed duration in Interpolation function: " << compute_ik_duration_.count() << "s\n"
+              << "Check Motion Elapsed duration: " << check_motion_duration_.count() << "s\n"
+              << "Check Motion has been called: " << check_motion_num << " times\n"
+              << "Object Transit Motion Planning Elapsed duration: " << object_transit_planning_duration_.count()
+              << "s\n"
+              << "Object Transit Motion Planner has been called: " << object_transit_motion_planner_num << " times\n"
+              << "Handoff Elapsed duration: " << hand_off_duration_.count() << "s\n"
+              << "Handoff Planning has been called: " << hand_off_planning_num << " times\n"
+              << "Handoff Planning Failed times: " << hand_off_failed_num << "\n"
+              << "IK sovling Elapsed Time in Check Motion: " << ik_solving_duration_.count() << "s\n"
+              << "Local Planner Collision Check Elapsed Time: " << collision_checking_duration_.count() << "s\n"
+              << "Choose Grasp Function Elapsed Time: " << choose_grasp_duration_.count() << std::endl;
+  }
+
+  std::chrono::duration<double> total_time_chro =
+  sampling_duration_ + validity_checking_duration_ + interpolation_duration_ + check_motion_duration_;
+  if (total_time)
+  {
+    *total_time = total_time_chro.count();
+  }
+
+  std::cout << "Total Time is: " << total_time_chro.count() << "s" << std::endl;
+}
+
 void HybridObjectStateSpace::setSE3Bounds(const RealVectorBounds& bounds)
 {
   components_[0]->as<SE3StateSpace>()->setBounds(bounds);
@@ -252,6 +340,7 @@ StateType* state
   int joint_space_size = components_[3]->as<RealVectorStateSpace>()->getDimension();
   if (joint_values.size() != joint_space_size)
   {
+    printf("Robot's JointModelGroup Variables Dimension is NOT %d \n", joint_space_size);
     return false;
   }
 
@@ -261,6 +350,23 @@ StateType* state
   }
 
   return true;
+}
+
+void HybridObjectStateSpace::copyJointValues
+(
+const StateType* state,
+std::vector<double>& joint_values
+) const
+{
+  const ompl::base::RealVectorStateSpace::StateType& joint_variable = state->jointVariables();
+  int joint_space_size = components_[3]->as<RealVectorStateSpace>()->getDimension();
+  joint_values.clear();
+  joint_values.resize(joint_space_size);
+
+  for (std::size_t i = 0; i < joint_space_size; ++i)
+  {
+    joint_values[i] = joint_variable[i];
+  }
 }
 
 int HybridObjectStateSpace::getJointSpaceDimension() const
@@ -442,6 +548,7 @@ const double t,
 State* state
 ) const
 {
+  auto start = std::chrono::high_resolution_clock::now();
   auto* cstate = static_cast<StateType*>(state);
   cstate->clearKnownInformation();
 
@@ -507,6 +614,11 @@ State* state
       // should not be there
       break;
   }
+
+  auto finish = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = finish - start;
+  interpolation_duration_ += elapsed;
+  call_interpolation_num += 1;
 }
 
 void HybridObjectStateSpace::copyToReals

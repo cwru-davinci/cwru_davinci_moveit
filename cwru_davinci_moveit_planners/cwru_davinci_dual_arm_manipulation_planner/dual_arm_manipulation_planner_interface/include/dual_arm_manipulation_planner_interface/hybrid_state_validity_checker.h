@@ -68,11 +68,20 @@ public:
   virtual ~HybridStateValidityChecker()
   {}
 
-  virtual bool isValid(const ompl::base::State* state) const override;
+  virtual bool isValid
+  (
+  const ompl::base::State* state
+  ) const override;
 
-  virtual double cost(const ompl::base::State* state) const;
+  virtual double cost
+  (
+  const ompl::base::State* state
+  ) const;
 
-  virtual double clearance(const ompl::base::State* state) const override;
+  virtual double clearance
+  (
+  const ompl::base::State* state
+  ) const override;
 
   bool hybridStateToRobotState
   (
@@ -107,7 +116,7 @@ public:
   const std::string& planning_group
   ) const;
 
-  inline const robot_model::RobotModelConstPtr& robotModel() const
+  const robot_model::RobotModelConstPtr& robotModel() const
   {
     return kmodel_;
   }
@@ -117,18 +126,23 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
-  static bool isRobotStateValid
+  bool isRobotStateValid
   (
-  const planning_scene::PlanningScenePtr& planning_scene,
+  const planning_scene::PlanningScene& planning_scene,
   const std::string& planning_group,
+  bool needleInteraction,
+  bool verbose,
   robot_state::RobotState* state,
   const robot_state::JointModelGroup* group,
   const double* ik_solution
-  );
+  ) const;
 
   bool noCollision
   (
-  const robot_state::RobotState& rstate
+  const robot_state::RobotState& rstate,
+  const std::string& planningGroup = "",
+  bool needleInteraction = true,
+  bool verbose = false
   ) const;
 
   void noCollisionThread
@@ -137,17 +151,55 @@ public:
   const robot_state::RobotState& rstate
   ) const;
 
+  const std::string& objectName
+  (
+  ) const
+  {
+    return m_ObjectName;
+  }
+
+  bool validateTrajectory
+  (
+  const std::string& planningGroup,
+  const robot_state::RobotStatePtr& pRobotState,
+  const std::vector<std::vector<double>>& armJntTraj,
+  double jaw = 0.0,
+  bool verbose = false,
+  bool needleInteraction = true
+  );
+
+  bool detechNeedleGrasped
+  (
+  const robot_state::RobotState& rstate,
+  const std::string& planningGroup,
+  bool verbose = false
+  );
+
+  void setJawPosition
+  (
+  double radian,
+  const std::string& planningGroup,
+  const robot_state::RobotStatePtr& pRState
+  );
+
+  const planning_scene::PlanningScenePtr& getPlanningScene
+  (
+  )
+  {
+    return planning_scene_;
+  }
+
 protected:
   void defaultSettings();
 
   void loadNeedleModel();
 
 protected:
-  HybridObjectStateSpace                    *hyStateSpace_;
+  HybridObjectStateSpace                    *hyStateSpace_ = nullptr;
 
-  planning_scene::PlanningScenePtr          planning_scene_;
+  planning_scene::PlanningScenePtr          planning_scene_ = nullptr;
 
-  robot_model::RobotModelConstPtr           kmodel_;
+  robot_model::RobotModelConstPtr           kmodel_ = nullptr;
 
   collision_detection::CollisionRequest     collision_request_simple_;
 

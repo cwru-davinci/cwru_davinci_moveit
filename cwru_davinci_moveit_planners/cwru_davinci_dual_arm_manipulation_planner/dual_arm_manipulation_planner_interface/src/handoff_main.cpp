@@ -125,27 +125,6 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
     is_ss_valid = si->isValid(start.get());
   }
 
-//
-//  stateSampler->sampleUniform(goal.get());
-//
-//  int start_arm_index = start->armIndex().value;
-//  int start_grasp_part = grasp_poses[start->graspIndex().value].part_id;
-//  int goal_arm_index = goal->armIndex().value;
-//  int goal_grasp_part = grasp_poses[goal->graspIndex().value].part_id;
-//  bool same_arm = (start_arm_index == goal_arm_index) ? true : false;
-//  bool same_grasp_part = (start_grasp_part == goal_grasp_part) ? true : false;
-
-//  bool is_gs_valid = si->isValid(goal.get());
-//  while (!same_arm || same_grasp_part || !is_gs_valid)
-//  {
-//    stateSampler->sampleUniform(goal.get());
-//    is_gs_valid = si->isValid(goal.get());
-//    if (!is_gs_valid)
-//      continue;
-//    same_arm = (start_arm_index == goal->armIndex().value) ? true : false;
-//    same_grasp_part = (start_grasp_part == grasp_poses[goal->graspIndex().value].part_id) ? true : false;
-//  }
-
   bool is_gs_valid = false;
   while (!is_gs_valid)
   {
@@ -196,6 +175,7 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
   pdef->print(std::cout);
   // attempt to solve the problem within one second of planning time
   auto start_ts = std::chrono::high_resolution_clock::now();
+  si->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
   ob::PlannerStatus solved = planner->ob::Planner::solve(200.0);
 
   auto finish = std::chrono::high_resolution_clock::now();
@@ -206,6 +186,9 @@ std::vector<cwru_davinci_grasp::GraspInfo> grasp_poses
     if (pdef->hasExactSolution())
     {
       std::cout << "Has exact solution" << std::endl;
+      double* total_time = new double;
+      si->getStateSpace().get()->as<HybridObjectStateSpace>()->printExecutionDuration(total_time);
+      delete total_time;
 
       og::PathGeometric slnPath = *(pdef->getSolutionPath()->as<og::PathGeometric>());
       // print the path to screen

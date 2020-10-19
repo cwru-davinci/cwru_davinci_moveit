@@ -110,7 +110,7 @@ private:
     stats.max = *std::max_element(running_time.begin(), running_time.end());
     stats.min = *std::min_element(running_time.begin(), running_time.end());
 
-    double accum = std::accumulate(running_time.begin(), running_time.end(), 0);
+    double accum = std::accumulate(running_time.begin(), running_time.end(), 0.0);
     double mean = accum / running_time.size();
     stats.mean = mean;
 
@@ -152,7 +152,9 @@ private:
     // attempt to solve the problem within one second of planning time
 
     auto start_ts = std::chrono::high_resolution_clock::now();
+    pSpaceInfor->getStateSpace().get()->as<HybridObjectStateSpace>()->resetTimer();
     ob::PlannerStatus solved = pPlanner->ob::Planner::solve(200.0);
+  
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> planning_time = finish - start_ts;
 

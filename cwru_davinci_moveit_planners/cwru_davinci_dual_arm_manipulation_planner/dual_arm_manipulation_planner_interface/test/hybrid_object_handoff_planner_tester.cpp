@@ -115,6 +115,18 @@ public:
   PathJointTrajectory& handoffPathJntTraj
   );
 
+  // inline const std::shared_ptr<og::PathGeometric>& getSolutionPath
+  // (
+  // ) const
+  // {
+  //   return m_pPath;
+  // }
+
+  bool testValidateOriginalHandoffPath
+  (
+  const PathJointTrajectory& handoffPathJntTraj
+  );
+
 protected:
   void getSolutionPathFromData();
 
@@ -136,7 +148,6 @@ protected:
 
 protected:
   std::vector<ob::State* >                           m_SlnStates;
-  std::unique_ptr<og::PathGeometric>                 m_pPath;
 };
 
 HybridObjectHandoffPlannerTester::HybridObjectHandoffPlannerTester
@@ -227,6 +238,31 @@ PathJointTrajectory& handoffPathJntTraj
       return false;
     }
     handoffPathJntTraj[i] = jntTrajectoryBtwStates;
+  }
+  return true;
+}
+
+bool HybridObjectHandoffPlannerTester::testValidateOriginalHandoffPath
+(
+const PathJointTrajectory& handoffPathJntTraj
+)
+{
+  EXPECT_TRUE(!m_SlnStates.empty());
+  EXPECT_TRUE(m_pHyStateSpace);
+  Eigen::Affine3d currentNeedlePose;
+  std::vector<double> currentJointPosition;
+
+  for (std::size_t i = 0; i < handoffPathJntTraj.size(); ++i)
+  {
+    if (handoffPathJntTraj[i].size() == 1)
+      continue;
+
+    const HybridObjectStateSpace::StateType* hyState = m_SlnStates[i]->as<HybridObjectStateSpace::StateType>();
+    m_pHyStateSpace->copyJointValues(hyState, currentJointPosition);
+    m_pHyStateSpace->se3ToEigen3d(hyState, currentNeedlePose);
+
+    if (!validateOriginalHandoffPath(currentNeedlePose, currentJointPosition, handoffPathJntTraj[i]))
+      return false;
   }
   return true;
 }
@@ -581,18 +617,18 @@ void HybridObjectHandoffPlannerTester::getSolutionPathFromData()
                           distance_zero(opt.identityCost()));
 
     // Extracting the path
-    m_pPath = std::make_unique<og::PathGeometric>(m_pSpaceInfor);
+    m_pSlnPath = std::make_shared<og::PathGeometric>(m_pSpaceInfor);
     for (ob::PlannerData::Graph::Vertex pos = boost::vertex(data.getGoalIndex(0), graph);
          prev[pos] != pos;
          pos = prev[pos])
     {
-      m_pPath->append(vertices[pos]->getState());
+      m_pSlnPath->append(vertices[pos]->getState());
       printf("Vertex index along the solution path: %u\n", data.vertexIndex(*vertices[pos]));
     }
-    m_pPath->append(vertices[start]->getState());
+    m_pSlnPath->append(vertices[start]->getState());
     printf("Start vertex index along the solution path: %u\n", data.vertexIndex(*vertices[start]));
-    m_pPath->reverse();
-    m_SlnStates = m_pPath->getStates();
+    m_pSlnPath->reverse();
+    m_SlnStates = m_pSlnPath->getStates();
   }
 }
 
