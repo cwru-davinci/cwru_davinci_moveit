@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-
-    <!-- send davinci PSM1 urdf to param server -->
-<!--    <param name="robot_description" command="$(find xacro)/xacro '$(find cwru_davinci_geometry_models)/model/PSM1.urdf.xacro'" />
-    <remap from="robot_description_semantic" to="robot_description"/>-->
-
-    <include file="$(find cwru_davinci_psm_one_moveit_config)/launch/planning_context.launch">
+    <include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/planning_context.launch">
         <arg name="load_robot_description" value="true"/>
     </include>
 
-    <test
-            test-name="test_davinci_moveit_kinematics_plugin"
-            pkg="cwru_davinci_moveit_plugins"
-            type="test_davinci_moveit_kinematics_plugin"
-            launch-prefix="terminator -x gdb --data-directory=/usr/share/gdb/ --args">
-        <param name="tip_name" value="PSM1tool_tip_link" />
-        <param name="root_name" value="PSM1psm_base_link" />
+    <test test-name="test_davinci_moveit_kinematics_plugin" pkg="cwru_davinci_moveit_plugins" type="test_davinci_moveit_kinematics_plugin"
+          time-limit="100.0" args="--gtest_repeat=1">
+        <param name="time_out" value="0.1" />
+        <param name="test_num" value="10000" />
+        <param name="tip_name" value="PSM1_tool_tip_link" />
+        <param name="root_name" value="world" />
         <param name="search_discretization" value="0.025" />
-        <param name="plugin_name" value="davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin"/>
+        <param name="plugin_name" value="trac_ik_kinematics_plugin/TRAC_IKKinematicsPlugin"/>
     </test>
 </launch>
+
+<!--<param name="plugin_name" value="davinci_moveit_kinematics/DavinciMoveitKinematicsPlugin"/>-->
+<!--<param name="plugin_name" value="trac_ik_kinematics_plugin/TRAC_IKKinematicsPlugin"/>-->

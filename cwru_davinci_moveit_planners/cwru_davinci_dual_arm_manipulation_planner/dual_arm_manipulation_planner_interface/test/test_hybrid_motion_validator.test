@@ -1,0 +1,10 @@
+<launch>
+    <include file="$(find cwru_davinci_dvrk_both_psms_moveit_config)/launch/planning_context.launch">
+        <arg name="load_robot_description" value="true"/>
+    </include>
+
+    <test test-name="test_hybrid_motion_validator" pkg="cwru_davinci_dual_arm_manipulation_planner" type="test_hybrid_motion_validator"
+        time-limit="1.0" args="--gtest_repeat=1">
+        <param name="test_num" value="1000"/>
+    </test>
+</launch>

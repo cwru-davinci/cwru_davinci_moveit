@@ -1,4 +1,6 @@
 #cmake_minimum_required(VERSION 2.8.3)
+find_package(GTest REQUIRED)
+
 set(MOVEIT_LIB_NAME davinci_moveit_kinematics_plugin)
 add_library( ${MOVEIT_LIB_NAME}
         src/davinci_moveit_ik.cpp
@@ -209,9 +211,9 @@ install(TARGETS ${MOVEIT_LIB_NAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DEST
 # add one/multiple source files to the executable target
 # register the rostest launch file "test/mynode.test"
 if (CATKIN_ENABLE_TESTING)
-
+    find_package(rostest REQUIRED)
     add_rostest_gtest(test_davinci_moveit_kinematics_plugin test/test_davinci_moveit_kinematics_plugin.test test/test_davinci_moveit_kinematics_plugin.cpp)
 
     # you will likely need to link other libraries to your test executable
-    target_link_libraries(test_davinci_moveit_kinematics_plugin ${PROJECT_SOURCE_DIR} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(test_davinci_moveit_kinematics_plugin ${MOVEIT_LIB_NAME} ${PROJECT_SOURCE_DIR} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif()

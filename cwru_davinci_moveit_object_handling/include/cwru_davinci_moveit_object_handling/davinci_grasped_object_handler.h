@@ -82,6 +82,8 @@ namespace davinci_moveit_object_handling
                                       const std::string &get_planning_scene_service = "/get_planning_scene",
                                       const std::string &set_planning_scene_topic = "/planning_scene");
 
+    virtual ~DavinciMoveitGraspedObjectHandler();
+
     /**
      * @brief attach object to robot
      * @param object_name

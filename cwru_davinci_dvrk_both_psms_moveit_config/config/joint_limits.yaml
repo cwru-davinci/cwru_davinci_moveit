@@ -2,135 +2,135 @@
 # Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
 # Joint limits can be turned off with [has_velocity_limits, has_acceleration_limits]
 joint_limits:
-  PSM1/jaw:
+  PSM1_jaw:
     has_position_limits: true
     min_position: -1.57
-    max_position: 1.57   
+    max_position: 1.57
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/jaw_mimic_1:
+  PSM1_jaw_mimic_1:
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/jaw_mimic_2:
+  PSM1_jaw_mimic_2:
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/outer_insertion:
+  PSM1_outer_insertion:
     has_position_limits: true
-    min_position: 0.016
+    min_position: 0.05
     max_position: 0.23
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/outer_pitch:
+  PSM1_outer_pitch:
     has_position_limits: true
     min_position: -0.7
     max_position: 0.7
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/outer_roll:
+  PSM1_outer_roll:
     has_position_limits: true
-    min_position: -2.25
-    max_position: 2.25
+    min_position: -3.0485
+    max_position: 3.0485
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/outer_wrist_pitch:
+  PSM1_outer_wrist_pitch:
     has_position_limits: true
     min_position: -1.57
     max_position: 1.57
     has_velocity_limits: true
-    max_velocity: 20
+    max_velocity: 20.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/outer_wrist_yaw:
+  PSM1_outer_wrist_yaw:
     has_position_limits: true
     min_position: -1.39
     max_position: 1.39
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM1/outer_yaw:
+  PSM1_outer_yaw:
     has_position_limits: true
-    min_position: -1.0
-    max_position: 1.0
+    min_position: -1.5707
+    max_position: 1.5707
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/jaw:
+  PSM2_jaw:
     has_position_limits: true
     min_position: -1.57
     max_position: 1.57
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/jaw_mimic_1:
+  PSM2_jaw_mimic_1:
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/jaw_mimic_2:
+  PSM2_jaw_mimic_2:
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/outer_insertion:
+  PSM2_outer_insertion:
     has_position_limits: true
-    min_position: 0.016
+    min_position: 0.05
     max_position: 0.23
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/outer_pitch:
+  PSM2_outer_pitch:
     has_position_limits: true
     min_position: -0.7
     max_position: 0.7
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/outer_roll:
+  PSM2_outer_roll:
     has_position_limits: true
-    min_position: -2.25
-    max_position: 2.25    
+    min_position: -3.0485
+    max_position: 3.0485  
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/outer_wrist_pitch:
+  PSM2_outer_wrist_pitch:
     has_position_limits: true
     min_position: -1.57
     max_position: 1.57
     has_velocity_limits: true
-    max_velocity: 20
+    max_velocity: 20.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/outer_wrist_yaw:
+  PSM2_outer_wrist_yaw:
     has_position_limits: true
     min_position: -1.39
     max_position: 1.39
     has_velocity_limits: true
-    max_velocity: 10
+    max_velocity: 10.0
     has_acceleration_limits: false
     max_acceleration: 0
-  PSM2/outer_yaw:
+  PSM2_outer_yaw:
     has_position_limits: true
-    min_position: -1.0
-    max_position: 1.0
+    min_position: -1.5707
+    max_position: 1.5707
     has_velocity_limits: true
-    max_velocity: 5
+    max_velocity: 5.0
     has_acceleration_limits: false
     max_acceleration: 0

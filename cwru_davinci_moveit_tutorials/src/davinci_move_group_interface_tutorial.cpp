@@ -1,8 +1,8 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Case Western Reserve University
- *  All rights reserved.
+ *  Copyright (c) 2018, Case Western resize University
+ *  All rights resized.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -70,7 +70,7 @@ void defineToolTipGoal(const moveit::core::RobotStatePtr &current_state,
   current_state->updateLinkTransforms();
 
   Eigen::Affine3d current_wrt_planning_frame = current_state->getFrameTransform(
-    "/one_tool_tip_link");
+    "/PSM1_tool_tip_link");
   ROS_INFO_STREAM("current_wrt_planning_frame \n" << current_wrt_planning_frame.matrix());
 
 
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "move_group_interface_tutorial");
   ros::NodeHandle node_handle;
   ros::AsyncSpinner spinner(1);
-//  ros::Duration(4.0).sleep();
+  ros::Duration(4.0).sleep();
   spinner.start();
 
   //***********************************************************************************************************
@@ -119,52 +119,114 @@ int main(int argc, char **argv)
   // MoveIt! operates on sets of joints called "planning groups" and stores them in an object called
   // the `JointModelGroup`. Throughout MoveIt! the terms "planning group" and "joint model group"
   // are used interchangably.
-  static const std::string PLANNING_GROUP = "psm_one";
+  static const std::string PSM_ONE_PLANNING_GROUP = "psm_one";
+  static const std::string PSM_TWO_PLANNING_GROUP = "psm_two";
+
+  const robot_state::JointModelGroup* psm1_jt_group_parent = daVinciRobotState->getJointModelGroup(PSM_ONE_PLANNING_GROUP);
+  std::vector<std::string> sub_group_name = psm1_jt_group_parent->getSubgroupNames();
+  const robot_state::JointModelGroup* eff_group = daVinciRobotState->getJointModelGroup(psm1_jt_group_parent->getAttachedEndEffectorNames()[0]);
+  std::vector<std::string> eff_links = eff_group->getLinkModelNames();
+  std::vector< const moveit::core::LinkModel * > tips;
+  bool xx = psm1_jt_group_parent->getEndEffectorTips(tips);
+
+  const moveit::core::LinkModel* tip_link = psm1_jt_group_parent->getOnlyOneEndEffectorTip();
+  std::string tip_link_name = tip_link->getName();
 
   // The :move_group_interface:`MoveGroup` class can be easily
   // setup using just the name of the planning group you would like to control and plan for.
-  moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
+  moveit::planning_interface::MoveGroupInterface move_group(PSM_ONE_PLANNING_GROUP);
 
   // We will use the :planning_scene_interface:`PlanningSceneInterface`
   // class to add and remove collision objects in our "virtual world" scene
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
 
   // Raw pointers are frequently used to refer to the planning group for improved performance.
-  const robot_state::JointModelGroup *joint_model_group =
-    move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
+  const robot_state::JointModelGroup *psm1_jt_group =
+    move_group.getCurrentState()->getJointModelGroup(PSM_ONE_PLANNING_GROUP);
+
+  daVinciRobotState = move_group.getCurrentState();
+
+  robot_state::RobotState dual_arm_state = planning_scene->getCurrentState();
+
+  psm1_jt_group = dual_arm_state.getJointModelGroup(PSM_ONE_PLANNING_GROUP);
+
+  const robot_state::JointModelGroup *psm2_jt_group = dual_arm_state.getJointModelGroup(PSM_TWO_PLANNING_GROUP);
+
+  // Next get the current set of joint values for the group.
+  std::vector<double> psm1_jt_pos;
+  dual_arm_state.copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+
+  ROS_INFO("Initial daVinciRobotState joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+  std::vector<double> psm2_jt_pos;
+  dual_arm_state.copyJointGroupPositions(psm2_jt_group, psm2_jt_pos);
+
+  ROS_INFO("Initial daVinciRobotState joint values: ");
+  for(int i = 0; i < psm2_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm2_jt_pos[i]);
+  }
+
+  std::vector< double > position1;
+  position1.push_back(0.0185);
+  dual_arm_state.setJointPositions("PSM1_outer_insertion", position1);
+
+  planning_scene->setCurrentState(dual_arm_state);
+
+  psm1_jt_pos.resize(0);
+  dual_arm_state.copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+  ROS_INFO("dual_arm_state joint values after the change of PSM1_outer_insertion: PSM1");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+  dual_arm_state.copyJointGroupPositions(psm2_jt_group, psm2_jt_pos);
+
+  ROS_INFO("dual_arm_state joint values after the change of PSM1_outer_insertion: PSM2");
+  for(int i = 0; i < psm2_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm2_jt_pos[i]);
+  }
+
+
   // Visualization
   // ^^^^^^^^^^^^^
   //
   // The package MoveItVisualTools provides many capabilties for visualizing objects, robots,
   // and trajectories in Rviz as well as debugging tools such as step-by-step introspection of a script
-  namespace rvt = rviz_visual_tools;
-  moveit_visual_tools::MoveItVisualTools visual_tools("world");
-  visual_tools.deleteAllMarkers();
-
-  // Remote control is an introspection tool that allows users to step through a high level script
-  // via buttons and keyboard shortcuts in Rviz
-  visual_tools.loadRemoteControl();
-
-  // Rviz provides many types of markers, in this demo we will use text, cylinders, and spheres
-  Eigen::Affine3d text_pose = Eigen::Affine3d::Identity();
-
-  text_pose.translation().z() = 1.75;  // a magic number need to be changed later
-
-  visual_tools.publishText(text_pose, "daVinciMoveGroupInterface Demo", rvt::WHITE, rvt::XLARGE);
-
-  // Batch publishing is used to reduce the number of messages being sent to Rviz for large visualizations
-  visual_tools.trigger();
-
-  // Getting Basic Information
-  // ^^^^^^^^^^^^^^^^^^^^^^^^^
-  //
-  // We can print the name of the reference frame for this robot.
-  ROS_INFO_NAMED("tutorial", "Reference frame: %s", move_group.getPlanningFrame().c_str());
-
-  // We can also print the name of the end-effector link for this group.
-  ROS_INFO_NAMED("tutorial", "End effector link: %s", move_group.getEndEffectorLink().c_str());
-
-  ROS_INFO_NAMED("tutorial", "End effector name: %s", move_group.getEndEffector().c_str());
+//  namespace rvt = rviz_visual_tools;
+//  moveit_visual_tools::MoveItVisualTools visual_tools("world");
+//  visual_tools.deleteAllMarkers();
+//
+//  // Remote control is an introspection tool that allows users to step through a high level script
+//  // via buttons and keyboard shortcuts in Rviz
+//  visual_tools.loadRemoteControl();
+//
+//  // Rviz provides many types of markers, in this demo we will use text, cylinders, and spheres
+//  Eigen::Affine3d text_pose = Eigen::Affine3d::Identity();
+//
+//  text_pose.translation().z() = 1.75;  // a magic number need to be changed later
+//
+//  visual_tools.publishText(text_pose, "daVinciMoveGroupInterface Demo", rvt::WHITE, rvt::XLARGE);
+//
+//  // Batch publishing is used to reduce the number of messages being sent to Rviz for large visualizations
+//  visual_tools.trigger();
+//
+//  // Getting Basic Information
+//  // ^^^^^^^^^^^^^^^^^^^^^^^^^
+//  //
+//  // We can print the name of the reference frame for this robot.
+//  ROS_INFO_NAMED("tutorial", "Reference frame: %s", move_group.getPlanningFrame().c_str());
+//
+//  // We can also print the name of the end-effector link for this group.
+//  ROS_INFO_NAMED("tutorial", "End effector link: %s", move_group.getEndEffectorLink().c_str());
+//
+//  ROS_INFO_NAMED("tutorial", "End effector name: %s", move_group.getEndEffector().c_str());
 
   // get camera to world transformation
   Eigen::Affine3d camera_to_world_transfom = daVinciRobotState->getFrameTransform("/camera");
@@ -215,23 +277,83 @@ int main(int argc, char **argv)
   bool success = (bool) move_group.plan(my_plan);
 
   ROS_INFO_NAMED("tutorial", "Visualizing plan 1 (pose goal) %s", success ? "" : "FAILED");
+  daVinciRobotState->setFromIK(psm1_jt_group, target_pose_1, 10, 0.1);
+  daVinciRobotState->update();
+  psm1_jt_pos.resize(0);
+  daVinciRobotState->copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
 
+  ROS_INFO("after setFrom IK daVinciRobotState joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+  planning_scene_monitor::PlanningSceneMonitorPtr pMonitor;
+  pMonitor.reset(new planning_scene_monitor::PlanningSceneMonitor("robot_description"));
+  pMonitor->requestPlanningSceneState();
+  planning_scene_monitor::LockedPlanningSceneRW ls(pMonitor);
+
+  robot_state::RobotState& current_state = ls->getCurrentStateNonConst();
+  psm1_jt_pos.resize(0);
+  current_state.copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+
+  ROS_INFO("before setting current joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+
+  ls->setCurrentState(*daVinciRobotState);
+  current_state = ls->getCurrentStateNonConst();
+  psm1_jt_pos.resize(0);
+  current_state.copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+
+  ROS_INFO("after setting current joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+  daVinciRobotState = move_group.getCurrentState();
+  //
+  // Next get the current set of joint values for the group.
+  psm1_jt_pos.resize(0);
+  daVinciRobotState->copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+
+  ROS_INFO("after first planning daVinciRobotState joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+  daVinciRobotState = move_group.getCurrentState();
+  //
+  // Next get the current set of joint values for the group.
+  psm1_jt_pos.resize(0);
+  daVinciRobotState->copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+
+  ROS_INFO("after press reset daVinciRobotState joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
   // Visualizing plans
   // ^^^^^^^^^^^^^^^^^
   // We can also visualize the plan as a line with markers in Rviz.
-  visual_tools.publishAxisLabeled(target_pose_1, "pose1");
-  visual_tools.publishText(text_pose, "Pose Goal", rvt::WHITE, rvt::XLARGE);
-  visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-  visual_tools.trigger();
-  moveit_msgs::MoveItErrorCodes error_code = move_group.move();
-  if (error_code.val == 1)
-  {
-    ROS_INFO("Planning is successful");
-  } else
-  {
-    ROS_INFO("Planning is failed");
-  }
-  visual_tools.prompt("next step");
+//  visual_tools.publishAxisLabeled(target_pose_1, "pose1");
+//  visual_tools.publishText(text_pose, "Pose Goal", rvt::WHITE, rvt::XLARGE);
+//  visual_tools.publishTrajectoryLine(my_plan.trajectory_, psm1_jt_group);
+//  visual_tools.trigger();
+//  moveit_msgs::MoveItErrorCodes error_code = move_group.move();
+//  if (error_code.val == 1)
+//  {
+//    ROS_INFO("Planning is successful");
+//  } else
+//  {
+//    ROS_INFO("Planning is failed");
+//  }
+//  visual_tools.prompt("next step");
 
 
   // Moving to a pose goal
@@ -256,38 +378,85 @@ int main(int argc, char **argv)
   //
   // To start, we'll create an pointer that references the current robot's state.
   // RobotState is the object that contains all the current position/velocity/acceleration data.
-  moveit::core::RobotStatePtr current_state = move_group.getCurrentState();
-  //
-  // Next get the current set of joint values for the group.
-  std::vector<double> joint_group_positions;
-  current_state->copyJointGroupPositions(joint_model_group, joint_group_positions);
 
-  for(int i = 0; i < joint_group_positions.size(); i++)
+  robot_state::RobotStatePtr test_state(new robot_state::RobotState(robot_model));
+  psm1_jt_pos.resize(0);
+  test_state->copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+  ROS_INFO("test state joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
   {
-    ROS_INFO("%dth joint value: %f \n", i, joint_group_positions[i]);
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+  robot_state::RobotState start_state(*move_group.getCurrentState());
+  psm1_jt_pos.resize(0);
+  start_state.copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+  ROS_INFO("start_state joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+//  geometry_msgs::Pose start_pose2;
+//  start_pose2.orientation.w = 1.0;
+//  start_pose2.position.x = 0.55;
+//  start_pose2.position.y = -0.05;
+//  start_pose2.position.z = 0.8;
+//  start_state.setFromIK(psm1_jt_group, start_pose2);
+
+  std::vector< double > position;
+  position.push_back(0.0185);
+  start_state.setJointPositions("PSM1_outer_insertion", position);
+  psm1_jt_pos.resize(0);
+  start_state.copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+  ROS_INFO("start_state joint values after the change of PSM1/outer_insertion: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
+
+  move_group.setStartState(start_state);
+
+  daVinciRobotState = move_group.getCurrentState();
+  psm1_jt_pos.resize(0);
+  daVinciRobotState->copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+
+  ROS_INFO("before planning daVinciRobotState joint values: ");
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
   }
 
   // Now, let's modify one of the joints, plan to the new joint space goal and visualize the lan.
-  joint_group_positions[1] = -0.5;  // radians
-  move_group.setJointValueTarget(joint_group_positions);
+  psm1_jt_pos[2] = 0.02;  // radians
+  move_group.setJointValueTarget(psm1_jt_pos);
   success = (bool) move_group.plan(my_plan);
+
+  daVinciRobotState = move_group.getCurrentState();
+  psm1_jt_pos.resize(0);
+  daVinciRobotState->copyJointGroupPositions(psm1_jt_group, psm1_jt_pos);
+  ROS_INFO("after planning daVinciRobotState joint values: ");
+
+  for(int i = 0; i < psm1_jt_pos.size(); i++)
+  {
+    ROS_INFO("%dth joint value: %f \n", i, psm1_jt_pos[i]);
+  }
 
   ROS_INFO_NAMED("tutorial", "Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
 
   // Visualize the plan in Rviz
-  visual_tools.deleteAllMarkers();
-  visual_tools.publishText(text_pose, "Joint Space Goal", rvt::WHITE, rvt::XLARGE);
-  visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-  visual_tools.trigger();
-  error_code = move_group.move();
-  if (error_code.val == 1)
-  {
-    ROS_INFO("Planning is successful");
-  } else
-  {
-    ROS_INFO("Planning is failed");
-  }
-  visual_tools.prompt("next step");
+//  visual_tools.deleteAllMarkers();
+//  visual_tools.publishText(text_pose, "Joint Space Goal", rvt::WHITE, rvt::XLARGE);
+//  visual_tools.publishTrajectoryLine(my_plan.trajectory_, psm1_jt_group);
+//  visual_tools.trigger();
+//  error_code = move_group.move();
+//  if (error_code.val == 1)
+//  {
+//    ROS_INFO("Planning is successful");
+//  } else
+//  {
+//    ROS_INFO("Planning is failed");
+//  }
+//  visual_tools.prompt("next step");
 
 
   // Planning with Path Constraints
@@ -301,7 +470,7 @@ int main(int argc, char **argv)
   Eigen::Quaterniond q1(rotate_mat);
 
   moveit_msgs::OrientationConstraint ocm;
-  ocm.link_name = "one_tool_tip_link";
+  ocm.link_name = "PSM1/tool_tip_link";
   ocm.header.frame_id = "world";
   ocm.orientation.w = q1.w();
   ocm.orientation.x = q1.x();
@@ -331,7 +500,7 @@ int main(int argc, char **argv)
 
   defineToolTipGoal(daVinciRobotState, orientation, translation, target_pose_2);
 
-//  daVinciRobotState->setFromIK(joint_model_group, target_pose_2);
+//  daVinciRobotState->setFromIK(psm1_jt_group, target_pose_2);
 
 //  move_group.setStartState(*daVinciRobotState);
 
@@ -350,26 +519,26 @@ int main(int argc, char **argv)
 
   ROS_INFO_STREAM("target_pose_2_wrt_planning_frame \n" << target_pose_2.matrix());
 
-  target_pose_1= daVinciRobotState->getFrameTransform("/one_tool_tip_link");
+  target_pose_1= daVinciRobotState->getFrameTransform("/PSM1/tool_tip_link");
   ROS_INFO_STREAM("target_pose_1_wrt_planning_frame \n" << target_pose_1.matrix());
 
 
   // Visualize the plan in Rviz
-  visual_tools.deleteAllMarkers();
-  visual_tools.publishAxisLabeled(target_pose_2, "goal");
-  visual_tools.publishAxisLabeled(target_pose_1, "start");
-  visual_tools.publishText(text_pose, "Constrained Goal", rvt::WHITE, rvt::XLARGE);
-  visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-  visual_tools.trigger();
-  error_code = move_group.move();
-  if (error_code.val == 1)
-  {
-    ROS_INFO("Planning is successful");
-  } else
-  {
-    ROS_INFO("Planning is failed");
-  }
-  visual_tools.prompt("next step");
+//  visual_tools.deleteAllMarkers();
+//  visual_tools.publishAxisLabeled(target_pose_2, "goal");
+//  visual_tools.publishAxisLabeled(target_pose_1, "start");
+//  visual_tools.publishText(text_pose, "Constrained Goal", rvt::WHITE, rvt::XLARGE);
+//  visual_tools.publishTrajectoryLine(my_plan.trajectory_, psm1_jt_group);
+//  visual_tools.trigger();
+//  error_code = move_group.move();
+//  if (error_code.val == 1)
+//  {
+//    ROS_INFO("Planning is successful");
+//  } else
+//  {
+//    ROS_INFO("Planning is failed");
+//  }
+//  visual_tools.prompt("next step");
 
 
   move_group.clearPathConstraints();
@@ -450,24 +619,24 @@ int main(int argc, char **argv)
   const double eef_step = 0.001;
   double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
 
-  ROS_INFO_NAMED("tutorial", "Visualizing plan 4 (cartesian path) (%.2f%% acheived)", fraction * 100.0);
-  visual_tools.deleteAllMarkers();
-  visual_tools.publishText(text_pose, "Joint Space Goal", rvt::WHITE, rvt::XLARGE);
-  visual_tools.publishPath(waypoints, rvt::LIME_GREEN, rvt::SMALL);
-  for (std::size_t i = 0; i < waypoints.size(); ++i)
-  {
-    visual_tools.publishAxisLabeled(waypoints[i], "pt" + std::to_string(i), rvt::SMALL);
-  }
-  visual_tools.trigger();
-  error_code = move_group.move();
-  if (error_code.val == 1)
-  {
-    ROS_INFO("Planning is successful");
-  } else
-  {
-    ROS_INFO("Planning is failed");
-  }
-  visual_tools.prompt("next step");
+//  ROS_INFO_NAMED("tutorial", "Visualizing plan 4 (cartesian path) (%.2f%% acheived)", fraction * 100.0);
+//  visual_tools.deleteAllMarkers();
+//  visual_tools.publishText(text_pose, "Joint Space Goal", rvt::WHITE, rvt::XLARGE);
+//  visual_tools.publishPath(waypoints, rvt::LIME_GREEN, rvt::SMALL);
+//  for (std::size_t i = 0; i < waypoints.size(); ++i)
+//  {
+//    visual_tools.publishAxisLabeled(waypoints[i], "pt" + std::to_string(i), rvt::SMALL);
+//  }
+//  visual_tools.trigger();
+//  error_code = move_group.move();
+//  if (error_code.val == 1)
+//  {
+//    ROS_INFO("Planning is successful");
+//  } else
+//  {
+//    ROS_INFO("Planning is failed");
+//  }
+//  visual_tools.prompt("next step");
 
 
 
@@ -585,7 +754,7 @@ int main(int argc, char **argv)
 //  // Visualize the plan in Rviz
 //  visual_tools.deleteAllMarkers();
 //  visual_tools.publishText(text_pose, "Obstacle Goal", rvt::WHITE, rvt::XLARGE);
-//  visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
+//  visual_tools.publishTrajectoryLine(my_plan.trajectory_, psm1_jt_group);
 //  visual_tools.trigger();
 //  visual_tools.prompt("next step");
 //  // END_TUTORIAL
