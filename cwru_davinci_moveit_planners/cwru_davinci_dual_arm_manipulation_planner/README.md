@@ -1,4 +1,6 @@
-**Version of the Code for Paper Published on International Symposium on Medical Robotics (ISMR 2020)**
+**Version of the Code for Needle Regrasping When Obstacle Presents**
+
+The package is for daVinci to do dual arm manipulation. More specifically it is now for needle handoff project.
 
 This package is the implementation of dual-arm needle manipulation by Patient-side manipulators (PSMs) of the da Vinci<sup>&reg;</sup> surgical robot. More specifically it is now for needle handoff project.
 
@@ -32,7 +34,8 @@ git clone https://github.com/cwru-davinci/cwru_davinci_moveit
 
 ### Some other packages needed before compiling
 ```
-git clone https://github.com/cwru-davinci/cwru_davinci_grasp
+git clone -b egocentric-simulation https://github.com/cwru-davinci/uv_geometry.git
+git clone https://github.com/lusu8892/cwru_davinci_grasp
 git clone https://github.com/cwru-davinci/uv_control.git
 git clone https://github.com/cwru-robotics/cwru_davinci_kinematics.git
 git clone https://github.com/cwru-davinci/sim_gazebo.git
