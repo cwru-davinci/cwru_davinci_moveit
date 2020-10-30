@@ -1,3 +1,5 @@
+**Version of the Code for Paper Published on International Symposium on Medical Robotics (ISMR 2020)**
+
 This package is the implementation of dual-arm needle manipulation by Patient-side manipulators (PSMs) of the da Vinci<sup>&reg;</sup> surgical robot. More specifically it is now for needle handoff project.
 
 This dual-arm needle manipulation planner is implemented by [**RRT-CONNECT**](https://www.cs.cmu.edu/afs/cs/academic/class/15494-s14/readings/kuffner_icra2000.pdf). The RRT-CONNECT code base is from [**OMPL**](https://ompl.kavrakilab.org/). Robot description, collision check, and kinematics are done by using [**MoveIt**](https://moveit.ros.org/).

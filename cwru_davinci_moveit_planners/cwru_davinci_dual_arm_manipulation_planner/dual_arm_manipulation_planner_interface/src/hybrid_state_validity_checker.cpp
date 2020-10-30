@@ -230,17 +230,10 @@ bool attachedObject
 
   if (attachedObject)
   {
-    const Eigen::Affine3d tool_tip_pose = pRSstate->getGlobalLinkTransform(pRSstate->getJointModelGroup(supportGroup)->getOnlyOneEndEffectorTip());
-    Eigen::Affine3d grasp_pose = tool_tip_pose.inverse() * object_pose;
-
-    if (grasp_pose.isApprox(hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose, 1e-4))
-    {
-      grasp_pose = hyStateSpace_->graspTransformations()[pHyState->graspIndex().value].grasp_pose;
-    }
     // attach object to supporting joint group of robot
     moveit::core::AttachedBody *pNeedleModel = createAttachedBody(supportGroup,
                                                                   m_ObjectName,
-                                                                  grasp_pose);
+                                                                  pHyState->graspIndex().value);
     pRSstate->attachBody(pNeedleModel);
     pRSstate->update();
   }
@@ -500,104 +493,4 @@ const double* ik_solution
   }
 
   return !collision_result.collision;
-}
-
-bool HybridStateValidityChecker::validateTrajectory
-(
-const std::string& planningGroup,
-const robot_state::RobotStatePtr& pRobotState,
-const std::vector<std::vector<double>>& armJntTraj,
-double jaw,
-bool verbose,
-bool needleInteraction
-)
-{
-  setJawPosition(jaw, planningGroup, pRobotState);
-  for (std::size_t i = 0; i < armJntTraj.size(); ++i)
-  {
-    pRobotState->setJointGroupPositions(planningGroup, armJntTraj[i]);
-    setMimicJointPositions(pRobotState, planningGroup);
-    pRobotState->update();
-    if (!noCollision(*pRobotState, "", needleInteraction, verbose))
-    {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool HybridStateValidityChecker::detechNeedleGrasped
-(
-const robot_state::RobotState& rstate,
-const std::string& planningGroup,
-bool verbose
-)
-{
-  collision_detection::CollisionRequest collision_request;
-  collision_request.contacts = true;
-  collision_detection::CollisionResult collision_result;
-  planning_scene_->checkCollision(collision_request, collision_result, rstate);
-
-  bool isNeedleGrasp = false;
-  if (!collision_result.collision)  // if no collision found, then needle is not grasped
-    return isNeedleGrasp;
-
-  // found collision, try to turn off needle interaction to see if collision still present
-  // turning off the needle interaction
-  collision_detection::AllowedCollisionMatrix acm = planning_scene_->getAllowedCollisionMatrix();
-  const std::string psm = (planningGroup == "psm_one") ? "PSM1" : "PSM2";
-  collision_detection::CollisionResult::ContactMap::const_iterator it;
-  for (it = collision_result.contacts.begin(); it != collision_result.contacts.end(); ++it)
-  {
-    ROS_WARN("DetechNeedleGrasped found contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-  }
-  acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_1", true);
-  acm.setEntry(m_ObjectName, psm + "_tool_wrist_sca_ee_link_2", true);
-
-  // after turning off needle interaction, do collision again
-  collision_result.clear();
-  planning_scene_->checkCollision(collision_request, collision_result, rstate, acm);
-
-  if (collision_result.collision)  // after turn off needleInteraction still found collision
-  {
-    if (verbose)
-    {
-      ROS_WARN("DetechNeedleGrasped: Robot state is in collision with planning scene. \n");
-      collision_detection::CollisionResult::ContactMap contactMap = collision_result.contacts;
-      for (collision_detection::CollisionResult::ContactMap::const_iterator it = contactMap.begin(); it != contactMap.end(); ++it)
-      {
-        ROS_WARN("Contact between: %s and %s \n", it->first.first.c_str(), it->first.second.c_str());
-      }
-    }
-
-    // this is failure due to collision detected with other link
-    return isNeedleGrasp;
-  }
-
-  // after turn off needleInteraction no collision found,
-  // this means collision only happens btw needle and gripper links
-  isNeedleGrasp = true;
-  return isNeedleGrasp;
-}
-
-void HybridStateValidityChecker::setJawPosition
-(
-double radian,
-const std::string& planningGroup,
-const robot_state::RobotStatePtr& pRState
-)
-{
-  const std::string eef_group_name = pRState->getJointModelGroup(planningGroup)->getAttachedEndEffectorNames()[0];
-  std::vector<double> eef_joint_position;
-  pRState->copyJointGroupPositions(eef_group_name, eef_joint_position);
-
-  for (std::size_t i = 0; i < eef_joint_position.size(); ++i)
-  {
-    eef_joint_position[i] = radian;
-  }
-
-  pRState->setJointGroupPositions(eef_group_name, eef_joint_position);
-  setMimicJointPositions(pRState, planningGroup);  // this line cannot be removed, as copyJointGroupPosition does not copy mimic joints's value
-  pRState->update();
 }

@@ -94,18 +94,6 @@ public:
   PathJointTrajectory& handoffPathJntTraj
   );
 
-  int stepsBtwStates
-  (
-  const Eigen::Affine3d& needlePose,
-  const Eigen::Affine3d& targetPose
-  );
-
-  double distanceBtwPoses
-  (
-  const Eigen::Affine3d& currentPose,
-  const Eigen::Affine3d& targetPose
-  );
-
 protected:
   HybridObjectStateSpacePtr                        m_pHyStateSpace = nullptr;
 
@@ -214,57 +202,6 @@ protected:
   const robot_state::RobotStateConstPtr& pRobotToState,
   const std::string& fromSupportGroup,
   MoveGroupJointTrajectory& jntTrajectoryBtwStates
-  );
-
-  bool localPlanObjectTransit
-  (
-  const std::vector<double>& currentJointPosition,
-  const Eigen::Affine3d& needlePose,
-  const int ithTraj,
-  MoveGroupJointTrajectory& jntTrajectoryBtwStates
-  );
-
-  // based on current needle pose move it towards to 
-  // target pose half way
-  bool localPlanObjectTransfer
-  (
-  const Eigen::Affine3d& currentNeedlePose,
-  const Eigen::Affine3d& targetNeedlePose,
-  const std::vector<double>& currentJointPosition,
-  const std::string& supportGroup,
-  MoveGroupJointTrajectorySegment& jntTrajSeg,
-  double& time
-  );
-
-  bool validateOriginalHandoffPath
-  (
-  const Eigen::Affine3d& currentNeedlePose,
-  const std::vector<double>& currentJointPosition,
-  const MoveGroupJointTrajectory& jntTrajectoryBtwStates
-  );
-
-  bool replanGraspToUngrasped
-  (
-  MoveGroupJointTrajectorySegment& newPathToUngrasp,
-  const Eigen::Affine3d& toRestGroupInitialToolTipPose,
-  robot_state::RobotStatePtr& pCurrentRobotState,
-  const std::string& toRestGroup
-  );
-
-  bool replanUnGraspToSafePlace
-  (
-  MoveGroupJointTrajectorySegment& newPathToHome,
-  const std::vector<double>& toRestJointPosition,
-  const robot_state::RobotStatePtr& pCurrentRobotState,
-  const std::string& toRestGroup
-  );
-
-  void getCurrentGrasp
-  (
-  Eigen::Affine3d& currentGrasp,
-  const Eigen::Affine3d& currentNeedlePose,
-  const std::string& supportGroup,
-  const PSMInterfacePtr& pSupportArmGroup
   );
 
 protected:

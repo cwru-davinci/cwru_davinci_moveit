@@ -186,18 +186,7 @@ int main(int argc, char** argv)
 
   if (!needleHandoffExecutor.executeNeedleHandoffTraj())
   {
-    char answer;
-    std::cout << "Replanning (y/n)? " << std::endl;
-    std::cin >> answer;
-    double okToReplan = (answer == 'y') ? true : false;
-    if (okToReplan)
-    {
-      if (needleHandoffExecutor.globalReplanning(planningTime))
-      {
-        if (!needleHandoffExecutor.executeNeedleHandoffTraj())
-          return -1;
-      }
-    }
+    return -1;
   }
 
   ros::shutdown();
